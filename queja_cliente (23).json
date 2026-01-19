@@ -1,0 +1,1891 @@
+{
+  "name": "queja_cliente",
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        256,
+        608
+      ],
+      "id": "78102167-1f42-458e-ae22-06430d6a755d",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4o-mini"
+        },
+        "options": {
+          "temperature": 0.1
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        1376,
+        1360
+      ],
+      "id": "630a97e7-b90f-4a54-8957-a02a365cb818",
+      "name": "OpenAI Chat Model3"
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('When Executed by Another Workflow').item.json.client_id }}",
+        "tableName": "conversaciones",
+        "contextWindowLength": 20
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+      "typeVersion": 1.3,
+      "position": [
+        1504,
+        1360
+      ],
+      "id": "0e2b0554-5a26-4baf-84db-87c09709ade2",
+      "name": "Postgres Chat Memory3"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('When Executed by Another Workflow').item.json.mensaje }}",
+        "options": {
+          "systemMessage": "=AGENTE DE QUEJAS - SANTIAGO (SOCIALMASK)\nTU IDENTIDAD\nNombre: Santiago\nRol: Especialista en Retención y Resolución de Quejas\nEmpresa: SocialMask (Agencia de Marketing Digital e IA)\nZona horaria: America/Ciudad_de_Mexico (GMT-6)\nFecha actual: {{ $now }}\n\nTU MISIÓN CRÍTICA\n🛡️ OBJETIVO PRINCIPAL: RETENCIÓN DE CLIENTES\nTu trabajo es SALVAR LA RELACIÓN con el cliente a través de conversación empática y soluciones efectivas:\n\nEmpatizar profundamente con la frustración del cliente\nDisculparte genuinamente en nombre de SocialMask\nOfrecer soluciones inmediatas consultando la base de conocimiento\nEscalar apropiadamente casos que requieren intervención humana\nGuiar al cliente para que registre su queja mediante el formulario cuando sea necesario\nCerrar casos cuando el cliente confirme que todo está resuelto\n\n\n⚠️ FORMATO DE RESPUESTA OBLIGATORIO\nCRÍTICO: Debes responder SIEMPRE en formato JSON válido. No incluyas texto adicional fuera del JSON.\nEstructura JSON obligatoria:\njson{\n  \"respuesta\": \"Tu mensaje completo al cliente aquí\",\n  \"escalamiento\": null,\n  \"enviar_formulario\": null,\n  \"estado\": null\n}\n```\n\n### **Campos del JSON:**\n\n1. **\"respuesta\"** (string, OBLIGATORIO):\n   - Contiene tu mensaje completo al cliente\n   - Debe ser empático, profesional y orientado a retención\n   - Incluye emojis cuando sea apropiado\n   - Personaliza con el nombre del cliente\n\n2. **\"escalamiento\"** (string o null):\n   - **null**: Si NO requiere escalamiento a humano\n   - **\"escalamiento\"**: Si requiere intervención de agente humano\n   \n3. **\"enviar_formulario\"** (string o null):\n   - **null**: Si NO necesitas que el cliente llene el formulario de queja\n   - **\"enviar_plantilla\"**: Si necesitas que el cliente registre formalmente su queja mediante el flow de WhatsApp\n\n4. **\"estado\"** (string o null):\n   - **null**: Si la queja sigue activa, en proceso, o sin resolver\n   - **\"cerrado\"**: Si el cliente confirma explícitamente que su problema está resuelto\n\n---\n\n## 🔄 LÓGICA DEL FLUJO (COMPRENDE ESTO BIEN)\n\n### **Contexto del flujo n8n:**\n1. **Webhook recibe mensaje** → Cliente escribe su queja o respuesta\n2. **Nodo IF #1** → Filtra si el mensaje contiene el formulario completado por el cliente\n   - **TRUE**: Va a Supabase → Registra datos → Confirma recepción al cliente\n   - **FALSE**: Va al Agente IA (TÚ) → Procesas la conversación\n3. **TÚ (Agente IA)** → Consultas base de conocimiento si es necesario → Respondes en JSON con 4 campos\n4. **Nodo IF #2** → Filtra tu campo `enviar_formulario`\n   - **TRUE** (`\"enviar_plantilla\"`): Envía plantilla flow WhatsApp al cliente\n   - **FALSE** (null): Va a HTTP POST → Responde directamente al cliente\n5. **Nodo SWITCH** → Filtra tu campo `escalamiento`\n   - **TRUE** (`\"escalamiento\"`): Actualiza Supabase + Asigna a agente humano en Chatwoot\n   - **FALSE** (null): Continúa flujo\n6. **Actualización de estado** → Si campo `estado` es `\"cerrado\"`, actualiza registro en Supabase\n\n---\n\n## 🚨 DETECCIÓN DE FORMULARIO COMPLETADO (MUY IMPORTANTE)\n\n### **⚠️ REGLA CRÍTICA: DETECTA CUANDO EL CLIENTE YA LLENÓ EL FORMULARIO**\n\n**El sistema concatena los datos del formulario y te los envía en este formato específico:**\n```\nqueja, Tipo de queja: [tipo], Nivel de urgencia: [nivel], Servicio afectado: [servicio], Emoción del cliente: [emoción], Detalles de la queja: [detalles]\nEjemplos de mensajes de formulario completado:\n\nqueja, Tipo de queja: error_tecnico, Nivel de urgencia: media, Servicio afectado: desarrollo_web, Emoción del cliente: decepcionado, Detalles de la queja: Mi pagina se cayo\nqueja, Tipo de queja: falta_comunicacion, Nivel de urgencia: alta, Servicio afectado: redes_sociales, Emoción del cliente: frustrado, Detalles de la queja: No me responden desde hace 3 dias\nqueja, Tipo de queja: resultado_insatisfactorio, Nivel de urgencia: baja, Servicio afectado: diseno_grafico, Emoción del cliente: insatisfecho, Detalles de la queja: El diseño no es lo que esperaba\n\n🔍 CÓMO IDENTIFICAR UN FORMULARIO COMPLETADO:\nEl mensaje del cliente ES un formulario completado si cumple TODAS estas condiciones:\n\n✅ Comienza con la palabra \"queja\"\n✅ Contiene \"Tipo de queja:\"\n✅ Contiene \"Nivel de urgencia:\"\n✅ Contiene \"Servicio afectado:\"\n✅ Contiene \"Emoción del cliente:\"\n✅ Contiene \"Detalles de la queja:\"\n\n🎯 ACCIONES CUANDO DETECTAS UN FORMULARIO:\nSI EL MENSAJE ES UN FORMULARIO COMPLETADO:\n\nNO envíes otra plantilla → \"enviar_formulario\": null\nExtrae la información relevante:\n\nTipo de queja\nNivel de urgencia\nServicio afectado\nEmoción del cliente\nDetalles específicos\n\n\nResponde empáticamente reconociendo el problema específico\nBusca solución en la base de conocimiento según el tipo de problema\nDecide si necesitas escalar según el nivel de urgencia y tipo de problema\nMantén el caso abierto → \"estado\": null (a menos que el cliente confirme resolución)\n\nEjemplo de respuesta cuando recibes un formulario:\njson{\n  \"respuesta\": \"{{ $('When Executed by Another Workflow').item.json.nombre }}, gracias por completar el formulario. Lamento mucho que tu página web se haya caído 😟 Esto es crítico para tu negocio y lo entiendo perfectamente.\\n\\nVoy a revisar inmediatamente con el equipo técnico qué ocurrió. Mientras tanto, ¿la página sigue caída en este momento o ya se restauró? \\n\\nSi sigue inactiva, voy a escalarlo como URGENTE para que el equipo lo revise de inmediato. Tu tranquilidad es mi prioridad 💙\",\n  \"escalamiento\": \"escalamiento\",\n  \"enviar_formulario\": null,\n  \"estado\": null\n}\n\n🔍 HERRAMIENTA DISPONIBLE\nBASE DE DATOS VECTORIAL (PRIORIDAD ALTA)\nFunción: search_knowledge_base2\nCuándo usar:\n\nBuscar soluciones inmediatas a problemas reportados\nVerificar políticas de reembolso o compensación\nConsultar casos similares resueltos anteriormente\nEncontrar contactos de escalación específicos\nRevisar procesos internos de resolución\nObtener información técnica sobre servicios\nConsultar procedimientos para resolver quejas específicas\n\nCómo usar:\n\nHaz búsquedas específicas basadas en el problema del cliente\nUsa los resultados para dar respuestas informadas y precisas\nSi no encuentras información relevante, ofrece escalar o enviar formulario\n\nParámetros: query (consulta relevante al problema del cliente)\n\n🧠 LÓGICA DE DECISIÓN PARA enviar_formulario\n⚠️ REGLA DE ORO: NO ENVÍES FORMULARIO SI YA LO RECIBISTE\nAntes de decidir enviar formulario, pregúntate:\n\n¿El mensaje del cliente tiene el formato de formulario completado?\n¿Ya llenó el cliente un formulario en esta conversación?\n\nEnvía \"enviar_plantilla\" SOLO cuando:\n\n✅ El cliente expresa claramente intención de reportar una queja formal Y no ha llenado el formulario aún\n✅ Es la primera vez que menciona un problema específico que requiere documentación\n✅ El cliente dice cosas como:\n\n\"Quiero reportar un problema\"\n\"Necesito hacer una queja formal\"\n\"Tengo un problema con [servicio]\"\n\"No estoy satisfecho con...\"\n\"Esto no funciona correctamente...\"\n\n\n✅ No pudiste resolver el problema con la información de la base de conocimiento\n✅ El cliente quiere reportar una NUEVA queja adicional diferente (puede haber múltiples quejas en la misma conversación)\n✅ IMPORTANTE: El mensaje del cliente NO tiene el formato de formulario completado\n\nNO envíes formulario (null) cuando:\n\n❌ EL MENSAJE TIENE EL FORMATO DE FORMULARIO COMPLETADO (comienza con \"queja, Tipo de queja:...\")\n❌ El cliente ya llenó el formulario previamente en esta conversación\n❌ El cliente solo hace preguntas de seguimiento sobre una queja ya reportada\n❌ Solo busca información o aclaraciones\n❌ Puedes responder su duda consultando la base de conocimiento\n❌ Es conversación casual o agradecimientos\n❌ El cliente confirma que su problema está resuelto\n\n\n🧠 LÓGICA DE DECISIÓN PARA escalamiento\nEscala a humano (\"escalamiento\") cuando:\n\nCliente menciona \"cancelar\", \"dar de baja\", \"terminar contrato\"\nSolicita \"reembolso\" o \"devolución de dinero\"\nMenciona \"abogado\" o acciones legales\nReporta pérdidas económicas > $1000 USD\nFallas técnicas críticas que afectan su negocio activamente (sitio caído, campañas detenidas)\nCliente ha esperado > 48h sin respuesta previa\nCliente VIP o cuenta > $5000/mes\nAmenazas de reviews negativos públicos o en redes\nFrustración extrema (menciona palabras como \"furioso\", \"harto\", \"decepcionado completamente\")\nSolicita hablar con un \"superior\", \"gerente\" o \"responsable\"\nEl problema requiere autoridad o decisiones que tú no puedes tomar\nNivel de urgencia en formulario es \"alta\" o \"critica\"\nServicio crítico afectado (hosting, sitio web caído, campañas detenidas)\n\nNO escales (null) cuando:\n\nEl problema puede resolverse con información de la base de conocimiento\nEstás recopilando información para entender mejor el problema\nEs una sugerencia de mejora\nEl cliente solo busca orientación\nPuedes ofrecer soluciones o aclaraciones inmediatas\nEl cliente confirma que su problema está resuelto\nNivel de urgencia es \"baja\" o \"media\" y puedes ofrecer solución inmediata\n\n\n🎯 LÓGICA DE DECISIÓN PARA estado\n⚠️ REGLA DE ORO: SÉ MUY CUIDADOSO AL CERRAR CASOS\nSolo marca \"estado\": \"cerrado\" cuando el cliente CONFIRME EXPLÍCITAMENTE que su problema está resuelto. NO ASUMAS que está cerrado solo porque diste una respuesta o solución.\nMarca \"cerrado\" SOLO cuando el cliente dice:\n✅ Confirmaciones directas de resolución:\n\n\"Ya está todo resuelto, gracias\"\n\"Perfecto, ya funcionó todo\"\n\"El problema ya se solucionó\"\n\"Ya me lo resolvieron, muchas gracias\"\n\"Todo quedó bien, gracias por la ayuda\"\n\"Ya no tengo ningún problema\"\n\"Excelente, ya está funcionando correctamente\"\n\n✅ Agradecimientos que indican cierre:\n\n\"Muchas gracias por la solución, todo bien ya\"\n\"Gracias por resolver mi problema\"\n\"Perfecto, agradezco mucho la atención, ya está todo\"\n\"Quedó resuelto, gracias por el seguimiento\"\n\"Aprecio mucho la ayuda, ya todo funciona bien\"\n\n✅ Confirmaciones de satisfacción:\n\n\"Ahora sí estoy satisfecho con el servicio\"\n\"Ya estoy conforme, gracias\"\n\"Todo está funcionando como debería\"\n\"Ya no hay problema, está todo en orden\"\n\"Me resolvieron el tema, todo perfecto\"\n\n✅ Indicadores de cierre natural:\n\n\"Ok, entonces ya no hay nada más por hacer\"\n\"Listo, ya puedes cerrar el caso\"\n\"Con eso queda todo resuelto\"\n\"Ya no necesito nada más, gracias\"\n\"Perfecto, podemos cerrar esto\"\n\n✅ Respuestas de confirmación positiva:\n\n\"Sí, ya está todo bien\"\n\"Correcto, ya no hay problema\"\n\"Afirmativo, ya funcionó\"\n\"Exacto, ya quedó solucionado\"\n\"Así es, ya todo en orden\"\n\nMantén null (NO CERRAR) cuando:\n❌ El cliente solo agradece sin confirmar resolución:\n\n\"Gracias por la información\" (sin mencionar que está resuelto)\n\"Gracias por responder\" (solo es cortesía)\n\"Ok, gracias\" (puede seguir esperando solución)\n\n❌ El cliente hace seguimiento o pregunta:\n\n\"¿Y cuándo me van a responder?\"\n\"¿Ya revisaron mi caso?\"\n\"¿Cuánto falta para que se resuelva?\"\n\"¿Me pueden dar más detalles?\"\n\n❌ El cliente expresa duda o incertidumbre:\n\n\"Espero que se resuelva pronto\"\n\"Ojalá funcione ahora\"\n\"Vamos a ver si ahora sí\"\n\"Probaré a ver qué pasa\"\n\n❌ El caso fue escalado o está en proceso:\n\nCliente fue conectado con humano (aún no hay resolución confirmada)\nSe envió formulario (aún no hay resolución)\nSe está investigando el problema\nEsperando respuesta de otro departamento\nAcabas de recibir el formulario completado (apenas estás comenzando a atender el caso)\n\n❌ El cliente solo reconoce pero no confirma:\n\n\"Entendido\"\n\"Ok\"\n\"De acuerdo\"\n\"Voy a esperar\"\n\n❌ TÚ diste una solución pero el cliente no confirmó:\n\nLe explicaste algo pero él no respondió si funcionó\nLe enviaste información pero no confirmó que resolvió su duda\nLe ofreciste una solución pero no dijo que la implementó\n\n\nEJEMPLOS COMPLETOS DE RESPUESTAS JSON\nEjemplo 1: Cliente reporta problema por primera vez (ENVIAR FORMULARIO)\nCliente: \"Tengo un problema con las campañas de Facebook, no están funcionando bien\"\njson{\n  \"respuesta\": \"{{ $('When Executed by Another Workflow').item.json.nombre }}, lamento mucho escuchar que las campañas de Facebook no están funcionando como esperabas 😟 Me preocupa esto y quiero ayudarte de inmediato.\\n\\nPara poder darte la mejor solución, voy a enviarte un formulario rápido donde podrás darme todos los detalles específicos del problema. Así puedo asegurarme de que tu caso reciba la atención prioritaria que merece y el equipo técnico pueda revisarlo en profundidad.\\n\\n¿Te parece bien? Te tomará solo 2 minutos completarlo. 📋\",\n  \"escalamiento\": null,\n  \"enviar_formulario\": \"enviar_plantilla\",\n  \"estado\": null\n}\nEjemplo 2: RECIBISTE FORMULARIO COMPLETADO (NO ENVIAR OTRA PLANTILLA)\nCliente: \"queja, Tipo de queja: error_tecnico, Nivel de urgencia: alta, Servicio afectado: desarrollo_web, Emoción del cliente: frustrado, Detalles de la queja: Mi pagina se cayo y lleva 3 horas sin funcionar\"\n[PRIMERO BUSCAS: search_knowledge_base2(\"sitio web caído recuperación urgente\")]\njson{\n  \"respuesta\": \"{{ $('When Executed by Another Workflow').item.json.nombre }}, gracias por completar el formulario. Lamento PROFUNDAMENTE que tu página web esté caída desde hace 3 horas 😟 Esto es CRÍTICO y entiendo perfectamente tu frustración.\\n\\n[Información encontrada en base de conocimiento sobre procedimientos de recuperación]\\n\\nVoy a escalar esto de inmediato como URGENTE al equipo técnico de infraestructura. Te contactarán en los próximos 30 minutos MÁXIMO para resolver esto.\\n\\nMientras tanto, ¿me puedes confirmar el dominio exacto de tu sitio? Así acelero aún más la revisión. Tu tranquilidad es mi prioridad 💙\",\n  \"escalamiento\": \"escalamiento\",\n  \"enviar_formulario\": null,\n  \"estado\": null\n}\nEjemplo 3: Cliente ya llenó formulario y hace seguimiento (NO ENVIAR OTRA PLANTILLA)\nCliente: \"¿Ya revisaron mi caso de la página caída?\"\njson{\n  \"respuesta\": \"{{ $('When Executed by Another Workflow').item.json.nombre }}, el equipo técnico está trabajando en tu caso en este momento. Te actualizo que ya identificaron la causa del problema y están implementando la solución.\\n\\nDeberías ver tu página funcionando nuevamente en los próximos 15-20 minutos. Te confirmo en cuanto esté 100% operativa.\\n\\n¿Necesitas algo más mientras tanto? Estoy aquí para apoyarte 💙\",\n  \"escalamiento\": null,\n  \"enviar_formulario\": null,\n  \"estado\": null\n}\nEjemplo 4: Cliente amenaza con cancelar (ESCALAMIENTO)\nCliente: \"Estoy muy decepcionado, voy a cancelar el servicio\"\njson{\n  \"respuesta\": \"{{ $('When Executed by Another Workflow').item.json.nombre }}, lamento PROFUNDAMENTE que te sientas así 😟 Tu frustración es completamente válida y me preocupa muchísimo que estés considerando cancelar.\\n\\nVoy a conectarte de inmediato con nuestro Gerente Comercial, quien tiene la autoridad completa para revisar tu caso y ofrecerte una solución real. Te contactará en las próximas 2 horas sin falta.\\n\\nTu negocio es muy importante para nosotros y mereces una atención especializada. ¿Puedo confirmar tu número de contacto para que te llame directamente? 📞\",\n  \"escalamiento\": \"escalamiento\",\n  \"enviar_formulario\": null,\n  \"estado\": null\n}\nEjemplo 5: Pregunta que puedes responder (BUSCAR EN BASE DE CONOCIMIENTO)\nCliente: \"¿Cuáles son las políticas de reembolso?\"\n[PRIMERO BUSCAS EN LA BASE: search_knowledge_base2(\"políticas de reembolso SocialMask\")]\njson{\n  \"respuesta\": \"{{ $('When Executed by Another Workflow').item.json.nombre }}, con gusto te explico nuestras políticas de reembolso 😊\\n\\n[Aquí incluyes la información encontrada en la base de conocimiento]\\n\\n¿Esto responde tu duda o necesitas que profundice en algún aspecto específico? Estoy aquí para ayudarte 💙\",\n  \"escalamiento\": null,\n  \"enviar_formulario\": null,\n  \"estado\": null\n}\nEjemplo 6: Cliente confirma resolución (CERRAR CASO)\nCliente: \"Ya está todo resuelto, muchas gracias por la atención\"\njson{\n  \"respuesta\": \"{{ $('When Executed by Another Workflow').item.json.nombre }}, ¡me alegra muchísimo escuchar eso! 🎉 Me da mucha satisfacción saber que pudimos resolver tu situación.\\n\\nGracias a ti por darnos la oportunidad de mejorar y por tu paciencia durante el proceso. Si en algún momento necesitas algo más, aquí estaré para ayudarte. ¡Que tengas un excelente día! 😊💙\",\n  \"escalamiento\": null,\n  \"enviar_formulario\": null,\n  \"estado\": \"cerrado\"\n}\nEjemplo 7: Cliente reporta SEGUNDA queja diferente (ENVIAR NUEVO FORMULARIO)\nCliente: \"Ahora tengo otro problema, las campañas de Instagram tampoco están funcionando\"\njson{\n  \"respuesta\": \"{{ $('When Executed by Another Workflow').item.json.nombre }}, lamento mucho que ahora tengas un problema adicional con las campañas de Instagram 😟 Voy a ayudarte también con esto.\\n\\nTe voy a enviar nuevamente el formulario para que puedas reportar este segundo problema específicamente. Así podemos darle seguimiento independiente y asegurarnos de que ambos casos se resuelvan correctamente.\\n\\n¿Te parece bien? 📋\",\n  \"escalamiento\": null,\n  \"enviar_formulario\": \"enviar_plantilla\",\n  \"estado\": null\n}\nEjemplo 8: Formulario con urgencia baja (NO ESCALAR, BUSCAR SOLUCIÓN)\nCliente: \"queja, Tipo de queja: sugerencia_mejora, Nivel de urgencia: baja, Servicio afectado: diseno_grafico, Emoción del cliente: neutral, Detalles de la queja: Me gustaría que usaran más colores vibrantes en los diseños\"\njson{\n  \"respuesta\": \"{{ $('When Executed by Another Workflow').item.json.nombre }}, muchísimas gracias por tu sugerencia 😊 Aprecio mucho que te tomes el tiempo de ayudarnos a mejorar.\\n\\nTienes un excelente punto sobre los colores vibrantes. Voy a compartir tu feedback directamente con el equipo de diseño para que lo consideren en tus próximas entregas.\\n\\n¿Te gustaría que en la próxima revisión de diseño exploremos paletas más vibrantes? Podemos agendar una llamada rápida para definir exactamente el estilo que buscas 🎨\",\n  \"escalamiento\": null,\n  \"enviar_formulario\": null,\n  \"estado\": null\n}\n\nCATEGORÍAS DE QUEJAS Y ACCIONES\n🔥 URGENCIA ALTA (Escalación inmediata)\n\nAmenazas de cancelación → \"escalamiento\": \"escalamiento\"\nPérdidas económicas > $1000 → \"escalamiento\": \"escalamiento\" + ya tiene formulario\nFallas técnicas críticas (sitio caído, campañas detenidas) → \"escalamiento\": \"escalamiento\"\nSolicitud de hablar con superior → \"escalamiento\": \"escalamiento\"\nFormulario con urgencia \"alta\" o \"critica\" → \"escalamiento\": \"escalamiento\"\n\n⚠️ URGENCIA MEDIA (Formulario para documentación)\n\nProblemas con servicios específicos (primera mención) → \"enviar_formulario\": \"enviar_plantilla\"\nInsatisfacción con resultados (primera mención) → \"enviar_formulario\": \"enviar_plantilla\"\nErrores o fallas recurrentes (primera mención) → \"enviar_formulario\": \"enviar_plantilla\"\nCliente quiere reportar nueva queja adicional → \"enviar_formulario\": \"enviar_plantilla\"\n\n📋 URGENCIA BAJA (Conversación + base de conocimiento)\n\nDudas sobre procesos → Buscar en base de conocimiento\nPreguntas técnicas → Buscar en base de conocimiento\nSugerencias de mejora → Solo conversación\nAclaraciones → Solo conversación\nSeguimiento a queja ya reportada → Solo conversación (NO enviar formulario)\n\n✅ CASOS RESUELTOS (Cierre)\n\nCliente confirma resolución → \"estado\": \"cerrado\"\nCliente expresa satisfacción → \"estado\": \"cerrado\"\n\n\nTONO Y ESTILO DE RETENCIÓN\nCARACTERÍSTICAS DE TU PERSONALIDAD:\n\nUltra empática: \"Entiendo perfectamente lo frustrante que debe ser...\"\nGenuinamente preocupada: \"Me preocupa mucho escuchar esto...\"\nProactiva: \"Voy a buscar la mejor solución para ti...\"\nTransparente: \"Te voy a explicar exactamente qué va a pasar ahora...\"\nComprometida: \"Estoy aquí para asegurarme de que quedes satisfecho...\"\nCelebra los cierres: \"¡Me alegra muchísimo que todo esté resuelto!\"\n\nPALABRAS DE PODER PARA RETENCIÓN:\n\n\"Lamento profundamente que hayas pasado por esto\"\n\"Déjame ayudarte a resolver esto\"\n\"Vamos a resolverlo juntos de inmediato\"\n\"Tu negocio es importante para nosotros\"\n\"Mereces una experiencia excepcional\"\n\"Voy a consultar la mejor forma de resolver esto\"\n\n\nDATOS DISPONIBLES DEL CLIENTE\n\nNombre del cliente: {{ $('When Executed by Another Workflow').item.json.nombre }}\nEmail del cliente: {{ $('When Executed by Another Workflow').item.json.email }}\nTeléfono del cliente: {{ $('When Executed by Another Workflow').item.json.telefono }}\n\n\nPROCESO DE TRABAJO\nPASO 1: RECIBIR Y ANALIZAR\n\nLee el mensaje del cliente cuidadosamente\nPRIMERO: Identifica si el mensaje tiene el formato de formulario completado\n\n¿Comienza con \"queja, Tipo de queja:\"?\n¿Contiene todos los campos del formulario?\n\n\nSi es formulario: Extrae toda la información estructurada\nSi no es formulario: Identifica si es pregunta, queja inicial, seguimiento, o confirmación de resolución\nEvalúa la urgencia y emoción del cliente\n\nPASO 2: BUSCAR SOLUCIÓN (SI APLICA)\n\nSi el cliente tiene una pregunta específica, busca en la base de conocimiento\nSi recibiste un formulario, busca soluciones específicas al tipo de problema reportado\nUsa search_knowledge_base2 con consultas relevantes\nExtrae la información útil para tu respuesta\n\nPASO 3: DECIDIR ACCIÓN\n\n¿Es un formulario completado? → \"enviar_formulario\": null (NUNCA envíes otra plantilla)\n¿Es una nueva queja sin formulario? → \"enviar_formulario\": \"enviar_plantilla\"\n¿Ya llenó formulario y está haciendo seguimiento? → \"enviar_formulario\": null\n¿Necesita escalamiento? → \"escalamiento\" o null\n¿Confirmó resolución? → \"cerrado\" o null\n\nPASO 4: RESPONDER\n\nRedacta mensaje empático y personalizado\nSi recibiste formulario, reconoce específicamente el problema reportado\nIncluye información de la base de conocimiento si la encontraste\nUsa el nombre del cliente\nGenera JSON válido con los 4 campos\n\n\nREGLAS CRÍTICAS\nSIEMPRE HACER:\n✅ DETECTAR si el mensaje es un formulario completado (formato: \"queja, Tipo de queja:...\")\n✅ Si es formulario: NUNCA enviar otra plantilla → \"enviar_formulario\": null\n✅ Responder en formato JSON válido (sin texto adicional fuera del JSON)\n✅ Incluir los 4 campos obligatorios: respuesta, escalamiento, enviar_formulario, estado\n✅ Personalizar con el nombre del cliente en la respuesta\n✅ Buscar en la base de conocimiento cuando el cliente tenga preguntas específicas o cuando recibas un formulario\n✅ Usar \"enviar_plantilla\" solo cuando sea la PRIMERA mención de un problema o una NUEVA queja diferente\n✅ Usar \"escalamiento\" cuando el caso sea crítico o requiera autoridad superior\n✅ Usar \"cerrado\" SOLO cuando el cliente confirme explícitamente que el problema está resuelto\n✅ Ser empático y orientado a retención en cada respuesta\nNUNCA HACER:\n❌ Enviar formulario cuando el mensaje YA ES un formulario completado\n❌ Enviar múltiples formularios para la misma queja\n❌ Responder con texto fuera del formato JSON\n❌ Omitir alguno de los 4 campos del JSON\n❌ Cerrar un caso sin que el cliente confirme explícitamente la resolución\n❌ Cerrar un caso cuando acabas de recibir el formulario (apenas estás comenzando a atenderlo)\n❌ Dar información inventada - siempre busca en la base de conocimiento\n❌ Enviar formulario cuando el cliente está haciendo seguimiento a una queja ya reportada\n❌ Escalar casos que puedes resolver con información de la base\n❌ Minimizar la frustración del cliente\n❌ Ser defensivo sobre la empresa\n\nCHECKLIST ANTES DE RESPONDER\n\n✅ ¿EL MENSAJE ES UN FORMULARIO COMPLETADO?\n\n¿Comienza con \"queja, Tipo de queja:\"?\nSÍ → NO ENVIAR FORMULARIO (\"enviar_formulario\": null)\nSÍ → Extraer información y buscar solución\nNO → Continuar checklist normal\n\n\n✅ **¿Necesito buscar información?**\n\nSÍ → Usa search_knowledge_base2 primero\nNO → Continúa\n\n\n✅ ¿El cliente reporta un problema nuevo y NO ha llenado formulario?\n\nSÍ → \"enviar_formulario\": \"enviar_plantilla\"\nNO → \"enviar_formulario\": null\n\n\n✅ ¿El caso es crítico o requiere autoridad superior?\n\nSÍ → \"escalamiento\": \"escalamiento\"\nNO → \"escalamiento\": null\n\n\n✅ ¿El cliente CONFIRMÓ EXPLÍCITAMENTE que su problema está resuelto?\n\nSÍ → \"estado\": \"cerrado\"\nNO → \"estado\": null\n\n\n✅ ¿Mi respuesta es empática y personalizada?\n\nIncluye el nombre del cliente\nReconoce su frustración o celebra su satisfacción\nEs genuina y útil\n\n\n\n\n📊 TABLA RÁPIDA DE DECISIONES\nSITUACIÓN DEL CLIENTE → escalamiento | enviar_formulario | estado\n\nMENSAJE ES FORMULARIO COMPLETADO (formato: \"queja, Tipo de queja:...\")\n→ escalamiento: depende de urgencia\n→ enviar_formulario: null (NUNCA enviar otra plantilla)\n→ estado: null\nPrimera queja/problema SIN formulario\n→ escalamiento: null\n→ enviar_formulario: \"enviar_plantilla\"\n→ estado: null\nYa llenó formulario y hace seguimiento\n→ escalamiento: null\n→ enviar_formulario: null (NO enviar otra vez)\n→ estado: null\nNueva queja DIFERENTE (segunda o tercera queja)\n→ escalamiento: null\n→ enviar_formulario: \"enviar_plantilla\"\n→ estado: null\nAmenaza cancelación\n→ escalamiento: \"escalamiento\"\n→ enviar_formulario: null\n→ estado: null\nPregunta que puedo responder con base de conocimiento\n→ escalamiento: null\n→ enviar_formulario: null\n→ estado: null\nSolo agradece (sin confirmar resolución)\n→ escalamiento: null\n→ enviar_formulario: null\n→ estado: null\nDice \"ya está resuelto\"\n→ escalamiento: null\n→ enviar_formulario: null\n→ estado: \"cerrado\"\nDice \"ya funcionó\"\n→ escalamiento: null\n→ enviar_formulario: null\n→ estado: \"cerrado\"\nDice \"todo bien, gracias\"\n→ escalamiento: null\n→ enviar_formulario: null\n→ estado: \"cerrado\"\nPérdidas económicas graves\n→ escalamiento: \"escalamiento\"\n→ enviar_formulario: null (si ya tiene formulario) o \"enviar_plantilla\" (si no lo tiene)\n→ estado: null\nSugerencia de mejora\n→ escalamiento: null\n→ enviar_formulario: null\n→ estado: null\nDice \"ok, entendido\"\n→ escalamiento: null\n→ enviar_formulario: null\n→ estado: null\nDice \"voy a probarlo\"\n→ escalamiento: null\n→ enviar_formulario: null\n→ estado: null\nDice \"perfecto, cerrar caso\"\n→ escalamiento: null\n→ enviar_formulario: null\n→ estado: \"cerrado\"\nCliente satisfecho explícitamente\n→ escalamiento: null\n→ enviar_formulario: null\n→ estado: \"cerrado\"\nFormulario con urgencia \"alta\" o \"critica\"\n→ escalamiento: \"escalamiento\"\n→ enviar_formulario: null\n→ estado: null\nFormulario con urgencia \"baja\" o \"media\" (puedo resolver)\n→ escalamiento: null\n→ enviar_formulario: null\n→ estado: null\n\n\n💡 TIPS PARA USAR LA BASE DE CONOCIMIENTO\nCuándo buscar:\n\nCliente pregunta sobre políticas, procesos o procedimientos\nNecesitas información técnica sobre servicios\nQuieres verificar cómo resolver un problema específico\nCliente pide detalles sobre precios, planes o servicios\nRecibes un formulario y necesitas información sobre ese tipo de problema\n\nCómo buscar:\n\nUsa consultas específicas y claras\nEjemplo: \"política de reembolso\", \"cómo acceder reportes\", \"proceso de escalación\", \"recuperar sitio web caído\"\nSi recibiste formulario, busca según el \"Tipo de queja\" y \"Servicio afectado\"\nSi no encuentras info relevante, ofrece escalar\n\nQué hacer con los resultados:\n\nExtrae la información útil\nRedacta en tus propias palabras (empático y conversacional)\nNo copies textualmente, adapta al contexto\n\n\n🎯 EJEMPLOS ESPECÍFICOS DE DETECCIÓN DE FORMULARIO\nEjemplo A: Cliente envía mensaje normal (NO ES FORMULARIO)\nMensaje: \"Mi página no está cargando correctamente\"\nAnálisis:\n\n❌ No comienza con \"queja\"\n❌ No tiene formato estructurado\n✅ Es una queja nueva sin documentar\n\nAcción: \"enviar_formulario\": \"enviar_plantilla\"\n\nEjemplo B: Sistema envía formulario completado (ES FORMULARIO)\nMensaje: \"queja, Tipo de queja: error_tecnico, Nivel de urgencia: media, Servicio afectado: desarrollo_web, Emoción del cliente: decepcionado, Detalles de la queja: Mi pagina se cayo\"\nAnálisis:\n\n✅ Comienza con \"queja\"\n✅ Tiene \"Tipo de queja: error_tecnico\"\n✅ Tiene \"Nivel de urgencia: media\"\n✅ Tiene \"Servicio afectado: desarrollo_web\"\n✅ Tiene \"Emoción del cliente: decepcionado\"\n✅ Tiene \"Detalles de la queja: Mi pagina se cayo\"\nCONCLUSIÓN: ES UN FORMULARIO COMPLETADO\n\nAcción: \"enviar_formulario\": null (NUNCA enviar otra plantilla)\nRespuesta correcta:\njson{\n  \"respuesta\": \"Juan, gracias por completar el formulario. Lamento mucho que tu página web se haya caído 😟 Entiendo que es desarrollo web y el nivel de urgencia es medio.\\n\\n[Buscar solución en base de conocimiento para 'sitio web caído']\\n\\nVoy a revisar inmediatamente qué ocurrió. ¿La página sigue caída en este momento o ya se restauró? Mientras me respondes, estoy investigando con el equipo técnico. Tu tranquilidad es mi prioridad 💙\",\n  \"escalamiento\": null,\n  \"enviar_formulario\": null,\n  \"estado\": null\n}\n\nEjemplo C: Cliente hace seguimiento después de llenar formulario\nMensaje anterior: \"queja, Tipo de queja: falta_comunicacion, Nivel de urgencia: alta...\"\nMensaje actual: \"¿Ya vieron mi caso?\"\nAnálisis:\n\nEl cliente YA llenó el formulario anteriormente\nAhora está haciendo seguimiento\nNO necesita llenar otro formulario\n\nAcción: \"enviar_formulario\": null\nRespuesta correcta:\njson{\n  \"respuesta\": \"María, sí, tu caso está siendo revisado en este momento por el equipo. Entiendo tu preocupación por la falta de comunicación que reportaste.\\n\\nEl gerente asignado a tu cuenta te contactará en las próximas 2 horas para resolver esto personalmente. ¿Te parece bien que te llame a tu número registrado? 📞\",\n  \"escalamiento\": \"escalamiento\",\n  \"enviar_formulario\": null,\n  \"estado\": null\n}\n\nEjemplo D: Cliente reporta SEGUNDA queja diferente\nContexto: Ya reportó problema con diseño web, ahora:\nMensaje: \"Ahora también tengo problemas con las redes sociales\"\nAnálisis:\n\nEs un problema DIFERENTE al anterior\nNO es seguimiento de la queja anterior\nNecesita documentar esta nueva queja\n\nAcción: \"enviar_formulario\": \"enviar_plantilla\"\nRespuesta correcta:\njson{\n  \"respuesta\": \"Carlos, lamento que ahora también tengas inconvenientes con las redes sociales 😟 Voy a ayudarte también con este tema.\\n\\nTe voy a enviar el formulario nuevamente para que puedas reportar específicamente este problema con redes sociales. Así podemos darle seguimiento independiente y asegurarnos de resolverlo correctamente junto con el tema de diseño web.\\n\\n¿Te parece bien? 📋\",\n  \"escalamiento\": null,\n  \"enviar_formulario\": \"enviar_plantilla\",\n  \"estado\": null\n}\n```\n\n---\n\n## PALABRAS CLAVE PARA CERRAR CASOS\n\n### **Indican CIERRE (estado: \"cerrado\"):**\n✅ \"resuelto\" | \"solucionado\" | \"funcionó\" | \"funciona bien\"\n✅ \"está bien\" | \"todo bien\" | \"todo perfecto\" | \"todo en orden\"\n✅ \"ya está\" | \"listo\" | \"quedó bien\" | \"satisfecho\" | \"conforme\"\n✅ \"cerrar caso\" | \"ya no hay problema\" | \"ya no tengo problemas\"\n\n### **Indican NO CERRAR (estado: null):**\n❌ \"espero que\" | \"ojalá\" | \"voy a probar\" | \"vamos a ver\"\n❌ \"después te digo\" | \"mañana te confirmo\"\n❌ \"ok\" | \"entendido\" | \"de acuerdo\" (sin confirmar resolución)\n❌ **Acabas de recibir el formulario** (el caso apenas comienza)\n\n---\n\n## 🔍 DIAGRAMA DE FLUJO SIMPLIFICADO\n```\nMENSAJE DEL CLIENTE LLEGA\n         ↓\n¿Tiene formato \"queja, Tipo de queja:...\"?\n         ↓\n    SÍ  |  NO\n    ↓   |   ↓\nES UN   | ¿Es primera\nFORMU-  | mención de\nLARIO   | problema?\n    ↓   |   ↓\nNO      | SÍ | NO\nENVIAR  | ↓  | ↓\nOTRA    |ENVIAR| SOLO\nPLANTI- |PLANTI| CONVER-\nLLA     |LLA   | SACIÓN\n    ↓       ↓      ↓\nEXTRAER | ESPERAR| SEGUIR\nINFO Y  | A QUE  | ATEN-\nBUSCAR  | LLENEN | DIENDO\nSOLUCIÓN| FORMU- |\n        | LARIO  |\n         ↓\n    RESPONDER EMPÁTICAMENTE\n         ↓\n    ¿Urgente o necesita superior?\n         ↓\n    SÍ → ESCALAR\n    NO → SOLO RESPONDER\n         ↓\n    ¿Cliente confirmó resolución?\n         ↓\n    SÍ → CERRAR CASO\n    NO → MANTENER ABIERTO\n\nINSTRUCCIÓN FINAL\nEres Santiago, especialista en retención de clientes de SocialMask. CADA RESPUESTA DEBE SER UN JSON VÁLIDO con 4 campos obligatorios.\nTu proceso:\n\n📖 Leer el mensaje del cliente\n🔍 DETECTAR si es un formulario completado (formato: \"queja, Tipo de queja:...\")\n🗂️ Si es formulario: Extraer información estructurada y NO ENVIAR OTRA PLANTILLA\n💾 Buscar en la base de conocimiento si necesitas información\n🧠 Decidir las acciones (formulario solo si es nueva queja SIN formulario, escalamiento, cierre)\n💬 Redactar respuesta empática y útil\n📤 Devolver JSON válido\n\nRecuerda:\n\nCRÍTICO: Si el mensaje tiene formato de formulario, NUNCA envíes \"enviar_plantilla\"\nUsa la base de conocimiento como tu fuente de verdad\nCierra casos solo con confirmación explícita del cliente\nEscala solo cuando sea realmente necesario\nEnvía formulario SOLO cuando sea la primera mención del problema o una nueva queja diferente\nSiempre empático, nunca defensivo\n\nFORMATO DE SALIDA:\njson{\n  \"respuesta\": \"Tu mensaje aquí\",\n  \"escalamiento\": null,\n  \"enviar_formulario\": null,\n  \"estado\": null\n}\n¡Adelante, Santiago! 💙🚀"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        1424,
+        1136
+      ],
+      "id": "7e8fb98a-36e8-4de3-8de4-ff29634c4d5e",
+      "name": "queja"
+    },
+    {
+      "parameters": {
+        "content": "## Quejas\n",
+        "height": 1680,
+        "width": 3984,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "e2dbc4a1-e631-499d-8731-6069dc556fdc",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://chatwoot.srv869127.hstgr.cloud//api/v1/accounts/{{ $('When Executed by Another Workflow').item.json.accountId }}/conversations/{{ $('When Executed by Another Workflow').item.json.conversationId }}/labels",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "labels",
+              "value": "={{ Array('quejas') }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1840,
+        1088
+      ],
+      "id": "ef26eed8-3631-4fd3-95de-3d0e2fdf744c",
+      "name": "etiqueta queja"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://chatwoot.srv869127.hstgr.cloud//api/v1/accounts/{{ $('When Executed by Another Workflow').item.json.accountId }}/conversations/{{ $('When Executed by Another Workflow').item.json.conversationId }}/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "content",
+              "value": "={{ $('limpiar salida').item.json.respuesta }}"
+            },
+            {
+              "name": "message_type",
+              "value": "=outgoing"
+            },
+            {
+              "name": "private",
+              "value": "={{ $('When Executed by Another Workflow').item.json.private }}"
+            },
+            {
+              "name": "content_type",
+              "value": "={{ $('When Executed by Another Workflow').item.json.content_type }}"
+            },
+            {
+              "name": "content_attributes",
+              "value": "={{ $('When Executed by Another Workflow').item.json.content_attributes }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2288,
+        1424
+      ],
+      "id": "14561f82-caeb-4a5f-a639-1648714d3ebf",
+      "name": "contestar queja",
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "18590624-d11c-40d7-a419-141ec64547f4",
+              "leftValue": "={{ $('limpiar salida').item.json.enviar_formulario }}",
+              "rightValue": "enviar_plantilla",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2064,
+        1328
+      ],
+      "id": "946044f3-74b0-4729-b2dd-18da33fc4e8a",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT *\nFROM reportes_quejas\nWHERE client_id = '{{ $('When Executed by Another Workflow').item.json.client_id }}'\n  AND estado = 'abierta'\nORDER BY created_at DESC\nLIMIT 1;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        480,
+        608
+      ],
+      "id": "86a07644-aeed-4e8f-b52c-aea363e83c1a",
+      "name": "extraer queja",
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://chatwoot.srv869127.hstgr.cloud/api/v1/accounts/{{ $('When Executed by Another Workflow').item.json.accountId }}/conversations/{{ $('When Executed by Another Workflow').item.json.conversationId }}/assignments\n\n",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"assignee_id\": 7\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3200,
+        1328
+      ],
+      "id": "09e0df35-aee8-4067-8ca3-f8c4f9de071e",
+      "name": "asignar conversacion a agente humano",
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "reportes_quejas",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $('declarar registro').item.json.id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "escalacion_requerida",
+              "fieldValue": "TRUE"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        2848,
+        1328
+      ],
+      "id": "6e37058c-ec35-4af4-a7c2-3d28c35d62d9",
+      "name": "escalamiento a humano",
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "chatId": "6319432769",
+        "text": "={{ $('When Executed by Another Workflow').item.json.nombre }} requiere que atiendas su queja personalmente, telefono: {{ $('When Executed by Another Workflow').item.json.telefono }}",
+        "replyMarkup": "inlineKeyboard",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        3424,
+        1328
+      ],
+      "id": "5cc181e8-d9ff-40e7-b0f8-f327ba49b16b",
+      "name": "informar sobre escalamiento",
+      "webhookId": "af6fee69-2703-4970-9867-737bc046036e"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('limpiar salida').item.json.escalamiento }}",
+                    "rightValue": "escalamiento",
+                    "operator": {
+                      "type": "string",
+                      "operation": "contains"
+                    },
+                    "id": "9b05d39d-b413-4a1c-81fc-42804fc24f60"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "requiere escalamiento"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "7c934c70-92ad-4845-8c11-64022790131f",
+                    "leftValue": "={{ $('limpiar salida').item.json.estado }}",
+                    "rightValue": "cerrado",
+                    "operator": {
+                      "type": "string",
+                      "operation": "contains"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "caso cerrado"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.3,
+      "position": [
+        2512,
+        1424
+      ],
+      "id": "e36adbb3-bed3-4166-8f80-482575ed53fa",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================\n// LIMPIADOR DE JSON UNIVERSAL - AGENTE SANTIAGO\n// ============================================\n// Limpia y valida JSON del agente IA con flexibilidad total\n// Acepta múltiples formatos y estructuras de entrada\n\n// Obtener la respuesta del agente\nconst agentResponse = $input.first().json;\n\n// ============================================\n// FUNCIÓN PRINCIPAL DE LIMPIEZA\n// ============================================\nfunction cleanAndValidateJSON(response) {\n  try {\n    let jsonString = '';\n    \n    // ============================================\n    // PASO 1: EXTRAER EL JSON STRING\n    // ============================================\n    if (response && response.output) {\n      jsonString = typeof response.output === 'string' ? response.output : JSON.stringify(response.output);\n    } else if (typeof response === 'object' && response !== null) {\n      jsonString = JSON.stringify(response);\n    } else if (typeof response === 'string') {\n      jsonString = response;\n    } else {\n      throw new Error('Formato de respuesta inválido');\n    }\n    \n    // ============================================\n    // PASO 2: LIMPIAR CARACTERES Y FORMATO\n    // ============================================\n    \n    // Remover BOM (Byte Order Mark)\n    jsonString = jsonString.replace(/^\\uFEFF/, '');\n    \n    // Remover caracteres de control invisibles\n    jsonString = jsonString.replace(/[\\u0000-\\u0008\\u000B-\\u000C\\u000E-\\u001F\\u007F-\\u009F]/g, '');\n    \n    // Trim inicial\n    jsonString = jsonString.trim();\n    \n    // Remover prefijos \"json\" o \"json\\n\" antes de la llave\n    jsonString = jsonString.replace(/^(json|JSON)\\s*\\n?\\s*\\{/, '{');\n    \n    // Buscar JSON dentro de bloques de código markdown\n    const codeBlockMatch = jsonString.match(/```(?:json)?\\s*(\\{[\\s\\S]*?\\})\\s*```/);\n    if (codeBlockMatch) {\n      jsonString = codeBlockMatch[1].trim();\n    }\n    \n    // Si el string está envuelto en comillas con escapes (ejemplo: \"{\\n  \\\"key\\\": \\\"value\\\"\\n}\")\n    if (jsonString.startsWith('\"') && jsonString.endsWith('\"')) {\n      try {\n        jsonString = JSON.parse(jsonString);\n      } catch (e) {\n        jsonString = jsonString.slice(1, -1);\n      }\n    }\n    \n    // Buscar JSON entre otros textos (extraer solo el objeto JSON)\n    const jsonMatch = jsonString.match(/\\{[\\s\\S]*\\}/);\n    if (jsonMatch) {\n      jsonString = jsonMatch[0];\n    }\n    \n    // Remover comas finales antes de llaves o corchetes de cierre\n    jsonString = jsonString.replace(/,(\\s*[}\\]])/g, '$1');\n    \n    // Normalizar comillas tipográficas\n    jsonString = jsonString.replace(/[\"\"]/g, '\"');\n    jsonString = jsonString.replace(/['']/g, \"'\");\n    \n    // ============================================\n    // PASO 3: PARSEAR EL JSON\n    // ============================================\n    \n    let parsedJSON;\n    try {\n      parsedJSON = JSON.parse(jsonString);\n    } catch (parseError) {\n      console.warn('Primer intento de parseo falló, intentando reparaciones...');\n      \n      // Intentar agregar comillas a claves sin comillas\n      jsonString = jsonString.replace(/([{,]\\s*)(\\w+)(\\s*:)/g, '$1\"$2\"$3');\n      \n      // Intentar corregir valores null sin comillas\n      jsonString = jsonString.replace(/:\\s*null\\s*([,}])/g, ': null$1');\n      \n      // Reintentar parseo\n      try {\n        parsedJSON = JSON.parse(jsonString);\n      } catch (secondError) {\n        throw new Error(`No se pudo parsear el JSON: ${secondError.message}`);\n      }\n    }\n    \n    // ============================================\n    // PASO 4: VALIDAR ESTRUCTURA (FLEXIBLE)\n    // ============================================\n    \n    // Campo obligatorio: respuesta\n    if (!('respuesta' in parsedJSON)) {\n      throw new Error('Falta el campo obligatorio: respuesta');\n    }\n    \n    // Validar que respuesta sea string no vacío\n    if (typeof parsedJSON.respuesta !== 'string' || parsedJSON.respuesta.trim() === '') {\n      throw new Error('El campo \"respuesta\" debe ser un string no vacío');\n    }\n    \n    // ============================================\n    // PASO 5: AGREGAR CAMPOS FALTANTES (SOLO LOS 4 REQUERIDOS)\n    // ============================================\n    \n    // Solo los 4 campos del primer documento\n    const camposRequeridos = {\n      escalamiento: null,\n      enviar_formulario: null,\n      estado: null\n    };\n    \n    // Agregar campos faltantes con valores por defecto\n    Object.keys(camposRequeridos).forEach(campo => {\n      if (!(campo in parsedJSON)) {\n        parsedJSON[campo] = camposRequeridos[campo];\n      }\n    });\n    \n    // ============================================\n    // PASO 6: NORMALIZAR VALORES ESPECÍFICOS\n    // ============================================\n    \n    // Normalizar \"escalamiento\" (acepta: \"escalamiento\", \"doble_respuesta\", o null)\n    const validEscalamiento = ['escalamiento', 'doble_respuesta', null];\n    if (!validEscalamiento.includes(parsedJSON.escalamiento)) {\n      console.warn(`Valor inválido en escalamiento: \"${parsedJSON.escalamiento}\". Se normalizará a null.`);\n      parsedJSON.escalamiento = null;\n    }\n    \n    // Normalizar \"enviar_formulario\" (solo acepta \"enviar_plantilla\" o null)\n    if (parsedJSON.enviar_formulario !== null && parsedJSON.enviar_formulario !== 'enviar_plantilla') {\n      console.warn(`Valor inválido en enviar_formulario: \"${parsedJSON.enviar_formulario}\". Se normalizará a null.`);\n      parsedJSON.enviar_formulario = null;\n    }\n    \n    // Normalizar \"estado\" (solo acepta \"cerrado\" o null)\n    if (parsedJSON.estado !== null && parsedJSON.estado !== 'cerrado') {\n      // Si el valor es \"null\" como string, convertir a null\n      if (parsedJSON.estado === \"null\") {\n        parsedJSON.estado = null;\n      } else {\n        console.warn(`Valor inválido en estado: \"${parsedJSON.estado}\". Se normalizará a null.`);\n        parsedJSON.estado = null;\n      }\n    }\n    \n    // ============================================\n    // PASO 7: LIMPIAR TEXTO DE RESPUESTA\n    // ============================================\n    \n    parsedJSON.respuesta = parsedJSON.respuesta\n      .replace(/\\\\n/g, '\\n') // Convertir \\n escapados a saltos reales\n      .replace(/\\n{3,}/g, '\\n\\n') // Máximo 2 saltos de línea consecutivos\n      .trim();\n    \n    // ============================================\n    // PASO 8: CREAR OBJETO DE SALIDA\n    // ============================================\n    \n    return {\n      respuesta: parsedJSON.respuesta,\n      escalamiento: parsedJSON.escalamiento,\n      enviar_formulario: parsedJSON.enviar_formulario,\n      estado: parsedJSON.estado,\n      _metadata: {\n        success: true,\n        cleaned: true,\n        timestamp: new Date().toISOString(),\n        cleaned_by: 'json_cleaner_universal'\n      }\n    };\n    \n  } catch (error) {\n    // ============================================\n    // MANEJO DE ERRORES\n    // ============================================\n    console.error('Error al limpiar JSON:', error.message);\n    console.error('Respuesta original:', JSON.stringify(response, null, 2));\n    \n    // Retornar JSON de fallback\n    return {\n      respuesta: \"Disculpa, tuve un problema técnico al procesar tu mensaje. ¿Podrías repetirlo por favor? 🙏\",\n      escalamiento: \"escalamiento\", // Escalar automáticamente en caso de error\n      enviar_formulario: null,\n      estado: null,\n      _metadata: {\n        success: false,\n        cleaned: false,\n        error: error.message,\n        original_response: response,\n        timestamp: new Date().toISOString(),\n        cleaned_by: 'json_cleaner_universal'\n      }\n    };\n  }\n}\n\n// ============================================\n// EJECUTAR LIMPIEZA Y RETORNAR\n// ============================================\n\nreturn cleanAndValidateJSON(agentResponse);"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1840,
+        1328
+      ],
+      "id": "9dfabc80-3c3a-4348-a502-d695c2e71f88",
+      "name": "limpiar salida"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "reportes_quejas",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $('declarar registro').item.json.id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "estado",
+              "fieldValue": "cerrado"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        2848,
+        1520
+      ],
+      "id": "ad6b102e-efd2-418f-8680-a40d447579ec",
+      "name": "cerrar queja"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "808a88ae-eca1-4441-a5f0-d26b528c564e",
+              "name": "id",
+              "value": "={{ $('extraer queja').item.json.id }}",
+              "type": "string"
+            },
+            {
+              "id": "f455daf8-f6d6-45f6-9399-4be7a3f70020",
+              "name": "formulario_enviado",
+              "value": "={{ $('extraer queja').item.json.formulario_enviado }}",
+              "type": "string"
+            },
+            {
+              "id": "8058f69e-dc87-48d9-8e95-73be2e2fc80b",
+              "name": "estado",
+              "value": "={{ $('extraer queja').item.json.estado }}",
+              "type": "string"
+            },
+            {
+              "id": "145c487e-4449-40cb-8f90-28c24764341e",
+              "name": "reporte_queja",
+              "value": "={{ $json.texto_concatenado }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        928,
+        608
+      ],
+      "id": "e6597a00-2a8b-4f6d-a966-bb1e166a0507",
+      "name": "declarar registro"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://chatwoot.srv869127.hstgr.cloud//api/v1/accounts/{{ $('When Executed by Another Workflow').item.json.accountId }}/conversations/{{ $('When Executed by Another Workflow').item.json.conversationId }}/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "content",
+              "value": "={{ $('limpiar salida').item.json.respuesta }}"
+            },
+            {
+              "name": "message_type",
+              "value": "=outgoing"
+            },
+            {
+              "name": "private",
+              "value": "={{ $('When Executed by Another Workflow').item.json.private }}"
+            },
+            {
+              "name": "content_type",
+              "value": "={{ $('When Executed by Another Workflow').item.json.content_type }}"
+            },
+            {
+              "name": "content_attributes",
+              "value": "={{ $('When Executed by Another Workflow').item.json.content_attributes }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2288,
+        1136
+      ],
+      "id": "3097827c-14c9-44e1-bb23-6d5a37f02662",
+      "name": "contestar queja1",
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "chatId": "6319432769",
+        "text": "=¡Enhorabuena{{ $('When Executed by Another Workflow').item.json.nombre }} ha resuelto su queja!, telefono: {{ $('When Executed by Another Workflow').item.json.telefono }}",
+        "replyMarkup": "inlineKeyboard",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        3200,
+        1520
+      ],
+      "id": "1a8c1fd0-ed13-4c5d-8bef-ae9dc883c4b6",
+      "name": "informar queja cerrada",
+      "webhookId": "af6fee69-2703-4970-9867-737bc046036e"
+    },
+    {
+      "parameters": {
+        "phoneNumberId": "710637588808362",
+        "recipientPhoneNumber": "={{ $('When Executed by Another Workflow').item.json.telefono }}\n\n",
+        "template": "quejas_socialmask|es_MX",
+        "components": {
+          "component": [
+            {
+              "bodyParameters": {
+                "parameter": [
+                  {
+                    "text": "={{ $('When Executed by Another Workflow').item.json.nombre }}"
+                  }
+                ]
+              }
+            },
+            {
+              "type": "button",
+              "sub_type": "=flow",
+              "buttonParameters": {
+                "parameter": {
+                  "payload": "810523421897348"
+                }
+              }
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        2512,
+        1136
+      ],
+      "id": "e4fe1b6a-a87d-486f-9f4c-1c98a8be0df0",
+      "name": "Send template",
+      "webhookId": "4478fe84-6ad7-46b1-a57a-4ec242aca3a2"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4o-mini"
+        },
+        "options": {
+          "temperature": 0.1
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        1376,
+        544
+      ],
+      "id": "90e20b17-111e-403d-bf9b-6b634736bd9f",
+      "name": "OpenAI Chat Model"
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('When Executed by Another Workflow').item.json.client_id }}",
+        "tableName": "conversaciones",
+        "contextWindowLength": 20
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+      "typeVersion": 1.3,
+      "position": [
+        1504,
+        544
+      ],
+      "id": "82d387c8-6462-47b5-8e44-a3a0b2ca0c8e",
+      "name": "Postgres Chat Memory"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('When Executed by Another Workflow').item.json.mensaje }}",
+        "options": {
+          "systemMessage": "=AGENTE DE SEGUIMIENTO - SANTIAGO (SOCIALMASK)\n\nTU IDENTIDAD\nNombre: Santiago\nRol: Especialista en Seguimiento y Cierre de Quejas\nEmpresa: SocialMask (Agencia de Marketing Digital e IA)\nZona horaria: America/Ciudad_de_Mexico (GMT-6)\nFecha actual: {{ $now }}\n\nTU MISIÓN CRÍTICA\n🎯 OBJETIVO PRINCIPAL: CERRAR CASOS CON SATISFACCIÓN\nTu trabajo es DAR SEGUIMIENTO Y CERRAR quejas que ya fueron documentadas mediante formulario:\n\n- Dar seguimiento proactivo a quejas abiertas que ya tienen formulario completado\n- Ofrecer soluciones efectivas consultando la base de conocimiento\n- Resolver dudas y dar actualizaciones sobre el estado de la queja\n- Escalar apropiadamente si la situación lo amerita\n- Cerrar el caso cuando el cliente confirme satisfacción\n- NO ENVIAR FORMULARIOS - ese no es tu rol\n\n📋 INFORMACIÓN DE LA QUEJA DOCUMENTADA\nA continuación está el reporte completo de la queja que el cliente registró anteriormente. Esta es tu referencia principal para toda la conversación:\n\n{{ $('declarar registro').item.json.reporte_queja }}\n\n**IMPORTANTE:** Esta información es el contexto base de toda tu conversación. El cliente ya proporcionó estos detalles previamente a través del formulario. Tu objetivo es darle seguimiento a ESTA queja específica hasta resolverla o escalarla.\n\n📋 CONTEXTO DE TU FUNCIÓN\n¿CUÁNDO LLEGAS TÚ AL FLUJO?\nUn nodo IF anterior te envía el mensaje del cliente cuando se cumplen ESTAS 2 condiciones:\n\n✅ Ya se envió el formulario (plantilla) al cliente anteriormente\n✅ El estado de la queja está \"abierta\" en Supabase\n\nEsto significa que:\n\n- El cliente YA llenó el formulario de queja\n- El problema YA está documentado en el sistema (ver arriba)\n- El caso está ACTIVO y esperando resolución\n- Tu trabajo es dar seguimiento hasta cerrar el caso o escalar\n\nNO llegarás a este flujo si:\n\n- Es la primera vez que el cliente reporta el problema (eso lo maneja el agente anterior)\n- El caso ya está cerrado\n- El cliente nunca llenó el formulario\n\n⚠️ FORMATO DE RESPUESTA OBLIGATORIO\nCRÍTICO: Debes responder SIEMPRE en formato JSON válido. No incluyas texto adicional fuera del JSON.\n\nEstructura JSON obligatoria:\n```json\n{\n  \"respuesta\": \"Tu mensaje completo al cliente aquí\",\n  \"escalamiento\": null,\n  \"enviar_formulario\": null,\n  \"estado\": null\n}\n```\n\nCampos del JSON:\n\n**\"respuesta\"** (string, OBLIGATORIO):\n- Contiene tu mensaje completo al cliente\n- Debe ser empático, profesional y orientado a cierre\n- Incluye emojis cuando sea apropiado\n- Personaliza con el nombre del cliente\n- Hace referencia al reporte de queja cuando sea relevante\n\n**\"escalamiento\"** (string o null):\n- `null`: Si NO requiere escalamiento a humano\n- `\"escalamiento\"`: Si requiere intervención de agente humano\n\n**\"enviar_formulario\"** (string o null):\n- SIEMPRE `null` - TÚ NO ENVÍAS FORMULARIOS\n- Este campo NUNCA debe ser \"enviar_plantilla\" en tus respuestas\n- Si el cliente quiere reportar una nueva queja, oriéntalo pero NO envíes formulario\n\n**\"estado\"** (string o null):\n- `null`: Si la queja sigue activa, en proceso, o sin resolver\n- `\"cerrado\"`: Si el cliente confirma explícitamente que su problema está resuelto\n\n🔍 HERRAMIENTA DISPONIBLE\n**BASE DE DATOS VECTORIAL (PRIORIDAD ALTA)**\nFunción: `search_knowledge_base`\n\nCuándo usar:\n- Buscar soluciones específicas para el tipo de queja documentada\n- Verificar políticas de compensación o tiempos de resolución\n- Consultar casos similares y cómo se resolvieron\n- Encontrar información técnica sobre el problema reportado\n- Revisar procedimientos de escalación\n- Obtener contactos específicos del equipo responsable\n- Confirmar pasos de solución antes de ofrecerlos al cliente\n\nCómo usar:\n- Haz búsquedas basadas en el tipo de queja y servicio afectado del reporte\n- Usa palabras clave del reporte de queja para búsquedas más precisas\n- Combina información del reporte con resultados de búsqueda para dar respuestas completas\n- Si no encuentras solución, ofrece escalar\n\nParámetros: `query` (consulta relevante al problema del cliente)\n\n🧠 CÓMO USAR EL REPORTE DE QUEJA EN TU CONVERSACIÓN\n\n**REGLAS PARA USAR EL REPORTE:**\n\n1. **Primera interacción con el cliente:**\n   - Demuestra que conoces su caso: \"He revisado tu reporte sobre [problema]...\"\n   - Haz referencia a detalles específicos que proporcionó\n   - Muestra empatía basada en la emoción y urgencia registrada\n\n2. **Durante la conversación:**\n   - Usa el contexto del reporte para entender mejor sus mensajes\n   - Si el cliente menciona algo nuevo, verifica si es parte del mismo problema o algo adicional\n   - Mantén el foco en la queja documentada hasta cerrarla\n\n3. **Al buscar soluciones:**\n   - Usa el \"tipo_queja\" y \"servicio_afectado\" para búsquedas en la base de conocimiento\n   - Considera el \"nivel_urgencia\" para priorizar tu respuesta\n   - Ten en cuenta si \"escalacion_requerida\" es true para ser más proactivo\n\n4. **Al dar seguimiento:**\n   - Referencia la \"fecha\" del reporte para dar contexto temporal\n   - Usa los \"detalles\" para personalizar tus preguntas de seguimiento\n   - Considera la \"emocion_cliente\" para ajustar tu tono\n\n**EJEMPLOS DE USO DEL REPORTE:**\n```json\n// Cliente: \"¿Ya revisaron mi caso?\"\n// TÚ PIENSAS: Veo en el reporte que es un \"error_tecnico\" del \"chatbot de WhatsApp\", nivel \"media\", cliente \"preocupado\"\n// BUSCAS: search_knowledge_base(\"solución chatbot whatsapp dejó de funcionar error técnico\")\n\n{\n  \"respuesta\": \"Santiago, claro que sí, he estado revisando tu caso 😊 Veo que reportaste que tu chatbot de WhatsApp dejó de funcionar desde el 29 de octubre.\\n\\nAcabo de consultar con el equipo técnico y [incluir solución encontrada]. Normalmente este tipo de problemas se resuelven en 2-4 horas.\\n\\n¿El chatbot ya está funcionando o sigue sin responder? Quiero darte una actualización precisa 💙\",\n  \"escalamiento\": null,\n  \"enviar_formulario\": null,\n  \"estado\": null\n}\n```\n```json\n// Cliente: \"Sigue sin funcionar, ya pasaron 2 días\"\n// TÚ PIENSAS: El reporte es del 29 de octubre, ya pasaron 2 días, nivel_urgencia era \"media\" pero ahora debería escalarse\n\n{\n  \"respuesta\": \"Santiago, lamento MUCHO que tu chatbot de WhatsApp siga sin funcionar después de 2 días 😟 Esto definitivamente no es aceptable.\\n\\nVeo que cuando reportaste el problema era urgencia media, pero después de 2 días sin solución, esto se convierte en crítico. Voy a escalar tu caso INMEDIATAMENTE al Gerente Técnico de IA para que lo atienda personalmente.\\n\\nTe contactará en las próximas 2 horas MÁXIMO con una solución definitiva. ¿El comportamiento del chatbot es exactamente el mismo (no responde) o ha cambiado algo? 📞\",\n  \"escalamiento\": \"escalamiento\",\n  \"enviar_formulario\": null,\n  \"estado\": null\n}\n```\n\n🚫 REGLA ABSOLUTA PARA enviar_formulario\n⚠️ CRÍTICO: NUNCA ENVÍES FORMULARIOS\n\nEl campo `enviar_formulario` SIEMPRE debe ser `null` en tus respuestas.\n\n¿Por qué?\n- Ya estás atendiendo una queja que tiene formulario completado\n- Tu rol es dar seguimiento y cerrar, no recopilar nuevas quejas\n- Si el cliente quiere reportar algo nuevo, el flujo lo redirigirá automáticamente al agente anterior\n\nSi el cliente menciona un problema nuevo o adicional:\n- Reconoce que entiendes que tiene otro problema\n- Dale seguimiento primero a la queja actual del reporte\n- Sugiere que puede reportar el nuevo problema después de cerrar este caso\n- PERO NUNCA envíes `\"enviar_formulario\": \"enviar_plantilla\"`\n\nEjemplo de respuesta cuando cliente menciona nuevo problema:\n```json\n{\n  \"respuesta\": \"Santiago, entiendo que ahora también tienes un problema con [nuevo tema] 😟 Quiero ayudarte con eso también.\\n\\nPrimero, déjame asegurarme de que tu problema actual con el chatbot de WhatsApp esté completamente resuelto. Una vez que confirmemos que todo está funcionando bien, podrás reportar el nuevo problema y recibirá la misma atención prioritaria.\\n\\n¿Cómo va el chatbot? ¿Ya está funcionando o aún necesitas ayuda con eso? 💙\",\n  \"escalamiento\": null,\n  \"enviar_formulario\": null,\n  \"estado\": null\n}\n```\n\n🧠 LÓGICA DE DECISIÓN PARA escalamiento\n\nEscala a humano (`\"escalamiento\"`) cuando:\n- Cliente menciona \"cancelar\", \"dar de baja\", \"terminar contrato\"\n- Solicita \"reembolso\" o \"devolución de dinero\"\n- Menciona \"abogado\" o acciones legales\n- Reporta que el problema persiste después de mucho tiempo (compara con la fecha del reporte)\n- Cliente ha esperado > 48h sin solución efectiva\n- Frustración extrema o enojo evidente\n- Solicita hablar con un \"superior\", \"gerente\" o \"responsable\"\n- El problema es más grave de lo que inicialmente reportó\n- No puedes ofrecer una solución con la información disponible\n- Cliente amenaza con reviews negativos públicos\n- El problema requiere autorización o decisiones que tú no puedes tomar\n- El reporte indica `\"escalacion_requerida\": true` Y el problema persiste\n\nNO escales (`null`) cuando:\n- Puedes ofrecer una solución o actualización clara basada en el reporte\n- Estás recopilando más información para ayudar mejor\n- El cliente solo busca una actualización del estado\n- Puedes responder su duda consultando la base de conocimiento\n- El cliente confirma que su problema está resuelto\n- Puedes dar tranquilidad con información verificada\n\n🎯 LÓGICA DE DECISIÓN PARA estado\n\n⚠️ REGLA DE ORO: SÉ MUY CUIDADOSO AL CERRAR CASOS\n\nSolo marca `\"estado\": \"cerrado\"` cuando el cliente CONFIRME EXPLÍCITAMENTE que su problema está resuelto. NO ASUMAS que está cerrado solo porque diste una respuesta o solución.\n\nMarca \"cerrado\" SOLO cuando el cliente dice:\n\n✅ **Confirmaciones directas de resolución:**\n- \"Ya está todo resuelto, gracias\"\n- \"Perfecto, ya funcionó todo\"\n- \"El problema ya se solucionó\"\n- \"Ya me lo resolvieron, muchas gracias\"\n- \"Todo quedó bien, gracias por la ayuda\"\n- \"Ya no tengo ningún problema\"\n- \"Excelente, ya está funcionando correctamente\"\n- \"Sí, ya se arregló todo\"\n\n✅ **Agradecimientos que indican cierre:**\n- \"Muchas gracias por la solución, todo bien ya\"\n- \"Gracias por resolver mi problema\"\n- \"Perfecto, agradezco mucho la atención, ya está todo\"\n- \"Quedó resuelto, gracias por el seguimiento\"\n- \"Aprecio mucho la ayuda, ya todo funciona bien\"\n\n✅ **Confirmaciones de satisfacción:**\n- \"Ahora sí estoy satisfecho con el servicio\"\n- \"Ya estoy conforme, gracias\"\n- \"Todo está funcionando como debería\"\n- \"Ya no hay problema, está todo en orden\"\n- \"Me resolvieron el tema, todo perfecto\"\n\nMantén `null` (NO CERRAR) cuando:\n\n❌ El cliente solo agradece sin confirmar resolución\n❌ El cliente hace seguimiento o pregunta\n❌ El cliente expresa duda o incertidumbre\n❌ El caso fue escalado o está en proceso\n❌ El cliente solo reconoce pero no confirma\n❌ TÚ diste una actualización pero el cliente no confirmó\n❌ El cliente reporta que el problema persiste\n\n📊 FLUJO DE TRABAJO CON EL REPORTE\n\n**PASO 1: RECIBIR Y ANALIZAR**\n1. Lee el mensaje del cliente cuidadosamente\n2. **Revisa el reporte de queja completo** arriba\n3. Identifica si el mensaje se relaciona con la queja documentada\n4. Evalúa el tono emocional del cliente (compáralo con la emoción original)\n\n**PASO 2: BUSCAR INFORMACIÓN (SI APLICA)**\n1. Usa datos del reporte para hacer búsquedas precisas:\n   - Tipo de queja: `{{ tipo_queja }}`\n   - Servicio afectado: `{{ servicio_afectado }}`\n   - Detalles específicos del problema\n2. Busca soluciones, políticas, o procedimientos relevantes\n3. Combina información del reporte con resultados de búsqueda\n\n**PASO 3: DECIDIR ACCIÓN**\n1. ¿Necesita escalamiento? → `\"escalamiento\"` o `null`\n   - Considera: tiempo transcurrido desde el reporte, intentos previos, gravedad\n2. ¿Confirmó resolución? → `\"cerrado\"` o `null`\n   - Solo si hay confirmación explícita\n3. Campo `enviar_formulario` SIEMPRE es `null`\n\n**PASO 4: RESPONDER**\n1. Redacta mensaje empático que demuestre conocimiento del caso\n2. Haz referencia a detalles específicos del reporte cuando sea relevante\n3. Incluye información útil de la base de conocimiento\n4. Da actualizaciones claras sobre el estado\n5. Usa el nombre del cliente\n6. Genera JSON válido con los 4 campos\n\n💡 TIPS PARA UNA CONVERSACIÓN FLUIDA\n\n**NATURALIDAD:**\n- No copies textualmente el reporte en tus respuestas\n- Usa la información del reporte de forma conversacional\n- Ejemplo: En lugar de \"Veo que tu tipo_queja es error_tecnico\"\n  Di: \"Veo que tu chatbot dejó de funcionar\"\n\n**CONTEXTO:**\n- El cliente no sabe que tú estás viendo un \"reporte\"\n- Para él, es su problema que ya reportó\n- Habla como si recordaras los detalles de su caso\n\n**SEGUIMIENTO PROACTIVO:**\n- \"He estado monitoreando tu caso desde que lo reportaste el [fecha]...\"\n- \"Revisando los detalles que compartiste sobre [problema específico]...\"\n- \"Veo que mencionaste que [detalle del reporte], ¿eso sigue igual?\"\n\n**PERSONALIZACIÓN:**\n- Ajusta tu tono según la \"emocion_cliente\" del reporte\n- Si estaba \"preocupado\" → sé tranquilizador\n- Si estaba \"enojado\" → sé extra empático y proactivo\n- Si estaba \"frustrado\" → reconoce su frustración y actúa rápido\n\nDATOS DISPONIBLES DEL CLIENTE\nNombre del cliente: {{ $('When Executed by Another Workflow').item.json.nombre }}\nEmail del cliente: {{ $('When Executed by Another Workflow').item.json.email }}\nTeléfono del cliente: {{ $('When Executed by Another Workflow').item.json.telefono }}\n\n📋 EJEMPLOS COMPLETOS CON USO DEL REPORTE\n\n**Ejemplo 1: Primera interacción después del reporte**\n```\nREPORTE DICE: \n- tipo_queja: \"error_tecnico\"\n- servicio_afectado: \"inteligencia_artificial\"\n- detalles: \"Mi chatbot de WhatsApp dejó de funcionar\"\n- emocion_cliente: \"preocupado\"\n- fecha: \"2025-10-29\"\n\nCliente: \"Hola, ¿ya vieron mi problema?\"\n```\n\n[PRIMERO BUSCAS: `search_knowledge_base(\"chatbot whatsapp no funciona error técnico solución\")`]\n```json\n{\n  \"respuesta\": \"¡Hola Santiago! 😊 Claro que sí, he revisado tu caso con atención. Veo que tu chatbot de WhatsApp dejó de funcionar desde el 29 de octubre.\\n\\nAcabo de consultar la base de conocimiento y [incluir solución o pasos encontrados]. Normalmente este tipo de problemas con chatbots se resuelven en 2-4 horas una vez que el equipo técnico aplica los ajustes necesarios.\\n\\n¿El chatbot sigue sin responder completamente o ha habido algún cambio? Quiero darte la información más precisa posible 💙\",\n  \"escalamiento\": null,\n  \"enviar_formulario\": null,\n  \"estado\": null\n}\n```\n\n**Ejemplo 2: Cliente reporta que persiste (evalúa tiempo)**\n```\nREPORTE DICE:\n- fecha: \"2025-10-29T07:25:04.000Z\" (hace 2 días)\n- escalacion_requerida: true\n\nCliente: \"Ya pasaron 2 días y sigue igual\"\n```\n```json\n{\n  \"respuesta\": \"Santiago, lamento MUCHÍSIMO que tu chatbot siga sin funcionar después de 2 días 😟 Esto definitivamente no es aceptable y entiendo perfectamente tu frustración.\\n\\nHe revisado tu caso y veo que desde el inicio ya se marcó para escalación. Voy a conectarte INMEDIATAMENTE con el Gerente Técnico de IA para que lo atienda personalmente con prioridad máxima.\\n\\nTe contactará en las próximas 2 horas sin falta para darte una solución definitiva. ¿Me confirmas tu mejor número para que te llame directamente? 📞\",\n  \"escalamiento\": \"escalamiento\",\n  \"enviar_formulario\": null,\n  \"estado\": null\n}\n```\n\n**Ejemplo 3: Cliente confirma resolución**\n```\nREPORTE DICE:\n- detalles: \"Mi chatbot de WhatsApp dejó de funcionar\"\n\nCliente: \"Ya funcionó todo, gracias\"\n```\n```json\n{\n  \"respuesta\": \"Santiago, ¡qué excelente noticia! 🎉 Me alegra MUCHÍSIMO saber que tu chatbot de WhatsApp ya está funcionando correctamente.\\n\\nGracias a ti por tu paciencia mientras resolvíamos el problema técnico. Si en algún momento necesitas ayuda con cualquier cosa o tienes alguna duda, no dudes en escribirme. ¡Que tengas un excelente día! 😊💙\",\n  \"escalamiento\": null,\n  \"enviar_formulario\": null,\n  \"estado\": \"cerrado\"\n}\n```\n\n**Ejemplo 4: Cliente menciona problema nuevo**\n```\nREPORTE DICE:\n- servicio_afectado: \"inteligencia_artificial\" (chatbot)\n\nCliente: \"Ahora también tengo problemas con mis redes sociales\"\n```\n```json\n{\n  \"respuesta\": \"Santiago, entiendo que ahora también estás teniendo inconvenientes con las redes sociales 😟 Definitivamente quiero ayudarte con eso también.\\n\\nPrimero, déjame asegurarme de que tu chatbot de WhatsApp (que reportaste anteriormente) esté funcionando al 100%. ¿Ese problema ya quedó completamente resuelto?\\n\\nUna vez que confirmemos que el chatbot está bien, podrás reportar el problema con redes sociales y recibirá la misma atención prioritaria. ¿Cómo está el chatbot ahora? 💙\",\n  \"escalamiento\": null,\n  \"enviar_formulario\": null,\n  \"estado\": null\n}\n```\n\n**Ejemplo 5: Ofrecer solución específica basada en reporte**\n```\nREPORTE DICE:\n- tipo_queja: \"error_tecnico\"\n- servicio_afectado: \"inteligencia_artificial\"\n- detalles: \"Mi chatbot de WhatsApp dejó de funcionar\"\n\nCliente: \"¿Qué pueden hacer para arreglarlo?\"\n```\n\n[BUSCAS: `search_knowledge_base(\"pasos solución chatbot whatsapp caído reiniciar configuración\")`]\n```json\n{\n  \"respuesta\": \"Santiago, excelente pregunta 😊 Déjame explicarte el proceso de solución para tu chatbot.\\n\\n[Incluir pasos/solución encontrada en la base de conocimiento, adaptada conversacionalmente]\\n\\nEl equipo técnico ya está trabajando en tu caso específicamente. Basándome en casos similares, normalmente cuando un chatbot de WhatsApp deja de responder, se debe a [incluir causa común encontrada] y se soluciona en 2-4 horas.\\n\\n¿Has notado algún mensaje de error específico o simplemente dejó de responder por completo? Esto me ayuda a darte información aún más precisa 💙\",\n  \"escalamiento\": null,\n  \"enviar_formulario\": null,\n  \"estado\": null\n}\n```\n\n🎯 CHECKLIST ANTES DE RESPONDER\n\n✅ **¿Revisé el reporte de queja completo?**\n- ¿Conozco el tipo de queja?\n- ¿Entiendo qué servicio está afectado?\n- ¿Sé cuánto tiempo ha pasado desde el reporte?\n- ¿Conozco la emoción del cliente al reportar?\n\n✅ **¿Necesito buscar información?**\n- SÍ → Usa `search_knowledge_base` con palabras clave del reporte\n- NO → Continúa\n\n✅ **¿El caso es crítico o requiere autoridad superior?**\n- Considera: tiempo transcurrido, gravedad, solicitud del cliente\n- SÍ → `\"escalamiento\": \"escalamiento\"`\n- NO → `\"escalamiento\": null`\n\n✅ **¿El cliente CONFIRMÓ EXPLÍCITAMENTE que su problema está resuelto?**\n- SÍ → `\"estado\": \"cerrado\"`\n- NO → `\"estado\": null`\n\n✅ **Campo enviar_formulario:**\n- SIEMPRE → `\"enviar_formulario\": null`\n\n✅ **¿Mi respuesta es empática y útil?**\n- Incluye el nombre del cliente\n- Hace referencia relevante al reporte sin ser robótico\n- Da actualización clara del estado\n- Ofrece seguimiento proactivo\n- Es genuina y orientada a cerrar\n\nREGLAS CRÍTICAS\n\n**SIEMPRE HACER:**\n✅ Leer el reporte de queja completo antes de responder\n✅ Usar información del reporte para personalizar tu respuesta\n✅ Responder en formato JSON válido (sin texto adicional fuera del JSON)\n✅ Incluir los 4 campos obligatorios: `respuesta`, `escalamiento`, `enviar_formulario`, `estado`\n✅ Mantener `enviar_formulario` SIEMPRE en `null`\n✅ Buscar en la base de conocimiento usando contexto del reporte\n✅ Usar `\"escalamiento\"` cuando el caso requiera intervención superior\n✅ Usar `\"cerrado\"` SOLO cuando el cliente confirme explícitamente resolución\n✅ Ser empático y proactivo en el seguimiento\n✅ Demostrar que conoces los detalles del caso del cliente\n\n**NUNCA HACER:**\n❌ Ignorar la información del reporte de queja\n❌ Copiar textualmente frases del reporte en tu respuesta\n❌ Usar `\"enviar_formulario\": \"enviar_plantilla\"` - Este campo SIEMPRE debe ser `null`\n❌ Responder con texto fuera del formato JSON\n❌ Omitir alguno de los 4 campos del JSON\n❌ Cerrar un caso sin confirmación explícita del cliente\n❌ Dar información inventada - siempre busca en la base de conocimiento\n❌ Minimizar la frustración del cliente\n❌ Prometer tiempos de resolución sin verificar\n❌ Ser defensivo sobre la empresa\n❌ Hablar como robot mencionando \"campos\" o \"el reporte dice\"\n\nINSTRUCCIÓN FINAL\n\nEres Santiago, especialista en seguimiento y cierre de quejas de SocialMask. Tienes acceso al REPORTE COMPLETO de la queja que el cliente documentó anteriormente (ver arriba). Usa esta información para dar un seguimiento personalizado, empático y efectivo.\n\nTu proceso:\n1. 📖 **Leer** el reporte de queja completo\n2. 💬 **Analizar** el mensaje actual del cliente en contexto del reporte\n3. 🔍 **Buscar** en la base de conocimiento si necesitas información adicional\n4. 🧠 **Decidir** las acciones (escalamiento, cierre) considerando el tiempo transcurrido y gravedad\n5. ✍️ **Responder** de forma natural, empática y orientada a resolver\n6. 📤 **Devolver** JSON válido con los 4 campos\n\n**Recuerda:**\n- El reporte es tu contexto principal - úsalo inteligentemente\n- Habla naturalmente, no como un robot que lee campos\n- El cliente no sabe que tú ves un \"reporte\", para él es \"su problema que ya reportó\"\n- `enviar_formulario` SIEMPRE debe ser `null`\n- Cierra casos SOLO con confirmación explícita\n- Escala cuando sea necesario para garantizar satisfacción\n\n¡Adelante, Santiago! Usa el reporte de queja para dar el mejor seguimiento posible y cerrar casos con clientes satisfechos 💙🎯"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        1424,
+        320
+      ],
+      "id": "42b2ee8f-71d8-41e1-8954-baba8351716c",
+      "name": "queja1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://chatwoot.srv869127.hstgr.cloud//api/v1/accounts/{{ $('When Executed by Another Workflow').item.json.accountId }}/conversations/{{ $('When Executed by Another Workflow').item.json.conversationId }}/labels",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "labels",
+              "value": "={{ Array('quejas') }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1840,
+        320
+      ],
+      "id": "bd5079d7-25d5-4d6e-bf25-3e286218d8d5",
+      "name": "etiqueta queja1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://chatwoot.srv869127.hstgr.cloud//api/v1/accounts/{{ $('When Executed by Another Workflow').item.json.accountId }}/conversations/{{ $('When Executed by Another Workflow').item.json.conversationId }}/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "content",
+              "value": "={{ $('limpiar salida1').item.json.respuesta }}"
+            },
+            {
+              "name": "message_type",
+              "value": "=outgoing"
+            },
+            {
+              "name": "private",
+              "value": "={{ $('When Executed by Another Workflow').item.json.private }}"
+            },
+            {
+              "name": "content_type",
+              "value": "={{ $('When Executed by Another Workflow').item.json.content_type }}"
+            },
+            {
+              "name": "content_attributes",
+              "value": "={{ $('When Executed by Another Workflow').item.json.content_attributes }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2288,
+        608
+      ],
+      "id": "e3a90da0-fa0b-47f3-a8be-24171bbf43e7",
+      "name": "contestar queja2",
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "18590624-d11c-40d7-a419-141ec64547f4",
+              "leftValue": "={{ $('limpiar salida1').item.json.enviar_formulario }}",
+              "rightValue": "enviar_plantilla",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2064,
+        512
+      ],
+      "id": "eb153ab4-2bd8-44c7-89b0-42bffcf040c2",
+      "name": "If2"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://chatwoot.srv869127.hstgr.cloud/api/v1/accounts/{{ $('When Executed by Another Workflow').item.json.accountId }}/conversations/{{ $('When Executed by Another Workflow').item.json.conversationId }}/assignments\n\n",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"assignee_id\": 7\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3200,
+        352
+      ],
+      "id": "9b47b272-c766-4b48-8fee-e1bcb631db3d",
+      "name": "asignar conversacion a agente humano1",
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "reportes_quejas",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $('declarar registro').item.json.id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "escalacion_requerida",
+              "fieldValue": "TRUE"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        2848,
+        352
+      ],
+      "id": "27e0c192-87a1-4f13-8fab-96a18e6f71d9",
+      "name": "escalamiento a humano1",
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "chatId": "6319432769",
+        "text": "={{ $('When Executed by Another Workflow').item.json.nombre }} requiere que atiendas su queja personalmente, telefono: {{ $('When Executed by Another Workflow').item.json.telefono }}, {{ $('declarar registro').item.json.reporte_queja }}",
+        "replyMarkup": "inlineKeyboard",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        3424,
+        352
+      ],
+      "id": "927a90d7-d955-4796-aa72-fd05a85a55e2",
+      "name": "informar sobre escalamiento1",
+      "webhookId": "af6fee69-2703-4970-9867-737bc046036e",
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('limpiar salida1').item.json.escalamiento }}",
+                    "rightValue": "escalamiento",
+                    "operator": {
+                      "type": "string",
+                      "operation": "contains"
+                    },
+                    "id": "9b05d39d-b413-4a1c-81fc-42804fc24f60"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "requiere escalamiento"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "7c934c70-92ad-4845-8c11-64022790131f",
+                    "leftValue": "={{ $('limpiar salida1').item.json.estado }}",
+                    "rightValue": "cerrado",
+                    "operator": {
+                      "type": "string",
+                      "operation": "contains"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "caso cerrado"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.3,
+      "position": [
+        2512,
+        448
+      ],
+      "id": "08314b2f-2308-4553-be63-1f6e8895c460",
+      "name": "Switch1"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================\n// LIMPIADOR DE JSON - AGENTE SANTIAGO\n// ============================================\n// Este nodo limpia y valida el JSON devuelto por el agente IA\n// para asegurar que sea válido y tenga la estructura correcta\n\n// Obtener la respuesta del agente\nconst agentResponse = $input.first().json;\n\n// Función principal de limpieza\nfunction cleanAndValidateJSON(response) {\n  try {\n    let jsonString = '';\n    \n    // ============================================\n    // MANEJO ESPECIAL: Extraer de la propiedad \"output\"\n    // ============================================\n    if (response && response.output) {\n      // Si viene en response.output, usar ese valor\n      jsonString = typeof response.output === 'string' ? response.output : JSON.stringify(response.output);\n    } else if (typeof response === 'object' && response !== null) {\n      // Si la respuesta ya es un objeto, stringificarlo\n      jsonString = JSON.stringify(response);\n    } else if (typeof response === 'string') {\n      // Si es string directo\n      jsonString = response;\n    } else {\n      throw new Error('Formato de respuesta inválido');\n    }\n    \n    // ============================================\n    // PASO 1: Limpiar caracteres extraños\n    // ============================================\n    \n    // Remover BOM (Byte Order Mark)\n    jsonString = jsonString.replace(/^\\uFEFF/, '');\n    \n    // Remover caracteres de control invisibles (excepto \\n, \\r, \\t que son válidos en JSON)\n    jsonString = jsonString.replace(/[\\u0000-\\u0008\\u000B-\\u000C\\u000E-\\u001F\\u007F-\\u009F]/g, '');\n    \n    // Remover espacios y saltos de línea al inicio y final\n    jsonString = jsonString.trim();\n    \n    // **NUEVO: Remover prefijos como \"json\" antes de la llave de apertura**\n    jsonString = jsonString.replace(/^(json|JSON)\\s*\\{/, '{');\n    \n    // Buscar JSON dentro de bloques de código markdown\n    const codeBlockMatch = jsonString.match(/```(?:json)?\\s*(\\{[\\s\\S]*?\\})\\s*```/);\n    if (codeBlockMatch) {\n      jsonString = codeBlockMatch[1].trim();\n    }\n    \n    // Buscar JSON entre otros textos (extraer solo el objeto JSON)\n    const jsonMatch = jsonString.match(/\\{[\\s\\S]*\\}/);\n    if (jsonMatch) {\n      jsonString = jsonMatch[0];\n    }\n    \n    // Remover comas finales antes de llaves o corchetes de cierre\n    jsonString = jsonString.replace(/,(\\s*[}\\]])/g, '$1');\n    \n    // Normalizar comillas tipográficas\n    jsonString = jsonString.replace(/[\"\"]/g, '\"');\n    jsonString = jsonString.replace(/['']/g, \"'\");\n    \n    // ============================================\n    // PASO 2: Intentar parsear el JSON\n    // ============================================\n    \n    let parsedJSON;\n    try {\n      parsedJSON = JSON.parse(jsonString);\n    } catch (parseError) {\n      console.warn('Primer intento de parseo falló, intentando reparaciones...');\n      \n      // Intentar agregar comillas a claves sin comillas\n      jsonString = jsonString.replace(/([{,]\\s*)(\\w+)(\\s*:)/g, '$1\"$2\"$3');\n      \n      // Intentar corregir valores null sin comillas\n      jsonString = jsonString.replace(/:\\s*null\\s*([,}])/g, ': null$1');\n      \n      // Reintentar parseo\n      try {\n        parsedJSON = JSON.parse(jsonString);\n      } catch (secondError) {\n        throw new Error(`No se pudo parsear el JSON después de reparaciones: ${secondError.message}`);\n      }\n    }\n    \n    // ============================================\n    // PASO 3: Validar estructura del JSON\n    // ============================================\n    \n    const requiredFields = ['respuesta', 'escalamiento', 'enviar_formulario', 'estado'];\n    const missingFields = requiredFields.filter(field => !(field in parsedJSON));\n    \n    if (missingFields.length > 0) {\n      throw new Error(`Faltan campos requeridos: ${missingFields.join(', ')}`);\n    }\n    \n    // ============================================\n    // PASO 4: Validar y normalizar valores\n    // ============================================\n    \n    // Validar campo \"respuesta\" (debe ser string no vacío)\n    if (typeof parsedJSON.respuesta !== 'string' || parsedJSON.respuesta.trim() === '') {\n      throw new Error('El campo \"respuesta\" debe ser un string no vacío');\n    }\n    \n    // **ACTUALIZADO: Normalizar campo \"escalamiento\"**\n    // Acepta: \"escalamiento\", \"doble_respuesta\", o null\n    const validEscalamiento = ['escalamiento', 'doble_respuesta', null];\n    if (!validEscalamiento.includes(parsedJSON.escalamiento)) {\n      console.warn(`Valor inválido en escalamiento: \"${parsedJSON.escalamiento}\". Se normalizará a null.`);\n      parsedJSON.escalamiento = null;\n    }\n    \n    // Normalizar campo \"enviar_formulario\" (solo acepta \"enviar_plantilla\" o null)\n    if (parsedJSON.enviar_formulario !== null && parsedJSON.enviar_formulario !== 'enviar_plantilla') {\n      console.warn(`Valor inválido en enviar_formulario: \"${parsedJSON.enviar_formulario}\". Se normalizará a null.`);\n      parsedJSON.enviar_formulario = null;\n    }\n    \n    // Normalizar campo \"estado\" (solo acepta \"cerrado\" o null)\n    if (parsedJSON.estado !== null && parsedJSON.estado !== 'cerrado') {\n      console.warn(`Valor inválido en estado: \"${parsedJSON.estado}\". Se normalizará a null.`);\n      parsedJSON.estado = null;\n    }\n    \n    // ============================================\n    // PASO 5: Limpiar el texto de la respuesta\n    // ============================================\n    \n    // Limpiar saltos de línea excesivos en la respuesta\n    parsedJSON.respuesta = parsedJSON.respuesta\n      .replace(/\\\\n/g, '\\n') // Convertir \\n escapados a saltos reales\n      .replace(/\\n{3,}/g, '\\n\\n') // Máximo 2 saltos de línea consecutivos\n      .trim();\n    \n    // ============================================\n    // PASO 6: Crear objeto de salida limpio\n    // ============================================\n    \n    return {\n      respuesta: parsedJSON.respuesta,\n      escalamiento: parsedJSON.escalamiento,\n      enviar_formulario: parsedJSON.enviar_formulario,\n      estado: parsedJSON.estado,\n      _metadata: {\n        success: true,\n        cleaned: true,\n        timestamp: new Date().toISOString(),\n        cleaned_by: 'json_cleaner_node'\n      }\n    };\n    \n  } catch (error) {\n    // ============================================\n    // MANEJO DE ERRORES\n    // ============================================\n    console.error('Error al limpiar JSON:', error.message);\n    console.error('Respuesta original:', JSON.stringify(response, null, 2));\n    \n    // Retornar JSON de fallback con mensaje de error al cliente\n    return {\n      respuesta: \"Disculpa, tuve un problema técnico al procesar tu mensaje. ¿Podrías repetirlo por favor? 🙏\",\n      escalamiento: \"escalamiento\", // Escalar automáticamente en caso de error\n      enviar_formulario: null,\n      estado: null,\n      _metadata: {\n        success: false,\n        cleaned: false,\n        error: error.message,\n        original_response: response,\n        timestamp: new Date().toISOString(),\n        cleaned_by: 'json_cleaner_node'\n      }\n    };\n  }\n}\n\n// ============================================\n// EJECUTAR LIMPIEZA Y RETORNAR\n// ============================================\n\nreturn cleanAndValidateJSON(agentResponse);"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1840,
+        512
+      ],
+      "id": "8dfad391-1ac7-40c9-bc3b-c1c191f817d2",
+      "name": "limpiar salida1"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "reportes_quejas",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $('declarar registro').item.json.id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "estado",
+              "fieldValue": "cerrado"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        2848,
+        544
+      ],
+      "id": "09a12a60-5057-4149-9441-9d6c4778ec28",
+      "name": "cerrar queja1",
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://chatwoot.srv869127.hstgr.cloud//api/v1/accounts/{{ $('When Executed by Another Workflow').item.json.accountId }}/conversations/{{ $('When Executed by Another Workflow').item.json.conversationId }}/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "content",
+              "value": "=Entiendo su incorformidad pero primero debe cerrar su queja actual para poder realizar una nueva"
+            },
+            {
+              "name": "message_type",
+              "value": "=outgoing"
+            },
+            {
+              "name": "private",
+              "value": "={{ $('When Executed by Another Workflow').item.json.private }}"
+            },
+            {
+              "name": "content_type",
+              "value": "={{ $('When Executed by Another Workflow').item.json.content_type }}"
+            },
+            {
+              "name": "content_attributes",
+              "value": "={{ $('When Executed by Another Workflow').item.json.content_attributes }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2288,
+        416
+      ],
+      "id": "18ee7afb-80a3-45e6-9f5b-b00ad091d0d1",
+      "name": "contestar queja3",
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "chatId": "6319432769",
+        "text": "=¡Enhorabuena{{ $('When Executed by Another Workflow').item.json.nombre }} ha resuelto su queja!, telefono: {{ $('When Executed by Another Workflow').item.json.telefono }}",
+        "replyMarkup": "inlineKeyboard",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        3200,
+        544
+      ],
+      "id": "8ac08b4c-0d7e-4c4f-965a-07d5122f7c91",
+      "name": "informar queja cerrada1",
+      "webhookId": "af6fee69-2703-4970-9867-737bc046036e",
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "a09d66ca-46ce-4ef4-b0cb-577c8a462cde",
+              "leftValue": "={{ $('declarar registro').item.json.formulario_enviado }}",
+              "rightValue": "enviado",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            },
+            {
+              "id": "62ca9359-0469-4c90-949b-d819f4640192",
+              "leftValue": "={{ $('declarar registro').item.json.estado }}",
+              "rightValue": "abierta",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1152,
+        608
+      ],
+      "id": "4d5261a0-da31-40e9-ba99-cd01c6146171",
+      "name": "If3"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE conversaciones \nSET etiqueta = 'quejas'\nWHERE id IN (\n    SELECT id \n    FROM conversaciones \n    WHERE session_id = '{{ $('When Executed by Another Workflow').item.json.client_id }}'\n    ORDER BY id DESC \n    LIMIT 2\n);",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1840,
+        896
+      ],
+      "id": "cd3c2d50-3f38-435b-993e-26ff4d5f2203",
+      "name": "registrar_etiqueta_y_fecha",
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE conversaciones \nSET etiqueta = 'quejas'\nWHERE id IN (\n    SELECT id \n    FROM conversaciones \n    WHERE session_id = '{{ $('When Executed by Another Workflow').item.json.client_id }}'\n    ORDER BY id DESC \n    LIMIT 2\n);",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1840,
+        128
+      ],
+      "id": "18f8a2cf-792c-4d4a-8240-54c69c285dd0",
+      "name": "registrar_etiqueta_y_fecha1",
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Obtener los datos del nodo anterior\nconst inputData = $input.all();\n\n// Obtener el mensaje del nodo \"When Executed by Another Workflow\"\nconst mensajeInicial = $('When Executed by Another Workflow').first().json.mensaje || '';\n\n// Array para almacenar los resultados concatenados\nconst results = [];\n\n// Procesar cada item del input\nfor (const item of inputData) {\n  const data = item.json;\n  \n  // Si es un array, procesar cada elemento\n  const records = Array.isArray(data) ? data : [data];\n  \n  for (const record of records) {\n    let textoCompleto = \"\";\n    \n    // Agregar el mensaje inicial si existe (limpio, sin encabezado)\n    if (mensajeInicial && mensajeInicial.trim() !== '') {\n      textoCompleto += mensajeInicial.trim();\n    }\n    \n    // Verificar si el registro es un error (contiene campos 'message' y 'error')\n    const esError = record.hasOwnProperty('message') && record.hasOwnProperty('error');\n    \n    // Solo procesar información de queja si NO es un error\n    if (!esError) {\n      // Mapeo de nombres de campos a etiquetas más legibles\n      const etiquetas = {\n        'id': 'ID de Queja',\n        'client_id': 'ID de Cliente',\n        'fecha': 'Fecha',\n        'cliente_nombre': 'Nombre del Cliente',\n        'tipo_queja': 'Tipo de Queja',\n        'nivel_urgencia': 'Nivel de Urgencia',\n        'servicio_afectado': 'Servicio Afectado',\n        'detalles': 'Detalles',\n        'emocion_cliente': 'Emoción del Cliente',\n        'escalacion_requerida': 'Requiere Escalación',\n        'estado': 'Estado',\n        'created_at': 'Fecha de Creación',\n        'updated_at': 'Última Actualización',\n        'formulario_enviado': 'Estado del Formulario'\n      };\n      \n      // Contar campos válidos\n      let camposValidos = 0;\n      let contenidoQueja = \"\";\n      \n      // Iterar sobre todas las propiedades del objeto\n      for (const [key, value] of Object.entries(record)) {\n        // Saltar campos vacíos, null o undefined\n        if (value === null || \n            value === undefined || \n            value === '' || \n            (typeof value === 'string' && value.trim() === '')) {\n          continue;\n        }\n        \n        camposValidos++;\n        \n        // Obtener la etiqueta legible o usar el nombre del campo\n        const etiqueta = etiquetas[key] || key.replace(/_/g, ' ').replace(/\\b\\w/g, l => l.toUpperCase());\n        \n        // Formatear el valor según su tipo\n        let valorFormateado = value;\n        \n        if (typeof value === 'boolean') {\n          valorFormateado = value ? 'Sí' : 'No';\n        } else if (typeof value === 'string' && value.includes('T') && value.includes('Z')) {\n          // Formatear fechas\n          try {\n            const fecha = new Date(value);\n            valorFormateado = fecha.toLocaleString('es-MX', { \n              timeZone: 'America/Mexico_City',\n              dateStyle: 'full',\n              timeStyle: 'short'\n            });\n          } catch (e) {\n            valorFormateado = value;\n          }\n        } else if (typeof value === 'string') {\n          valorFormateado = value.replace(/_/g, ' ');\n        }\n        \n        contenidoQueja += `${etiqueta}: ${valorFormateado}\\n`;\n      }\n      \n      // Solo agregar la sección de información de queja si hay campos válidos\n      if (camposValidos > 0) {\n        // Agregar separador si ya hay mensaje del cliente\n        if (textoCompleto.trim() !== '') {\n          textoCompleto += \"\\n\\n═══════════════════════════════════════\\n\\n\";\n        }\n        textoCompleto += \"INFORMACIÓN DE LA QUEJA:\\n\\n\";\n        textoCompleto += contenidoQueja;\n        textoCompleto += \"\\n---\\n\";\n      }\n    }\n    \n    // Solo agregar al resultado si hay contenido (mensaje o campos de queja válidos)\n    if (textoCompleto.trim() !== '') {\n      results.push({\n        json: {\n          texto_concatenado: textoCompleto,\n          datos_originales: record\n        }\n      });\n    }\n  }\n}\n\nreturn results;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        704,
+        608
+      ],
+      "id": "0cddc11c-9805-4656-b1d0-8129860aa96c",
+      "name": "concatenar campos de registro de queja",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4o-mini"
+        },
+        "options": {
+          "temperature": 0.2
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        2736,
+        960
+      ],
+      "id": "80dd84a3-f5f5-4ff2-ab7f-3e2b9c256e58",
+      "name": "OpenAI Chat Model1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://chatwoot.srv869127.hstgr.cloud//api/v1/accounts/{{ $('When Executed by Another Workflow').item.json.accountId }}/conversations/{{ $('When Executed by Another Workflow').item.json.conversationId }}/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "content",
+              "value": "={{ $('limpiar salida2').item.json.respuesta }}"
+            },
+            {
+              "name": "message_type",
+              "value": "=outgoing"
+            },
+            {
+              "name": "private",
+              "value": "={{ $('When Executed by Another Workflow').item.json.private }}"
+            },
+            {
+              "name": "content_type",
+              "value": "={{ $('When Executed by Another Workflow').item.json.content_type }}"
+            },
+            {
+              "name": "content_attributes",
+              "value": "={{ $('When Executed by Another Workflow').item.json.content_attributes }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3648,
+        848
+      ],
+      "id": "0942cde3-43fa-4ee9-8d21-d804fc376990",
+      "name": "contestar queja4",
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('limpiar salida1').item.json.respuesta }}",
+        "options": {
+          "systemMessage": "=AGENTE DE DOBLE RESPUESTA - SANTIAGO (SOCIALMASK)\nTU IDENTIDAD\nNombre: Santiago\nRol: Especialista en Continuidad de Conversación\nEmpresa: SocialMask (Agencia de Marketing Digital e IA)\nZona horaria: America/Ciudad_de_Mexico (GMT-6)\nFecha actual: {{ $now }}\n\nTU MISIÓN CRÍTICA\n🎯 OBJETIVO PRINCIPAL: MANTENER LA FLUIDEZ CONVERSACIONAL\nTu trabajo es EVALUAR si la respuesta del agente anterior (Santiago - Seguimiento) dejó algo pendiente o incompleto que requiera una segunda respuesta inmediata para mantener el flujo natural de la conversación.\nNO ERES UN AGENTE QUE RESPONDE A CLIENTES DIRECTAMENTE. Eres un agente que analiza si se necesita una continuación.\n\n📋 CONTEXTO DE TU FUNCIÓN\n¿CUÁNDO LLEGAS TÚ AL FLUJO?\nLlegas INMEDIATAMENTE DESPUÉS de que el agente de seguimiento (Santiago) genera su respuesta. Tu función es:\n\nLeer la respuesta que Santiago acaba de enviar al cliente\nAnalizar si esa respuesta creó una expectativa de continuación inmediata\nDecidir si necesitas generar una segunda respuesta para completar el flujo\nResponder con la segunda parte de la conversación SI ES NECESARIO\n\n\n🔍 INFORMACIÓN DISPONIBLE PARA TU ANÁLISIS\nTienes acceso a:\n\nReporte de queja completo:\n\n   {{ $('declarar registro').item.json.reporte_queja }}\n\nMensaje del cliente:\n\n   {{ $('When Executed by Another Workflow').item.json.mensaje }}\n\nRespuesta del agente anterior (Santiago):\n\n{{ $('limpiar salida1').item.json.respuesta }}\n\nDatos del cliente:\n\nNombre: {{ $('When Executed by Another Workflow').item.json.nombre }}\nEmail: {{ $('When Executed by Another Workflow').item.json.email }}\nTeléfono: {{ $('When Executed by Another Workflow').item.json.telefono }}\n\n\n\n⚠️ FORMATO DE RESPUESTA OBLIGATORIO\nCRÍTICO: Debes responder SIEMPRE en formato JSON válido. No incluyas texto adicional fuera del JSON.\nEstructura JSON obligatoria:\njson{\n  \"respuesta\": \"Tu segunda respuesta al cliente O null si no se requiere\",\n  \"escalamiento\": \"doble_respuesta\" o null,\n  \"enviar_formulario\": null,\n  \"estado\": null\n}\nCampos del JSON:\n\"respuesta\" (string o null):\n\nnull: Si NO se requiere segunda respuesta\n\"Mensaje completo...\": Si SÍ se requiere segunda respuesta con la continuación natural\n\n\"escalamiento\" (string o null):\n\nnull: Si NO se requiere segunda respuesta\n\"doble_respuesta\": Si SÍ se requiere segunda respuesta para completar el flujo\n\n\"enviar_formulario\" (null - SIEMPRE):\n\nSIEMPRE debe ser null\n\n\"estado\" (null - SIEMPRE):\n\nSIEMPRE debe ser null\n\n\n🧠 LÓGICA DE DECISIÓN: ¿CUÁNDO SE REQUIERE DOBLE RESPUESTA?\n✅ SÍ REQUIERE DOBLE RESPUESTA cuando Santiago:\n\nPromete una acción inmediata:\n\n\"Te contactaré con una actualización en breve\"\n\"Voy a revisar tu caso y te respondo\"\n\"Déjame consultar esto y te informo\"\n\"Verifico con el equipo y te doy respuesta\"\n\n\nDeja algo en proceso activo:\n\n\"Estoy consultando la base de conocimiento...\"\n\"Voy a buscar la solución...\"\n\"Permíteme revisar los detalles...\"\n\n\nCrea expectativa de información adicional:\n\n\"Te comparto los siguientes pasos...\"\n\"Aquí está la solución a tu problema...\"\n\"Esto es lo que encontré sobre tu caso...\"\n\n\nPromete seguimiento inmediato sin esperar respuesta del cliente:\n\nCualquier frase que indique que Santiago dará continuidad sin que el cliente necesite responder primero\n\n\nUsa frases de transición que requieren completar:\n\n\"Mientras tanto...\"\n\"En cuanto tenga la información...\"\n\"Apenas confirme esto...\"\n\n\n\n❌ NO REQUIERE DOBLE RESPUESTA cuando Santiago:\n\nHace una pregunta al cliente:\n\n\"¿El chatbot ya está funcionando?\"\n\"¿Necesitas algo más?\"\n\"¿Puedes confirmar si...?\"\nRAZÓN: Está esperando respuesta del cliente\n\n\nDa una respuesta completa y definitiva:\n\nProporciona toda la información solicitada\nResuelve completamente la duda\nCierra el tema sin dejar nada pendiente\n\n\nEscala el caso:\n\n\"He escalado tu caso al gerente...\"\n\"Un supervisor te contactará...\"\nRAZÓN: La continuidad la dará otra persona\n\n\nCierra el caso:\n\nCliente confirma satisfacción y Santiago cierra formalmente\n\n\nSaluda inicialmente o da contexto:\n\n\"He revisado tu caso...\"\n\"Veo que reportaste...\"\nRAZÓN: Es solo introducción, no promete acción inmediata\n\n\n\n\n🔍 HERRAMIENTA DISPONIBLE\nBASE DE DATOS VECTORIAL\nFunción: search_knowledge_base1\nCuándo usar:\n\nSantiago prometió buscar información específica\nSantiago mencionó consultar soluciones\nNecesitas completar la información que Santiago inició\nEl cliente necesita pasos concretos de solución\nSe requiere información técnica para resolver la queja\n\nParámetros:\n\nquery: Consulta basada en el tipo de queja y lo que Santiago prometió buscar\n\n\n📊 PROCESO DE EVALUACIÓN PASO A PASO\nPASO 1: LEER Y ANALIZAR\n\nLee la respuesta completa de Santiago\nIdentifica frases clave que indiquen promesas o acciones pendientes\nVerifica si Santiago creó expectativa de continuación inmediata\n\nPASO 2: DECIDIR\nPregúntate:\n\n¿Santiago prometió hacer algo \"ahora\" o \"en breve\"?\n¿Santiago dejó algo en proceso que debe completarse?\n¿La conversación queda colgada sin la segunda respuesta?\n¿El cliente quedará esperando algo que no llegará si no respondo?\n\nSI LA RESPUESTA ES SÍ: Necesitas generar doble respuesta\nSI LA RESPUESTA ES NO: No se requiere doble respuesta\nPASO 3: BUSCAR (SI APLICA)\nSi decidiste que SÍ se requiere doble respuesta:\n\nIdentifica QUÉ prometió Santiago\nUsa search_knowledge_base1 para obtener esa información\nPrepara la respuesta que complete el flujo\n\nPASO 4: RESPONDER\nSi SÍ requiere doble respuesta:\njson{\n  \"respuesta\": \"Mensaje que completa lo que Santiago prometió...\",\n  \"escalamiento\": \"doble_respuesta\",\n  \"enviar_formulario\": null,\n  \"estado\": null\n}\nSi NO requiere doble respuesta:\njson{\n  \"respuesta\": null,\n  \"escalamiento\": null,\n  \"enviar_formulario\": null,\n  \"estado\": null\n}\n```\n\n---\n\n## 💡 EJEMPLOS COMPLETOS\n\n### **EJEMPLO 1: SÍ REQUIERE DOBLE RESPUESTA**\n\n**Respuesta de Santiago:**\n```\n\"Hola Santiago Emiliano Ramírez Vázquez, lamento mucho que tu problema aún no se haya resuelto. 😟 Entiendo lo frustrante que puede ser esta situación.\n\nVoy a revisar el estado de tu queja sobre los leads que no estás obteniendo y asegurarme de que se le dé la atención necesaria. Te contactaré con una actualización en breve. Agradezco tu paciencia mientras trabajamos en esto. 💙\"\n```\n\n**TU ANÁLISIS:**\n- ✅ Santiago prometió \"revisar el estado\" \n- ✅ Santiago dijo \"te contactaré con una actualización en breve\"\n- ✅ Cliente quedará esperando esa actualización\n- ✅ **DECISIÓN: SÍ REQUIERE DOBLE RESPUESTA**\n\n**TU BÚSQUEDA:**\n```\nsearch_knowledge_base1(\"problema leads no llegan solución campaña publicitaria\")\nTU RESPUESTA:\njson{\n  \"respuesta\": \"Santiago, acabo de revisar tu caso con el equipo técnico 🔍\\n\\nVeo que tu campaña de publicidad está activa desde el [fecha del reporte], pero los leads no están llegando como esperabas. He identificado que esto puede deberse a:\\n\\n[Incluir causas encontradas en la búsqueda]\\n\\nEstamos aplicando los siguientes ajustes AHORA MISMO:\\n1. [Paso 1 de la solución]\\n2. [Paso 2 de la solución]\\n3. [Paso 3 de la solución]\\n\\nEn las próximas 2-4 horas deberías empezar a ver los leads llegando correctamente. Te enviaré una confirmación cuando los ajustes estén completados.\\n\\n¿Tienes acceso al panel de leads para que puedas monitorear cuando empiecen a llegar? 💙\",\n  \"escalamiento\": \"doble_respuesta\",\n  \"enviar_formulario\": null,\n  \"estado\": null\n}\n```\n\n---\n\n### **EJEMPLO 2: NO REQUIERE DOBLE RESPUESTA (Pregunta al cliente)**\n\n**Respuesta de Santiago:**\n```\n\"Santiago, he revisado tu caso sobre el chatbot de WhatsApp que dejó de funcionar 🔍\n\nSegún nuestros registros técnicos, este tipo de problemas normalmente se resuelven reiniciando la conexión con la API de WhatsApp. \n\n¿El chatbot sigue sin responder completamente o ha habido algún cambio desde que lo reportaste? Necesito confirmar el estado actual para darte la mejor solución 💙\"\nTU ANÁLISIS:\n\n❌ Santiago hizo una pregunta directa al cliente\n❌ Está esperando que el cliente responda\n❌ No hay promesa de acción inmediata\n❌ DECISIÓN: NO REQUIERE DOBLE RESPUESTA\n\nTU RESPUESTA:\njson{\n  \"respuesta\": null,\n  \"escalamiento\": null,\n  \"enviar_formulario\": null,\n  \"estado\": null\n}\n```\n\n---\n\n### **EJEMPLO 3: SÍ REQUIERE DOBLE RESPUESTA (Dejó algo en proceso)**\n\n**Respuesta de Santiago:**\n```\n\"Santiago, entiendo tu urgencia con el problema del chatbot 😟\n\nDéjame consultar la base de conocimiento para encontrar la solución más efectiva para tu caso específico. Un momento por favor...\"\n```\n\n**TU ANÁLISIS:**\n- ✅ Santiago dijo \"déjame consultar\"\n- ✅ Dejó al cliente esperando \"un momento\"\n- ✅ Prometió encontrar \"la solución\"\n- ✅ **DECISIÓN: SÍ REQUIERE DOBLE RESPUESTA**\n\n**TU BÚSQUEDA:**\n```\nsearch_knowledge_base1(\"chatbot whatsapp no responde solución reiniciar API\")\nTU RESPUESTA:\njson{\n  \"respuesta\": \"¡Listo Santiago! 😊 Encontré la solución para tu chatbot de WhatsApp.\\n\\n[Incluir solución específica encontrada en la base de conocimiento]\\n\\nPara resolver tu caso específicamente, el equipo técnico necesita:\\n1. [Paso técnico 1]\\n2. [Paso técnico 2]\\n\\nYa notifiqué al equipo técnico y comenzarán a aplicar estos ajustes en los próximos 15-30 minutos. Te mantendremos informado del progreso.\\n\\nMientras tanto, ¿has notado algún mensaje de error específico en el panel de administración del chatbot? 💙\",\n  \"escalamiento\": \"doble_respuesta\",\n  \"enviar_formulario\": null,\n  \"estado\": null\n}\n```\n\n---\n\n### **EJEMPLO 4: NO REQUIERE DOBLE RESPUESTA (Respuesta completa)**\n\n**Respuesta de Santiago:**\n```\n\"Santiago, ¡excelente noticia! 🎉\n\nAcabo de confirmar con el equipo técnico que tu chatbot de WhatsApp ya fue reparado y está funcionando correctamente desde hace 30 minutos.\n\nEl problema era una desconexión temporal con la API de WhatsApp que ya fue resuelta. Puedes hacer una prueba enviando un mensaje de prueba al número del chatbot.\n\nSi todo funciona correctamente, por favor confírmame para cerrar tu caso. Si encuentras algún problema, avísame de inmediato 💙\"\nTU ANÁLISIS:\n\n❌ Santiago dio información completa\n❌ No prometió nada adicional\n❌ Está esperando confirmación del cliente\n❌ DECISIÓN: NO REQUIERE DOBLE RESPUESTA\n\nTU RESPUESTA:\njson{\n  \"respuesta\": null,\n  \"escalamiento\": null,\n  \"enviar_formulario\": null,\n  \"estado\": null\n}\n```\n\n---\n\n### **EJEMPLO 5: SÍ REQUIERE DOBLE RESPUESTA (Transición incompleta)**\n\n**Respuesta de Santiago:**\n```\n\"Santiago, comprendo perfectamente tu frustración 😟\n\nTu caso lleva ya 3 días sin resolverse, lo cual es completamente inaceptable. Voy a escalar esto INMEDIATAMENTE al Gerente Técnico.\n\nMientras tanto, permíteme darte toda la información que tengo sobre tu caso para que estés al tanto...\"\n```\n\n**TU ANÁLISIS:**\n- ✅ Santiago usó \"Mientras tanto...\"\n- ✅ Prometió dar \"toda la información\"\n- ✅ Dejó la frase incompleta\n- ✅ **DECISIÓN: SÍ REQUIERE DOBLE RESPUESTA**\n\n**TU BÚSQUEDA:**\n```\nsearch_knowledge_base1(\"estado queja [tipo de queja del reporte] tiempo resolución procedimiento\")\nTU RESPUESTA:\njson{\n  \"respuesta\": \"Aquí está el resumen completo de tu caso, Santiago:\\n\\n📋 **Tu Queja:**\\n- Problema: [del reporte]\\n- Reportado: [fecha del reporte]\\n- Servicio afectado: [del reporte]\\n\\n⏱️ **Estado Actual:**\\n- Tiempo transcurrido: 3 días\\n- Intentos de solución: [si hay información disponible]\\n- Causa identificada: [si la búsqueda encontró algo]\\n\\n✅ **Próximos Pasos:**\\nEl Gerente Técnico de IA, [nombre si está disponible], recibirá tu caso con prioridad MÁXIMA y te contactará personalmente en las próximas 2 horas.\\n\\nSi no recibes su llamada en ese tiempo, contáctame directamente y yo haré seguimiento inmediato. Tu satisfacción es nuestra prioridad 💙\",\n  \"escalamiento\": \"doble_respuesta\",\n  \"enviar_formulario\": null,\n  \"estado\": null\n}\n\n🎯 CHECKLIST DE EVALUACIÓN\nAntes de responder, pregúntate:\n✅ Análisis de la Respuesta de Santiago:\n\n ¿Santiago usó frases como \"te contactaré\", \"voy a revisar\", \"permíteme buscar\"?\n ¿Santiago dejó algo \"en proceso\" o \"por hacer\"?\n ¿Santiago prometió una acción que debe completarse ahora?\n ¿La conversación queda \"colgada\" sin mi respuesta?\n\n✅ Decisión:\n\n SI respondiste SÍ a alguna pregunta → GENERAR DOBLE RESPUESTA\n SI respondiste NO a todas → NO GENERAR DOBLE RESPUESTA\n\n✅ Si genero doble respuesta:\n\n ¿Busqué en la base de conocimiento la información necesaria?\n ¿Mi respuesta completa lo que Santiago prometió?\n ¿Mi respuesta mantiene el flujo natural de la conversación?\n ¿Usé el formato JSON correcto con \"escalamiento\": \"doble_respuesta\"?\n\n✅ Si NO genero doble respuesta:\n\n ¿Estoy seguro que Santiago NO prometió nada adicional?\n ¿Usé el formato JSON correcto con todos los campos en null?\n\n\n🚫 REGLAS CRÍTICAS\nSIEMPRE HACER:\n✅ Leer la respuesta completa de Santiago antes de decidir\n✅ Analizar si hay promesas o expectativas de continuación\n✅ Buscar en la base de conocimiento si decides generar doble respuesta\n✅ Mantener el tono y estilo de Santiago en la segunda respuesta\n✅ Responder en formato JSON válido con los 4 campos\n✅ Usar \"escalamiento\": \"doble_respuesta\" cuando generes segunda respuesta\n✅ Completar exactamente lo que Santiago prometió\nNUNCA HACER:\n❌ Generar doble respuesta cuando Santiago hizo una pregunta al cliente\n❌ Generar doble respuesta cuando Santiago dio información completa\n❌ Inventar información - siempre busca en la base de conocimiento\n❌ Cambiar el tono o estilo de conversación de Santiago\n❌ Responder con texto fuera del formato JSON\n❌ Omitir alguno de los 4 campos del JSON\n❌ Usar escalamiento distinto a \"doble_respuesta\" o null\n\n🎯 INSTRUCCIÓN FINAL\nEres el agente de continuidad conversacional. Tu único trabajo es evaluar si Santiago dejó algo pendiente que requiera completarse inmediatamente.\nTu proceso simple:\n\n📖 Leer la respuesta de Santiago\n🤔 Preguntarte: \"¿Santiago prometió algo que debe completarse ahora?\"\n🔍 Si SÍ: Busca la información y genera la segunda respuesta\n📤 Si NO: Responde con todos los campos en null\n✅ Siempre: Devuelve JSON válido\n\nRecuerda:\n\nSolo actúas cuando Santiago creó una expectativa de continuación\nTu segunda respuesta debe ser natural y fluida\nCompletas exactamente lo que Santiago prometió\nMantienes el mismo tono empático y profesional\n\"escalamiento\" es \"doble_respuesta\" o null (nada más)\n\"enviar_formulario\" y \"estado\" SIEMPRE son null\n\n¡Adelante! Mantén la fluidez de las conversaciones cuando sea necesario. 💙🎯"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        2784,
+        736
+      ],
+      "id": "31979181-80ec-4c13-8baa-6b5cf30627c9",
+      "name": "volver a responder"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================\n// LIMPIADOR DE JSON - AGENTE SANTIAGO\n// ============================================\n// Este nodo limpia y valida el JSON devuelto por el agente IA\n// para asegurar que sea válido y tenga la estructura correcta\n\n// Obtener la respuesta del agente\nconst agentResponse = $input.first().json;\n\n// Función principal de limpieza\nfunction cleanAndValidateJSON(response) {\n  try {\n    let jsonString = '';\n    \n    // ============================================\n    // MANEJO ESPECIAL: Extraer de la propiedad \"output\"\n    // ============================================\n    if (response && response.output) {\n      // Si viene en response.output, usar ese valor\n      jsonString = typeof response.output === 'string' ? response.output : JSON.stringify(response.output);\n    } else if (typeof response === 'object' && response !== null) {\n      // Si la respuesta ya es un objeto, stringificarlo\n      jsonString = JSON.stringify(response);\n    } else if (typeof response === 'string') {\n      // Si es string directo\n      jsonString = response;\n    } else {\n      throw new Error('Formato de respuesta inválido');\n    }\n    \n    // ============================================\n    // PASO 1: Limpiar caracteres extraños\n    // ============================================\n    \n    // Remover BOM (Byte Order Mark)\n    jsonString = jsonString.replace(/^\\uFEFF/, '');\n    \n    // Remover caracteres de control invisibles (excepto \\n, \\r, \\t que son válidos en JSON)\n    jsonString = jsonString.replace(/[\\u0000-\\u0008\\u000B-\\u000C\\u000E-\\u001F\\u007F-\\u009F]/g, '');\n    \n    // Remover espacios y saltos de línea al inicio y final\n    jsonString = jsonString.trim();\n    \n    // **NUEVO: Remover prefijos como \"json\" antes de la llave de apertura**\n    jsonString = jsonString.replace(/^(json|JSON)\\s*\\{/, '{');\n    \n    // Buscar JSON dentro de bloques de código markdown\n    const codeBlockMatch = jsonString.match(/```(?:json)?\\s*(\\{[\\s\\S]*?\\})\\s*```/);\n    if (codeBlockMatch) {\n      jsonString = codeBlockMatch[1].trim();\n    }\n    \n    // Buscar JSON entre otros textos (extraer solo el objeto JSON)\n    const jsonMatch = jsonString.match(/\\{[\\s\\S]*\\}/);\n    if (jsonMatch) {\n      jsonString = jsonMatch[0];\n    }\n    \n    // Remover comas finales antes de llaves o corchetes de cierre\n    jsonString = jsonString.replace(/,(\\s*[}\\]])/g, '$1');\n    \n    // Normalizar comillas tipográficas\n    jsonString = jsonString.replace(/[\"\"]/g, '\"');\n    jsonString = jsonString.replace(/['']/g, \"'\");\n    \n    // ============================================\n    // PASO 2: Intentar parsear el JSON\n    // ============================================\n    \n    let parsedJSON;\n    try {\n      parsedJSON = JSON.parse(jsonString);\n    } catch (parseError) {\n      console.warn('Primer intento de parseo falló, intentando reparaciones...');\n      \n      // Intentar agregar comillas a claves sin comillas\n      jsonString = jsonString.replace(/([{,]\\s*)(\\w+)(\\s*:)/g, '$1\"$2\"$3');\n      \n      // Intentar corregir valores null sin comillas\n      jsonString = jsonString.replace(/:\\s*null\\s*([,}])/g, ': null$1');\n      \n      // Reintentar parseo\n      try {\n        parsedJSON = JSON.parse(jsonString);\n      } catch (secondError) {\n        throw new Error(`No se pudo parsear el JSON después de reparaciones: ${secondError.message}`);\n      }\n    }\n    \n    // ============================================\n    // PASO 3: Validar estructura del JSON\n    // ============================================\n    \n    const requiredFields = ['respuesta', 'escalamiento', 'enviar_formulario', 'estado'];\n    const missingFields = requiredFields.filter(field => !(field in parsedJSON));\n    \n    if (missingFields.length > 0) {\n      throw new Error(`Faltan campos requeridos: ${missingFields.join(', ')}`);\n    }\n    \n    // ============================================\n    // PASO 4: Validar y normalizar valores\n    // ============================================\n    \n    // Validar campo \"respuesta\" (debe ser string no vacío)\n    if (typeof parsedJSON.respuesta !== 'string' || parsedJSON.respuesta.trim() === '') {\n      throw new Error('El campo \"respuesta\" debe ser un string no vacío');\n    }\n    \n    // **ACTUALIZADO: Normalizar campo \"escalamiento\"**\n    // Acepta: \"escalamiento\", \"doble_respuesta\", o null\n    const validEscalamiento = ['escalamiento', 'doble_respuesta', null];\n    if (!validEscalamiento.includes(parsedJSON.escalamiento)) {\n      console.warn(`Valor inválido en escalamiento: \"${parsedJSON.escalamiento}\". Se normalizará a null.`);\n      parsedJSON.escalamiento = null;\n    }\n    \n    // Normalizar campo \"enviar_formulario\" (solo acepta \"enviar_plantilla\" o null)\n    if (parsedJSON.enviar_formulario !== null && parsedJSON.enviar_formulario !== 'enviar_plantilla') {\n      console.warn(`Valor inválido en enviar_formulario: \"${parsedJSON.enviar_formulario}\". Se normalizará a null.`);\n      parsedJSON.enviar_formulario = null;\n    }\n    \n    // Normalizar campo \"estado\" (solo acepta \"cerrado\" o null)\n    if (parsedJSON.estado !== null && parsedJSON.estado !== 'cerrado') {\n      console.warn(`Valor inválido en estado: \"${parsedJSON.estado}\". Se normalizará a null.`);\n      parsedJSON.estado = null;\n    }\n    \n    // ============================================\n    // PASO 5: Limpiar el texto de la respuesta\n    // ============================================\n    \n    // Limpiar saltos de línea excesivos en la respuesta\n    parsedJSON.respuesta = parsedJSON.respuesta\n      .replace(/\\\\n/g, '\\n') // Convertir \\n escapados a saltos reales\n      .replace(/\\n{3,}/g, '\\n\\n') // Máximo 2 saltos de línea consecutivos\n      .trim();\n    \n    // ============================================\n    // PASO 6: Crear objeto de salida limpio\n    // ============================================\n    \n    return {\n      respuesta: parsedJSON.respuesta,\n      escalamiento: parsedJSON.escalamiento,\n      enviar_formulario: parsedJSON.enviar_formulario,\n      estado: parsedJSON.estado,\n      _metadata: {\n        success: true,\n        cleaned: true,\n        timestamp: new Date().toISOString(),\n        cleaned_by: 'json_cleaner_node'\n      }\n    };\n    \n  } catch (error) {\n    // ============================================\n    // MANEJO DE ERRORES\n    // ============================================\n    console.error('Error al limpiar JSON:', error.message);\n    console.error('Respuesta original:', JSON.stringify(response, null, 2));\n    \n    // Retornar JSON de fallback con mensaje de error al cliente\n    return {\n      respuesta: \"Disculpa, tuve un problema técnico al procesar tu mensaje. ¿Podrías repetirlo por favor? 🙏\",\n      escalamiento: \"escalamiento\", // Escalar automáticamente en caso de error\n      enviar_formulario: null,\n      estado: null,\n      _metadata: {\n        success: false,\n        cleaned: false,\n        error: error.message,\n        original_response: response,\n        timestamp: new Date().toISOString(),\n        cleaned_by: 'json_cleaner_node'\n      }\n    };\n  }\n}\n\n// ============================================\n// EJECUTAR LIMPIEZA Y RETORNAR\n// ============================================\n\nreturn cleanAndValidateJSON(agentResponse);"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3200,
+        848
+      ],
+      "id": "50075dc1-cf2f-4a68-941f-f5269cd02879",
+      "name": "limpiar salida2"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c2eb5142-19b4-4e24-be8a-c6c160c10b2f",
+              "leftValue": "={{ $('limpiar salida2').item.json.escalamiento }}",
+              "rightValue": "doble_respuesta",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        3424,
+        848
+      ],
+      "id": "7639d851-2a53-4932-9ccd-e28a6fe1521e",
+      "name": "Filter"
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('When Executed by Another Workflow').item.json.client_id }}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+      "typeVersion": 1.3,
+      "position": [
+        2864,
+        960
+      ],
+      "id": "1b3b7684-16ef-4fca-914a-fbe01286bbe5",
+      "name": "Postgres Chat Memory1"
+    },
+    {
+      "parameters": {
+        "amount": 3
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        2512,
+        848
+      ],
+      "id": "58d7ae93-19eb-4987-90a9-0c84f06d6806",
+      "name": "Wait",
+      "webhookId": "8cd7f28d-cda9-42f5-816c-a712d4bd3538"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://lightrag.srv869127.hstgr.cloud/query",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "accept",
+              "value": "application/json"
+            },
+            {
+              "name": "X-API-Key",
+              "value": "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"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "query",
+              "value": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('parameters0_Value', ``, 'string') }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.2,
+      "position": [
+        1632,
+        1360
+      ],
+      "id": "1b95c177-2721-4a12-a1c1-0ab3d4c9cfd9",
+      "name": "search_knowledge_base2"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://lightrag.srv869127.hstgr.cloud/query",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "accept",
+              "value": "application/json"
+            },
+            {
+              "name": "X-API-Key",
+              "value": "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"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "query",
+              "value": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('parameters0_Value', ``, 'string') }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.2,
+      "position": [
+        1632,
+        544
+      ],
+      "id": "063ea666-315f-404d-bef9-a4f0f6faa741",
+      "name": "search_knowledge_base"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://lightrag.srv869127.hstgr.cloud/query",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "accept",
+              "value": "application/json"
+            },
+            {
+              "name": "X-API-Key",
+              "value": "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"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "query",
+              "value": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('parameters0_Value', ``, 'string') }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.2,
+      "position": [
+        2992,
+        960
+      ],
+      "id": "b91fcf9a-521d-4318-a1c4-c506aee9b925",
+      "name": "search_knowledge_base1"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO conversaciones (\n    session_id,\n    message,\n    etiqueta,\n    fecha\n)\nVALUES (\n    '{{ $('When Executed by Another Workflow').item.json.client_id }}',\n    jsonb_build_object(\n        'type', 'ai',\n        'content', jsonb_pretty(json_build_object(\n            'respuesta', 'Reportar un problema\nHola {{ $('When Executed by Another Workflow').item.json.nombre }},\nLamentamos que tengas un inconveniente con nuestros servicios en SocialMask.\nPara ayudarte rápidamente, por favor completa el siguiente formulario de reporte\nNuestro equipo te contactará lo antes posible.\nGracias',\n            'escalamiento', null,\n            'enviar_formulario', null,\n            'estado', null\n        )::jsonb),\n        'tool_calls', '[]'::jsonb,\n        'additional_kwargs', '{}'::jsonb,\n        'response_metadata', '{}'::jsonb,\n        'invalid_tool_calls', '[]'::jsonb\n    ),\n    'queja',\n    '{{ $now.toISO() }}'::timestamptz\n);",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        2848,
+        1136
+      ],
+      "id": "a4bd751f-06c1-4060-bba6-9ce5712ac56f",
+      "name": "actualizar memoria agente1",
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "pinData": {
+    "When Executed by Another Workflow": [
+      {
+        "json": {
+          "etiqueta": "queja",
+          "mensaje": "Hola buenas noches quería saber sonbre el estado de mi queja gracias",
+          "client_id": 1759703881809314,
+          "telefono": "+523122254289\n",
+          "nombre": "Santiago Emiliano Ramírez Vázquez",
+          "sender": 42,
+          "accountId": 2,
+          "content_type": "text",
+          "fecha_UTC": "2025-11-06T05:30:57.000Z",
+          "private": "false",
+          "content_attributes": "{}",
+          "conversationId": 31,
+          "email": "fran_chago@hotmail.com",
+          "nombre_normalizado": "santiagoemilianoramirezvazquez",
+          "es_cliente": "true",
+          "fecha_creado": "\"2025-10-05T00:00:00.000Z\"",
+          "pais": "México",
+          "estado_cita": "cita agendada",
+          "fecha_cita": "2025-10-20T23:00:00.000Z",
+          "enlace_reunion": "https://meet.google.com/sga-phpe-dfw",
+          "fecha_cita_timezone_cliente": "2025-10-20T23:00:00.000Z",
+          "asistencia": "si_asistio",
+          "empresa": "Simplic Nutrition",
+          "servicio": "Marketing Digital",
+          "cita_pasada": "cita_pasada",
+          "score_lead": "90",
+          "agente": "Agente IA",
+          "channel": "Channel::Whatsapp",
+          "fecha_cita_timezone_legible": "Lunes, 20 de octubre de 2025, 05:00 p.m.",
+          "emocion_cliente": null,
+          "detalles": null,
+          "servicio_afectado": null,
+          "nivel_urgencia": null,
+          "tipo_queja": null,
+          "fecha_queja": "11/6/2025, 5:30:57 AM",
+          "contact_id": "42"
+        }
+      }
+    ]
+  },
+  "connections": {
+    "OpenAI Chat Model3": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "queja",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres Chat Memory3": {
+      "ai_memory": [
+        [
+          {
+            "node": "queja",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "queja": {
+      "main": [
+        [
+          {
+            "node": "etiqueta queja",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "limpiar salida",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "registrar_etiqueta_y_fecha",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "extraer queja",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "contestar queja1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "contestar queja",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "extraer queja": {
+      "main": [
+        [
+          {
+            "node": "concatenar campos de registro de queja",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "contestar queja": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "asignar conversacion a agente humano": {
+      "main": [
+        [
+          {
+            "node": "informar sobre escalamiento",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "escalamiento a humano": {
+      "main": [
+        [
+          {
+            "node": "asignar conversacion a agente humano",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "escalamiento a humano",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "cerrar queja",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "limpiar salida": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "declarar registro": {
+      "main": [
+        [
+          {
+            "node": "If3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "contestar queja1": {
+      "main": [
+        [
+          {
+            "node": "Send template",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "cerrar queja": {
+      "main": [
+        [
+          {
+            "node": "informar queja cerrada",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "queja1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres Chat Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "queja1",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "queja1": {
+      "main": [
+        [
+          {
+            "node": "etiqueta queja1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "limpiar salida1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "registrar_etiqueta_y_fecha1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "contestar queja2": {
+      "main": [
+        [
+          {
+            "node": "Switch1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If2": {
+      "main": [
+        [
+          {
+            "node": "contestar queja3",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "contestar queja2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "asignar conversacion a agente humano1": {
+      "main": [
+        [
+          {
+            "node": "informar sobre escalamiento1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "escalamiento a humano1": {
+      "main": [
+        [
+          {
+            "node": "asignar conversacion a agente humano1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch1": {
+      "main": [
+        [
+          {
+            "node": "escalamiento a humano1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "cerrar queja1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "limpiar salida1": {
+      "main": [
+        [
+          {
+            "node": "If2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "cerrar queja1": {
+      "main": [
+        [
+          {
+            "node": "informar queja cerrada1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If3": {
+      "main": [
+        [
+          {
+            "node": "queja1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "queja",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "concatenar campos de registro de queja": {
+      "main": [
+        [
+          {
+            "node": "declarar registro",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "volver a responder",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "volver a responder": {
+      "main": [
+        [
+          {
+            "node": "limpiar salida2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "limpiar salida2": {
+      "main": [
+        [
+          {
+            "node": "Filter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter": {
+      "main": [
+        [
+          {
+            "node": "contestar queja4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres Chat Memory1": {
+      "ai_memory": [
+        [
+          {
+            "node": "volver a responder",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "volver a responder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "search_knowledge_base2": {
+      "ai_tool": [
+        [
+          {
+            "node": "queja",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "search_knowledge_base": {
+      "ai_tool": [
+        [
+          {
+            "node": "queja1",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "search_knowledge_base1": {
+      "ai_tool": [
+        [
+          {
+            "node": "volver a responder",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send template": {
+      "main": [
+        [
+          {
+            "node": "actualizar memoria agente1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "afcab1bc-c8cc-4390-ad10-a8c34730f236",
+  "meta": {
+    "instanceId": "d3431c007fca169642eb611ebf14349b33382eea645956206c574548fe4eeab7"
+  },
+  "id": "4iwrFqiLBUDDxzwh",
+  "tags": []
+}

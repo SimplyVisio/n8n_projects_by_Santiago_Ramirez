@@ -1,0 +1,1528 @@
+{
+  "name": "AGENTE DE VENTAS B2B WA",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "2ae748c5-eb3e-4a79-a1d9-b11cb9b91568",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -3136,
+        288
+      ],
+      "id": "51addaec-6318-4e26-8c9f-14fa54444965",
+      "name": "Webhook",
+      "webhookId": "2ae748c5-eb3e-4a79-a1d9-b11cb9b91568"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT *\nFROM prospectos_b2b\nWHERE telefono_empresa = '{{ $('Code').item.json.phone_number_normalized }}'\nORDER BY id DESC\nLIMIT 1;\n\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -2240,
+        288
+      ],
+      "id": "8f15d5d2-e2e5-412a-b9fc-132b33edabbe",
+      "name": "extraer_prospecto",
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "5e540f11-201e-451d-b71e-a96551f2a434",
+              "name": "mensaje",
+              "value": "={{ $('variables persistentes cliente').item.json.concat_message }}",
+              "type": "string"
+            },
+            {
+              "id": "63bc376c-c12f-4fd5-884a-8ba1d489ca05",
+              "name": "client_id",
+              "value": "={{ $('variables persistentes cliente').item.json.client_id }}",
+              "type": "number"
+            },
+            {
+              "id": "f760c342-af9e-4a73-a62b-10e11cf89bff",
+              "name": "telefono",
+              "value": "={{ $('variables persistentes cliente').item.json.telefono }}",
+              "type": "string"
+            },
+            {
+              "id": "b5d366d3-de97-450f-b2b9-dc02e777c52a",
+              "name": "nombre",
+              "value": "={{ $('variables persistentes cliente').item.json.nombre }}",
+              "type": "string"
+            },
+            {
+              "id": "95b1c42a-4254-4416-89e0-d8416067e527",
+              "name": "sender",
+              "value": "={{ $('Data message extraction').item.json.sender }}",
+              "type": "number"
+            },
+            {
+              "id": "f8275ac7-2270-46ef-82fa-e686f3f83dc1",
+              "name": "accountId",
+              "value": "={{ $('Data message extraction').item.json.accountId }}",
+              "type": "number"
+            },
+            {
+              "id": "6aebd595-f155-4a0e-8cd4-2ac30fa7ecb2",
+              "name": "content_type",
+              "value": "={{ $('Data message extraction').item.json.content_type }}",
+              "type": "string"
+            },
+            {
+              "id": "a91b516f-4822-4835-a574-88c34fa5d915",
+              "name": "fecha_UTC",
+              "value": "={{ $('Data message extraction').item.json.fecha_UTC }}",
+              "type": "string"
+            },
+            {
+              "id": "f16de72f-dda2-4c38-8496-b636db5d39e0",
+              "name": "private",
+              "value": "={{ $('Data message extraction').item.json.private }}",
+              "type": "string"
+            },
+            {
+              "id": "55875180-5959-4092-8fde-2c813687dab3",
+              "name": "content_attributes",
+              "value": "={{ $('Data message extraction').item.json.content_attributes }}",
+              "type": "string"
+            },
+            {
+              "id": "58fd6d62-ce5d-42bf-9183-9acec874479a",
+              "name": "conversationId",
+              "value": "={{ $('Data message extraction').item.json.conversationId }}",
+              "type": "number"
+            },
+            {
+              "id": "9ccdf450-93d7-42b5-a48c-e236b3f0cc00",
+              "name": "email",
+              "value": "={{ $('variables persistentes cliente').item.json.email}}",
+              "type": "string"
+            },
+            {
+              "id": "c12d845b-2b04-4b38-b781-b601086ee9f4",
+              "name": "nombre_normalizado",
+              "value": "={{ $('variables persistentes cliente').item.json.nombre_normalizado}}",
+              "type": "string"
+            },
+            {
+              "id": "1172d311-55d3-413a-a3af-a7cfdb8473b6",
+              "name": "es_cliente",
+              "value": "={{ $('variables persistentes cliente').item.json.es_cliente }}",
+              "type": "string"
+            },
+            {
+              "id": "fc9608cc-0ff4-4018-a56a-bf73450c9620",
+              "name": "fecha_creado",
+              "value": "={{ $('variables persistentes cliente').item.json.fecha_creado }}",
+              "type": "string"
+            },
+            {
+              "id": "9b19255d-bc4a-4dd9-9366-496d0db25d11",
+              "name": "pais",
+              "value": "={{ $('variables persistentes cliente').item.json.pais }}",
+              "type": "string"
+            },
+            {
+              "id": "8672eb3f-573b-488f-98c2-e5bf99b33d38",
+              "name": "estado_cita",
+              "value": "={{ $('variables persistentes cliente').item.json.estado_cita.replace(/\\s+/g, ' ').trim() }}",
+              "type": "string"
+            },
+            {
+              "id": "0a5398b0-0855-467f-9ee2-d4783a5e10aa",
+              "name": "fecha_cita",
+              "value": "={{ $('variables persistentes cliente').item.json.fecha_cita }}",
+              "type": "string"
+            },
+            {
+              "id": "a686e00b-9f67-4449-9f7b-2d10956315c6",
+              "name": "enlace_reunion",
+              "value": "={{ $('variables persistentes cliente').item.json.enlace_reunion }}",
+              "type": "string"
+            },
+            {
+              "id": "156681d6-a73b-41bc-9ceb-7ebbc8145743",
+              "name": "fecha_cita_timezone_cliente",
+              "value": "={{ $('variables persistentes cliente').item.json.fecha_cita_timezone_cliente }}",
+              "type": "string"
+            },
+            {
+              "id": "d1c89a28-7013-45f0-9349-9f130b28e4dc",
+              "name": "asistencia",
+              "value": "={{ $('variables persistentes cliente').item.json.asistencia }}",
+              "type": "string"
+            },
+            {
+              "id": "7983b5f6-0777-4d5c-af06-0b18d5774e87",
+              "name": "empresa",
+              "value": "={{ $('variables persistentes cliente').item.json.empresa }}",
+              "type": "string"
+            },
+            {
+              "id": "65a19a39-fc77-4b6c-8eb3-af4ce863eb05",
+              "name": "servicio",
+              "value": "={{ $('variables persistentes cliente').item.json.servicio }}",
+              "type": "string"
+            },
+            {
+              "id": "bddea788-d86a-45e8-8dab-5907bf9d8c22",
+              "name": "cita_pasada",
+              "value": "={{ $('variables persistentes cliente').item.json.cita_pasada }}",
+              "type": "string"
+            },
+            {
+              "id": "48196d9e-82a5-4971-98e2-b36249b0d4b7",
+              "name": "score_lead",
+              "value": "={{ $('variables persistentes cliente').item.json.score_lead }}",
+              "type": "string"
+            },
+            {
+              "id": "45497936-3c46-41e9-84f2-ded1c5e45d54",
+              "name": "agente",
+              "value": "={{ $('variables persistentes cliente').item.json.agente }}",
+              "type": "string"
+            },
+            {
+              "id": "9fd56c8a-d5d5-49fd-8f78-657ae0440222",
+              "name": "channel",
+              "value": "={{ $('Data message extraction').item.json.channel }}",
+              "type": "string"
+            },
+            {
+              "id": "85426495-f10c-4dd3-bbf9-244279b2d6ac",
+              "name": "fecha_cita_timezone_legible",
+              "value": "={{ $('variables persistentes cliente').item.json.fecha_cita_timezone_legible }}",
+              "type": "string"
+            },
+            {
+              "id": "2f5d5166-6c55-4dc4-a99b-48e686730d07",
+              "name": "google_event_id",
+              "value": "={{ $('obtener_citas').item.json.google_event_id }}",
+              "type": "string"
+            },
+            {
+              "id": "4d5bcadf-700e-4985-ae6c-848ecb3087cc",
+              "name": "empresa_nombre",
+              "value": "={{ $('extraer_prospecto').item.json.empresa_nombre }}",
+              "type": "string"
+            },
+            {
+              "id": "551da8aa-bc0f-4cb2-9ffb-54fc18f9bf73",
+              "name": "industria",
+              "value": "={{ $('extraer_prospecto').item.json.industria }}",
+              "type": "string"
+            },
+            {
+              "id": "4b460c75-5e1d-4131-ad66-fb2ad3495165",
+              "name": "ubicacion_estado",
+              "value": "={{ $('extraer_prospecto').item.json.ubicacion_estado }}",
+              "type": "string"
+            },
+            {
+              "id": "6edba7ac-e3c6-4fd0-af32-9d2541a1ee3b",
+              "name": "tamano_empresa",
+              "value": "={{ $('extraer_prospecto').item.json.tamano_empresa }}",
+              "type": "string"
+            },
+            {
+              "id": "91e63b29-b924-4996-8c67-e7de56db0b9e",
+              "name": "sitio_web",
+              "value": "={{ $('extraer_prospecto').item.json.sitio_web }}",
+              "type": "string"
+            },
+            {
+              "id": "2d694dcd-1d46-4612-8b56-d3f90af1cdc5",
+              "name": "oportunidades_detectadas",
+              "value": "={{ $('extraer_prospecto').item.json.oportunidades_detectadas }}",
+              "type": "string"
+            },
+            {
+              "id": "821da95e-92dc-4e71-b5d5-6b2af7d83fb5",
+              "name": "notas_personalizacion",
+              "value": "={{ $('extraer_prospecto').item.json.notas_personalizacion }}",
+              "type": "string"
+            },
+            {
+              "id": "ed130f30-3b5f-482b-b8d8-6d2e81535ad9",
+              "name": "mensaje_personalizado",
+              "value": "={{ $('extraer_prospecto').item.json.mensaje_personalizado }}",
+              "type": "string"
+            },
+            {
+              "id": "2e7d0916-0db5-4108-9116-40df2b234f4f",
+              "name": "caso_exito_industria",
+              "value": "={{ $('extraer_prospecto').item.json.caso_exito_industria }}",
+              "type": "string"
+            },
+            {
+              "id": "33543775-efe8-4afa-a4c4-b3ed7f50e368",
+              "name": "mejoras_sugeridas",
+              "value": "={{ $('extraer_prospecto').item.json.mejoras_sugeridas }}",
+              "type": "string"
+            },
+            {
+              "id": "041c8d6c-3768-49eb-a46e-594f6d290699",
+              "name": "noticia_ia_resumen",
+              "value": "={{ $('extraer_prospecto').item.json.noticia_ia_resumen }}",
+              "type": "string"
+            },
+            {
+              "id": "551d3d47-04dd-48c4-9e08-b8f6c463f7a1",
+              "name": "impacto_ia_negocio",
+              "value": "={{ $('extraer_prospecto').item.json.impacto_ia_negocio }}",
+              "type": "string"
+            },
+            {
+              "id": "97b9d1a1-31f8-4894-8160-fe3fbad3d3eb",
+              "name": "servicios_recomendados",
+              "value": "={{ $('extraer_prospecto').item.json.servicios_recomendados }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1920,
+        192
+      ],
+      "id": "f3a6e034-9c22-414f-9e5c-0155eedd4f8f",
+      "name": "enviar_variables_cliente"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT *\nFROM citas\nWHERE client_id = '{{ $('Get many rows').item.json.client_id }}'\nORDER BY fecha_cita_timezone_cliente DESC\nLIMIT 1;\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -2016,
+        288
+      ],
+      "id": "e3b33416-f668-42f0-b51e-520bcf8e8666",
+      "name": "obtener_citas",
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c70cd167-b2fd-4d7f-ba75-312caf97704f",
+              "name": "client_id",
+              "value": "={{ $('Get many rows').item.json.client_id }}",
+              "type": "string"
+            },
+            {
+              "id": "a842390b-4153-485c-bd85-4f9650883de1",
+              "name": "concat_message",
+              "value": "={{ $('Edit Fields').item.json.concat_message }}",
+              "type": "string"
+            },
+            {
+              "id": "bf6537db-58ae-4063-bab2-647dc071ad0d",
+              "name": "telefono",
+              "value": "={{ $('Get many rows').item.json.telefono }}\n",
+              "type": "string"
+            },
+            {
+              "id": "9120aa52-9c10-467b-8f9d-50ac37e16ea0",
+              "name": "nombre",
+              "value": "={{ $('Get many rows').item.json.nombre ?? $('obtener_citas').item.json.nombre}}",
+              "type": "string"
+            },
+            {
+              "id": "eeaaeea4-a922-49ae-8b3d-a40738c64d77",
+              "name": "email",
+              "value": "={{ $('Get many rows').item.json.email }}",
+              "type": "string"
+            },
+            {
+              "id": "1ccca01b-d27f-425b-bad2-f536e863ba27",
+              "name": "nombre_normalizado",
+              "value": "={{ $('Get many rows').item.json.nombre_normalizado }}",
+              "type": "string"
+            },
+            {
+              "id": "eb2d32d4-035c-4488-aaba-774560e516c7",
+              "name": "es_cliente",
+              "value": "={{ $('Get many rows').item.json.es_cliente }}",
+              "type": "string"
+            },
+            {
+              "id": "16a8513b-88b1-488b-b450-a010c0d9e3ca",
+              "name": "fecha_creado",
+              "value": "={{ $('Get many rows').item.json.fecha_creado }}",
+              "type": "string"
+            },
+            {
+              "id": "e47d424f-47d1-46c6-9a49-418c87699d72",
+              "name": "pais",
+              "value": "={{ $('Get many rows').item.json.pais ?? $('obtener_citas').item.json.pais}}",
+              "type": "string"
+            },
+            {
+              "id": "706b0922-56f3-4254-8108-ae5ee56378a8",
+              "name": "estado_cita",
+              "value": "={{ $('obtener_citas').item.json.estado }}",
+              "type": "string"
+            },
+            {
+              "id": "353c0f28-6629-44ad-8124-bce0544c41ac",
+              "name": "fecha_cita",
+              "value": "={{ $('obtener_citas').item.json.fecha_cita }}",
+              "type": "string"
+            },
+            {
+              "id": "0015cad1-5678-468b-851a-674ebcef0f1e",
+              "name": "enlace_reunion",
+              "value": "={{ $('obtener_citas').item.json.enlace_reunion }}",
+              "type": "string"
+            },
+            {
+              "id": "452bccdf-ac61-4faa-8417-a9c26fd5d7da",
+              "name": "fecha_cita_timezone_cliente",
+              "value": "={{ $('obtener_citas').item.json.fecha_cita_timezone_cliente }}",
+              "type": "string"
+            },
+            {
+              "id": "1cfbb988-38a7-4672-9cf8-3993d81ec82f",
+              "name": "asistencia",
+              "value": "={{ $('obtener_citas').item.json.asistencia}}",
+              "type": "string"
+            },
+            {
+              "id": "b9d8b0da-7030-47e0-9732-4e96815a3f67",
+              "name": "empresa",
+              "value": "={{ $('Get many rows').item.json.empresa ?? $('obtener_citas').item.json.empresa}}",
+              "type": "string"
+            },
+            {
+              "id": "264fbb34-23b3-4d79-bc39-661d49a882f5",
+              "name": "servicio",
+              "value": "={{ $('obtener_citas').item.json.servicio ?? $('Get many rows').item.json.servicio}}",
+              "type": "string"
+            },
+            {
+              "id": "4afd1276-241a-4b50-9a0c-c07e531cc75d",
+              "name": "cita_pasada",
+              "value": "={{ $('obtener_citas').item.json.cita_pasada }}",
+              "type": "string"
+            },
+            {
+              "id": "e4ad595e-c1d7-4a2e-aa88-61688d6194e1",
+              "name": "score_lead",
+              "value": "={{ $('Get many rows').item.json.score_lead }}",
+              "type": "string"
+            },
+            {
+              "id": "579a9579-3fd2-43ca-8560-0de0ec786940",
+              "name": "agente",
+              "value": "={{ $('Data message extraction').item.json.agente }}",
+              "type": "string"
+            },
+            {
+              "id": "8b8f1a4a-4ce0-46cb-a713-0dc45ab0b48f",
+              "name": "fecha_cita_timezone_legible",
+              "value": "={{ $('obtener_citas').item.json.fecha_cita_timezone_legible }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1696,
+        192
+      ],
+      "id": "8f7c7b77-fd79-4d46-84e1-0d8af67ac3a6",
+      "name": "variables persistentes cliente",
+      "alwaysOutputData": false,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT *\nFROM leads_formularios_optimizada\nWHERE \n  nombre_normalizado = '{{ $('Data message extraction').item.json.nombre_normalizado }}'\n  OR telefono = '{{ $('Code').item.json.phone_number_normalized }}'\n  OR messenger = '{{ $('Data message extraction').item.json.sender_name }}'\n  OR instagram = '{{ $('Data message extraction').item.json.sender_name }}'\n  OR whatsapp = '{{ $('Code').item.json.phone_number_normalized }}'\n  OR nombre = '{{ $('Data message extraction').item.json.sender_name }}'\n  OR messenger_normalizado = '{{ $('Data message extraction').item.json.nombre_normalizado }}'\n  OR instagram_normalizado = '{{ $('Data message extraction').item.json.nombre_normalizado }}'\n  OR telegram = '{{ $('Data message extraction').item.json.username_telegram }}'\n  OR telegram_normalizado = '{{ $('Data message extraction').item.json.username_telegram.normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').replace(/[^a-zA-ZñÑ]/g, '').toLowerCase() }}'\nORDER BY created_at DESC\nLIMIT 1;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -2464,
+        288
+      ],
+      "id": "b8b32df4-f7c1-40b0-8b6d-b295e1995ac1",
+      "name": "Get many rows",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT json_build_object(\n  'historial_conversaciones', \n  string_agg(\n    conversacion_formateada,\n    E'\\n\\n'\n  )\n) as resultado\nFROM (\n  SELECT \n    '#' || id || ' [' || (message->>'type') || '] ' || \n    COALESCE(\n      CASE \n        -- Si content es un objeto JSON con campo 'respuesta', extraerlo\n        WHEN jsonb_typeof(message->'content') = 'object' AND message->'content' ? 'respuesta' \n        THEN (message->'content')->>'respuesta'\n        \n        -- Si content es un string JSON, intentar parsearlo\n        WHEN jsonb_typeof(message->'content') = 'string' AND (message->>'content')::text LIKE '{%'\n        THEN (message->>'content')::jsonb->>'respuesta'\n        \n        -- Si no, devolver el contenido tal cual\n        ELSE message->>'content'\n      END,\n      'Sin contenido'\n    ) ||\n    CASE \n      WHEN clasificacion_cita IS NOT NULL AND clasificacion_cita != '' \n      THEN ' | Clasificación: ' || clasificacion_cita\n      ELSE ''\n    END as conversacion_formateada\n  FROM conversaciones\n  WHERE session_id = '{{ $('Get many rows').item.json.client_id }}'\n  ORDER BY id DESC\n  LIMIT 5\n) subquery;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        448,
+        192
+      ],
+      "id": "54591267-dd9d-4bdc-a458-03411263f10f",
+      "name": "extraer_clasificacion_anterior",
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Obtener la respuesta del agente de filtro\nconst respuestaAgente = $input.all()[0].json.respuesta || $input.all()[0].json.output || '';\n\n// Normalizar la respuesta (limpiar espacios, saltos de línea y convertir a mayúsculas)\nconst respuestaNormalizada = respuestaAgente\n  .toString()\n  .trim()\n  .toUpperCase()\n  .replace(/\\n/g, '')\n  .replace(/\\r/g, '');\n\n// Determinar la decisión final\nlet decision;\nlet razonFallback = null;\n\n// Verificar si la respuesta es válida\nif (respuestaNormalizada.includes('IGNORAR')) {\n  decision = 'IGNORAR';\n} else if (respuestaNormalizada.includes('PROCESAR')) {\n  decision = 'PROCESAR';\n} else {\n  // Si no es ninguna de las respuestas esperadas, usar fallback\n  decision = 'PROCESAR';\n  razonFallback = 'Respuesta del agente no válida o vacía. Aplicando fallback de seguridad.';\n  \n  // Registrar para debugging\n  console.log('⚠️ FALLBACK ACTIVADO');\n  console.log('Respuesta original:', respuestaAgente);\n  console.log('Respuesta normalizada:', respuestaNormalizada);\n}\n\n// Preparar el output\nconst resultado = {\n  decision: decision,\n  respuesta_agente_original: respuestaAgente,\n  fallback_aplicado: razonFallback !== null,\n  razon_fallback: razonFallback,\n  timestamp: new Date().toISOString()\n};\n\n// Log para monitoreo\nif (decision === 'IGNORAR') {\n  console.log('🚫 Mensaje filtrado como IGNORAR');\n} else {\n  console.log('✅ Mensaje procesado como PROCESAR');\n  if (razonFallback) {\n    console.log('⚠️ Razón:', razonFallback);\n  }\n}\n\n// Retornar el resultado\nreturn resultado;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1024,
+        192
+      ],
+      "id": "48155111-b6c1-4b28-94d8-a149f20d618e",
+      "name": "parsear salida del agente respuesta predeterminada"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "29e410a8-9c27-49ee-b15f-4e37290f2b81",
+              "leftValue": "={{ $('parsear salida del agente respuesta predeterminada').item.json.decision }}",
+              "rightValue": "IGNORAR",
+              "operator": {
+                "type": "string",
+                "operation": "notContains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        1248,
+        192
+      ],
+      "id": "e259753d-3115-47f9-b990-11fcdfff5967",
+      "name": "ignorar mensaje"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "5438a99f-4868-4371-9278-e325eefe372e",
+              "leftValue": "={{ $('Data message extraction').item.json.voice_message_type }}",
+              "rightValue": "=text",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -1568,
+        288
+      ],
+      "id": "9396009b-94cf-4729-80be-e3be6f46cb53",
+      "name": "If2"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "47df2a04-37cd-463c-b9dc-30f80b9900cf",
+              "name": "final_message",
+              "value": "={{ $json.text }}",
+              "type": "string"
+            },
+            {
+              "id": "d1811afc-88b4-4540-a55b-fefe21f53887",
+              "name": "sessionId",
+              "value": "={{ $('Data message extraction').item.json.sessionId }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -896,
+        192
+      ],
+      "id": "206f2eb5-40e2-4616-a5f4-3a2dcfeee7e6",
+      "name": "final_message_voice1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c8d5073d-a91f-4c62-b5e6-0fa9c7822ed9",
+              "name": "final_message",
+              "value": "={{ $('Data message extraction').item.json.text_message }}",
+              "type": "string"
+            },
+            {
+              "id": "cc1a1071-90fc-49c2-9759-3769187c8a8e",
+              "name": "sessionId",
+              "value": "={{ $('Data message extraction').item.json.sessionId }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -896,
+        384
+      ],
+      "id": "b16edffb-4c67-4a84-ab9c-16f935ca4de1",
+      "name": "final_message_text1"
+    },
+    {
+      "parameters": {
+        "operation": "push",
+        "list": "={{ $('Data message extraction').item.json.sender }}",
+        "messageData": "={{ JSON.stringify(\n{\n'message': $json.final_message ,\n'sessionId': $('Data message extraction').item.json.sessionId, \n'date_time': $('Data message extraction').item.json.data_time \n}\n) }}",
+        "tail": true
+      },
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        -672,
+        288
+      ],
+      "id": "34b6f5ab-003e-4138-ab9e-c1737807b79d",
+      "name": "buffer1"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "propertyName": "message",
+        "key": "={{ $('Data message extraction').item.json.sender }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        -448,
+        288
+      ],
+      "id": "3c9bb4c1-620f-4d9f-b74b-7cd25359bce8",
+      "name": "get_buffer_data1"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ JSON.parse($json.message.last()).sessionId }}",
+                    "rightValue": "={{ $('Data message extraction').item.json.sessionId }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "notEquals"
+                    },
+                    "id": "a476894f-bb93-4167-aad2-4b63f275e969"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Ignorar"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "340f7c66-134b-4b22-9d7b-2326d886aa76",
+                    "leftValue": "={{ JSON.parse($json.message.last()).date_time}}",
+                    "rightValue": "={{ $now.minus(15,'seconds').toLocal() }}",
+                    "operator": {
+                      "type": "dateTime",
+                      "operation": "before"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Continuar"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra",
+          "renameFallbackOutput": "Esperar"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        -224,
+        176
+      ],
+      "id": "cf9da22d-50fd-4331-9276-c73dfac631f7",
+      "name": "Switch1"
+    },
+    {
+      "parameters": {
+        "amount": 15
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        384
+      ],
+      "id": "f4777ad8-c874-444b-86dd-a8a8e08a64f5",
+      "name": "Wait1",
+      "webhookId": "6c9e4656-e771-40a4-82d4-0127c5904dff"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "516705dd-52a2-4798-8b93-f9262fe5cefc",
+      "name": "No Operation, do nothing1"
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "key": "={{ $('Data message extraction').item.json.sender }}"
+      },
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        0,
+        192
+      ],
+      "id": "991a2650-f930-4439-be5e-d61291f9d0ba",
+      "name": "Delete_buffer1"
+    },
+    {
+      "parameters": {
+        "resource": "audio",
+        "operation": "transcribe",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        -1120,
+        192
+      ],
+      "id": "3aa81d3f-df11-425c-855f-b04ea5b92eb8",
+      "name": "Transcribe a recording1"
+    },
+    {
+      "parameters": {
+        "url": "={{ $('Data message extraction').item.json.voice_message_url }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -1344,
+        192
+      ],
+      "id": "b3892a7d-7d07-4d3b-aee8-91d7a1320823",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "de2ee357-32a4-4717-8618-f281f4b54299",
+              "name": "concat_message",
+              "value": "={{ $json.message.map(m=> JSON.parse(m).message).join('\\n') }}",
+              "type": "string"
+            },
+            {
+              "id": "b0544111-6d92-4a75-a917-9df1ee09572e",
+              "name": "sessionId",
+              "value": "={{ $('Data message extraction').item.json.sessionId }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        224,
+        192
+      ],
+      "id": "c3e82736-51b4-480c-8997-2ce3faa158c9",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Función para normalizar números de teléfono mexicanos en n8n\n// Usar en un nodo \"Code\" o \"Function\"\n\nfunction normalizePhone(phoneNumber) {\n    // Si el número es null, undefined o vacío, retornarlo tal como está\n    if (!phoneNumber || phoneNumber === '') {\n        return phoneNumber;\n    }\n    \n    // Convertir a string y limpiar: quitar espacios, guiones, paréntesis, etc.\n    let cleanPhone = phoneNumber.toString().replace(/[^0-9+]/g, '');\n    \n    // Casos para números mexicanos (+52)\n    \n    // Patrón: +521XXXXXXXXXX -> +52XXXXXXXXXX (remover el 1 después de +52)\n    if (/^\\+521[0-9]{10}$/.test(cleanPhone)) {\n        return '+52' + cleanPhone.substring(4);\n    }\n    \n    // Patrón: 521XXXXXXXXXX -> +52XXXXXXXXXX (sin +, con 1)\n    if (/^521[0-9]{10}$/.test(cleanPhone)) {\n        return '+52' + cleanPhone.substring(3);\n    }\n    \n    // Patrón: +52XXXXXXXXXX -> ya está correcto\n    if (/^\\+52[0-9]{10}$/.test(cleanPhone)) {\n        return cleanPhone;\n    }\n    \n    // Patrón: 52XXXXXXXXXX -> +52XXXXXXXXXX (agregar +)\n    if (/^52[0-9]{10}$/.test(cleanPhone)) {\n        return '+' + cleanPhone;\n    }\n    \n    // Patrón: 1XXXXXXXXXX (11 dígitos empezando con 1) -> +52XXXXXXXXXX\n    if (/^1[0-9]{10}$/.test(cleanPhone)) {\n        return '+52' + cleanPhone.substring(1);\n    }\n    \n    // Patrón: XXXXXXXXXX (10 dígitos) -> +52XXXXXXXXXX (asumir México)\n    if (/^[0-9]{10}$/.test(cleanPhone)) {\n        return '+52' + cleanPhone;\n    }\n    \n    // Si no coincide con ningún patrón conocido, retornar original\n    return phoneNumber;\n}\n\n// Código adaptado para tu estructura específica\nconst phoneFromWebhook = $input.first().json.phone_number;\nconst normalizedPhone = normalizePhone(phoneFromWebhook);\n\nreturn [{\n    json: {\n        ...$input.first().json,  // Mantiene todos los datos originales del webhook\n        phone_number_normalized: normalizedPhone,\n        was_normalized: phoneFromWebhook !== normalizedPhone,\n        original_phone_number: phoneFromWebhook\n    }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2688,
+        288
+      ],
+      "id": "08be885d-0bf5-4331-95ad-f4e3f9b2410d",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1a586314-5928-4b62-bff6-7c784ac43200",
+              "name": "sender",
+              "value": "={{ $json.body.messages[0].sender_id }}",
+              "type": "string"
+            },
+            {
+              "id": "96227c45-6870-459d-90c9-76ce28cd56c5",
+              "name": "accountId",
+              "value": "={{ $json.body.messages[0].account_id }}",
+              "type": "string"
+            },
+            {
+              "id": "2296800b-5382-4b4f-ac45-cfb4eef98753",
+              "name": "sessionId",
+              "value": "={{ $json.body.messages[0].conversation_id }}",
+              "type": "string"
+            },
+            {
+              "id": "9a03752f-dca9-4cc7-ab54-272156ccd62e",
+              "name": "content_type",
+              "value": "={{ $json.body.messages[0].content_type }}",
+              "type": "string"
+            },
+            {
+              "id": "c259b839-bb24-457e-93fa-7020c5b1d7de",
+              "name": "voice_message_type",
+              "value": "={{ $json.body.messages[0].attachments[0].file_type }}",
+              "type": "string"
+            },
+            {
+              "id": "06954d6a-a252-4848-a533-654dfdc19903",
+              "name": "voice_message_url",
+              "value": "={{ $json.body.messages[0].attachments[0].data_url }}",
+              "type": "string"
+            },
+            {
+              "id": "c186b8dc-11f7-4417-996a-6abd2a80d3b0",
+              "name": "text_message",
+              "value": "={{ $json.body.messages[0].content }}",
+              "type": "string"
+            },
+            {
+              "id": "4121e376-2460-4dcd-9586-0a763db038d2",
+              "name": "data_time",
+              "value": "={{ $json.body.timestamp.toDateTime('s').toLocal() }}",
+              "type": "string"
+            },
+            {
+              "id": "f69184fa-fbe4-47d2-981b-58df4a294f59",
+              "name": "private",
+              "value": "={{ $json.body.messages[0].private }}",
+              "type": "string"
+            },
+            {
+              "id": "f8d4e2ab-f6f5-4b0a-b2e3-d80df515643b",
+              "name": "content_attributes",
+              "value": "={{ $json.body.messages[0].content_attributes }}",
+              "type": "string"
+            },
+            {
+              "id": "c48454c2-e580-4edd-b162-3abb0f482f7b",
+              "name": "conversationId",
+              "value": "={{ $json.body.messages[0].conversation_id }}",
+              "type": "string"
+            },
+            {
+              "id": "0f4b0104-58cb-431f-a8c4-35825d787d55",
+              "name": "sender_name",
+              "value": "={{ $json.body.messages[0].sender.name }}",
+              "type": "string"
+            },
+            {
+              "id": "8c1ac62c-c1b6-4b18-9f44-37e8cbe8d367",
+              "name": "inbox_id",
+              "value": "={{ $json.body.messages[0].inbox_id }}",
+              "type": "string"
+            },
+            {
+              "id": "6b1f496c-5f93-4b3c-918a-9274f7bf2078",
+              "name": "channel",
+              "value": "={{ $json.body.channel }}",
+              "type": "string"
+            },
+            {
+              "id": "dd9215f9-4cdd-4a9b-800c-d84d3577f01e",
+              "name": "phone_number",
+              "value": "={{ $json.body.messages[0].sender.phone_number }}",
+              "type": "string"
+            },
+            {
+              "id": "b9412e9e-6c50-4a66-9c8d-ad7806974e4b",
+              "name": "fecha_UTC",
+              "value": "={{ $json.body.timestamp.toDateTime('s').toUTC()  }}",
+              "type": "string"
+            },
+            {
+              "id": "3c780d3d-cb73-41ef-89f6-3afb08da0abf",
+              "name": "nombre_normalizado",
+              "value": "={{ $json.body.messages[0].sender.name.normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').replace(/[^a-zA-ZñÑ]/g, '').toLowerCase() }}",
+              "type": "string"
+            },
+            {
+              "id": "ffba6980-26f7-4f17-8b4f-8bf9e8a9dbfd",
+              "name": "agente",
+              "value": "={{ $json.body.meta.assignee.name }}",
+              "type": "string"
+            },
+            {
+              "id": "3f0c1605-b6be-4197-9bbc-313dbc06f01a",
+              "name": "contact_id",
+              "value": "={{ $json.body.contact_inbox.contact_id }}",
+              "type": "number"
+            },
+            {
+              "id": "bb7f20cc-e8b2-4b2f-bb87-04b0f8bc9178",
+              "name": "etiqueta",
+              "value": "={{ $json.body.labels }}",
+              "type": "string"
+            },
+            {
+              "id": "634fb0d2-c44f-469b-859f-c6e91bb168a5",
+              "name": "username_telegram",
+              "value": "={{ $json.body.sender.additional_attributes.username }}",
+              "type": "string"
+            },
+            {
+              "id": "f3d41afb-eca3-4d2b-95af-78464654fb73",
+              "name": "fecha_queja",
+              "value": "={{ new Date().toLocaleString() }}",
+              "type": "string"
+            },
+            {
+              "id": "a78724cc-5a41-456a-9de4-d07b5080f82b",
+              "name": "message_type",
+              "value": "={{ $json.body.messages[0].message_type }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -2912,
+        288
+      ],
+      "id": "fe57f645-e8f7-451a-94e9-028e9629991d",
+      "name": "Data message extraction"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4o-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        752,
+        416
+      ],
+      "id": "76e85b69-c082-408d-9d67-a7a1c2eecbbf",
+      "name": "OpenAI Chat Model1"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('Edit Fields').item.json.concat_message }}",
+        "options": {
+          "systemMessage": "=# Prompt: Agente de Filtro de Conversación\n\nEres un agente de filtro inteligente para una Agencia de Marketing Digital e Inteligencia Artificial. Tu función es analizar cada mensaje del cliente y determinar si debe ser procesado o ignorado.\n\n## CONTEXTO DE LA CONVERSACIÓN\n\n**Historial de conversación (últimos 10 mensajes):**\n{{ $('extraer_clasificacion_anterior').item.json.resultado.historial_conversaciones || 'Sin historial previo' }}\n\n**Tiempo desde último mensaje del cliente:**\n[INSERTA TIEMPO TRANSCURRIDO - en minutos]\n\n**Mensaje actual del cliente:**\n{{ $('Edit Fields').item.json.concat_message }}\n\n---\n\n## PRINCIPIO FUNDAMENTAL\n\n🎯 **FILOSOFÍA DEL FILTRO:** \"Mejor procesar 100 mensajes innecesarios que ignorar 1 mensaje importante\"\n\n⚠️ **REGLA ABSOLUTA:** Si tienes CUALQUIER duda, responde \"PROCESAR\"\n\n---\n\n## CRITERIOS PARA IGNORAR (EXTREMADAMENTE RESTRICTIVOS)\n\nSolo existen **DOS** escenarios donde puedes responder \"IGNORAR\":\n\n### ESCENARIO 1: Despedida Definitiva Confirmada\n\nDebes cumplir **TODAS** estas 6 condiciones simultáneamente:\n\n1. ✅ El último mensaje del CLIENTE fue una despedida clara:\n   - \"gracias adiós\", \"hasta luego\", \"nos vemos\", \"bye\", \"chao\"\n   - Y el agente YA respondió confirmando la despedida\n\n2. ✅ El mensaje actual es **ÚNICAMENTE** una de estas palabras (sin nada más):\n   - \"ok\" / \"okay\" / \"vale\" / \"entendido\" / \"👍\" / \"gracias\" / \"perfecto\"\n\n3. ✅ Han pasado **MENOS de 30 minutos** desde la despedida\n\n4. ✅ El mensaje NO contiene ninguna de estas señales de continuación:\n   - Palabras: \"pero\", \"aunque\", \"sin embargo\", \"otra\", \"más\", \"también\", \"además\"\n   - Palabras interrogativas: \"cuándo\", \"cómo\", \"dónde\", \"quién\", \"qué\", \"por qué\"\n   - Signos de interrogación: \"?\"\n   - Números de contacto o emails\n   - Referencias a servicios o precios\n\n5. ✅ NO hay solicitudes pendientes del agente sin responder\n\n6. ✅ El mensaje NO es un saludo de reactivación:\n   - NO es \"hola\", \"buenos días\", \"buenas tardes\", \"hey\", \"qué tal\"\n   - NO es \"hola de nuevo\", \"retomo\", \"sigo aquí\"\n\n**Ejemplo ÚNICO válido para IGNORAR:**\n```\n#100 [human] \"Gracias por todo, hasta luego\"\n#101 [ai] \"¡Que tengas buen día! Hasta pronto\"\n[Pasan 10 minutos]\n#102 [human] \"ok\"\n→ IGNORAR\n```\n\n### ESCENARIO 2: Spam Evidente e Irrelevante\n\nEl mensaje debe cumplir **AMBAS** condiciones:\n\n1. ✅ NO tiene NINGUNA relación con servicios digitales:\n   - Marketing, IA, desarrollo web, chatbots, tecnología, consultoría\n   - Automatización, apps, bases de datos, e-commerce\n   - SEO, publicidad digital, redes sociales, hosting\n\n2. ✅ ES claramente spam comercial no relacionado:\n   - Venta de productos físicos: comida, ropa, construcción, servicios locales\n   - Cadenas, estafas, contenido ofensivo\n   - Publicidad masiva genérica\n   - Texto aleatorio sin sentido\n\n**Ejemplos válidos para IGNORAR:**\n- \"Vendo tacos al pastor 🌮 3x2 en Polanco\"\n- \"Plomero 24hrs - Destapamos cañerías\"\n- \"💰💰 GANA $10,000 USD DIARIOS DESDE CASA 💰💰\"\n- \"asdfghjklñ\" (texto sin sentido)\n\n---\n\n## CRITERIOS PARA PROCESAR (99% DE LOS CASOS)\n\n### 🚨 PROCESAMIENTO AUTOMÁTICO OBLIGATORIO\n\nResponde **PROCESAR** inmediatamente si el mensaje contiene:\n\n#### 1. Cualquier saludo o reactivación\n- \"hola\", \"hey\", \"buenos días\", \"buenas tardes\", \"qué tal\", \"buenas\"\n- \"hola de nuevo\", \"retomo\", \"sigo\", \"vuelvo\"\n- **INCLUSO SI** el cliente se despidió antes\n\n#### 2. Signos de interrogación (?)\n- Cualquier mensaje con \"?\" es una pregunta → PROCESAR\n- No importa el contexto previo\n\n#### 3. Intención comercial explícita\n- Palabras: \"cuánto\", \"precio\", \"costo\", \"cotización\", \"presupuesto\"\n- Verbos: \"quiero\", \"necesito\", \"busco\", \"me interesa\", \"requiero\"\n- Preguntas: \"¿hacen...?\", \"¿ofrecen...?\", \"¿pueden...?\"\n\n#### 4. Servicios o temas relevantes mencionados\n- Palabras: \"cita\", \"agendar\", \"reunión\", \"demo\", \"presentación\"\n- Servicios: \"chatbot\", \"página web\", \"app\", \"IA\", \"marketing\", \"SEO\"\n- Tecnología: \"sistema\", \"software\", \"automatización\", \"base de datos\"\n\n#### 5. Información de contacto o datos\n- Números de teléfono\n- Correos electrónicos\n- Nombres de empresas\n- URLs o enlaces\n- Horarios o fechas\n\n#### 6. Emociones o urgencia\n- Negativas: \"molesto\", \"frustrado\", \"enojado\", \"decepcionado\"\n- Urgentes: \"urgente\", \"rápido\", \"ya\", \"inmediato\", \"ASAP\"\n- Problemas: \"no funciona\", \"error\", \"ayuda\", \"problema\"\n\n#### 7. Continuación de conversación\n- Respuestas a preguntas del agente\n- Follow-ups: \"y eso?\", \"entonces?\", \"ok, y?\"\n- Referencias: \"sobre lo que hablamos\", \"como decías\"\n\n#### 8. Mensajes ambiguos o poco claros\n- Si NO entiendes el mensaje → PROCESAR\n- Si podría tener doble significado → PROCESAR\n- Solo emojis sin contexto → PROCESAR\n\n---\n\n## CASOS ESPECIALES QUE SIEMPRE SE PROCESAN\n\n### ✅ Reactivación después de despedida\n```\nCliente se despidió → Pasan horas/días → Cliente escribe de nuevo\n→ SIEMPRE PROCESAR (no importa cuánto tiempo pasó)\n```\n\n### ✅ Mensajes cortos en contexto activo\nSi hay conversación en las últimas 24 horas:\n- \"sí\", \"no\", \"claro\", \"dale\" → PROCESAR\n- Números: \"3pm\", \"mañana\", \"100\" → PROCESAR\n- Confirmaciones breves → PROCESAR\n\n### ✅ Primer mensaje del cliente\n- Sin importar el contenido → PROCESAR\n- Establece el primer contacto\n\n### ✅ Respuestas incorrectas o typos\n- \"Hola Quisier aagendar\" → PROCESAR (tiene intención clara)\n- Errores de ortografía no invalidan el mensaje\n\n---\n\n## ANÁLISIS DEL HISTORIAL\n\nAntes de decidir, revisa el historial buscando:\n\n1. **¿Hubo despedida mutua?**\n   - Cliente dijo adiós + Agente confirmó → Marcar como \"despedida confirmada\"\n\n2. **¿Cuánto tiempo pasó desde la despedida?**\n   - Menos de 30 min → Podría ignorarse SI cumple todos los criterios\n   - Más de 30 min → PROCESAR cualquier mensaje nuevo\n\n3. **¿El mensaje actual es reactivación?**\n   - Si contiene saludo o nueva solicitud → PROCESAR (ignora despedida previa)\n\n4. **¿Hay preguntas pendientes del agente?**\n   - Si el agente preguntó algo sin respuesta → PROCESAR respuesta del cliente\n\n---\n\n## CHECKLIST DE VALIDACIÓN\n\nAntes de decidir \"IGNORAR\", verifica que respondiste NO a TODAS estas preguntas:\n\n- [ ] ¿El mensaje contiene \"hola\" o algún saludo? → NO\n- [ ] ¿Tiene signos de interrogación (?)? → NO\n- [ ] ¿Menciona servicios, precios o citas? → NO\n- [ ] ¿Contiene datos de contacto? → NO\n- [ ] ¿Expresa emoción o urgencia? → NO\n- [ ] ¿Pasaron más de 30 minutos desde la despedida? → NO\n- [ ] ¿El mensaje tiene más de 2 palabras? → NO\n- [ ] ¿Tengo alguna duda sobre ignorarlo? → NO\n- [ ] ¿Podría ser importante para el negocio? → NO\n- [ ] ¿El cliente podría estar respondiendo algo? → NO\n\n**Si respondiste SÍ a cualquiera → PROCESAR**\n\n**Solo si respondiste NO a todas → Considera IGNORAR** (y vuelve a verificar)\n\n---\n\n## FORMATO DE RESPUESTA\n\nResponde con UNA sola palabra, sin explicaciones:\n\n**PROCESAR** o **IGNORAR**\n\n---\n\n## EJEMPLOS PRÁCTICOS\n\n### ✅ PROCESAR - Reactivación después de despedida\n```\n#2443 [human] \"Gracias adios\"\n#2444 [ai] \"¡Hasta luego!\"\n[Pasan 3 horas]\n#2447 [human] \"Hola Quisier aagendar otra cita\"\n→ PROCESAR (nuevo saludo + solicitud)\n```\n\n### ✅ PROCESAR - Saludo simple\n```\nHistorial: Sin mensajes previos\nMensaje: \"Hola\"\n→ PROCESAR (primer contacto)\n```\n\n### ✅ PROCESAR - Pregunta adicional\n```\nHistorial: Conversación sobre precios\nMensaje: \"¿también hacen apps móviles?\"\n→ PROCESAR (pregunta con ?)\n```\n\n### ✅ PROCESAR - Mensaje corto con intención\n```\nHistorial: Agente preguntó horario preferido\nMensaje: \"3 pm\"\n→ PROCESAR (responde pregunta)\n```\n\n### ✅ PROCESAR - Despedida con posible seguimiento\n```\nHistorial: Conversación sobre IA\nMensaje: \"Gracias por la info, lo voy a pensar\"\n→ PROCESAR (podría tener preguntas después)\n```\n\n### ✅ PROCESAR - Reactivación tardía\n```\nHistorial: Cliente se despidió hace 2 días\nMensaje: \"Hola de nuevo\"\n→ PROCESAR (reactivación explícita)\n```\n\n### ⛔ IGNORAR - Despedida confirmada reciente\n```\n#100 [human] \"Perfecto, gracias por todo. Hasta luego\"\n#101 [ai] \"¡Que tengas excelente día!\"\n[Pasan 5 minutos]\n#102 [human] \"ok\"\n→ IGNORAR (cumple los 6 criterios)\n```\n\n### ⛔ IGNORAR - Spam evidente\n```\nHistorial: Sin mensajes previos\nMensaje: \"Vendo pizzas 2x1 🍕🍕🍕\"\n→ IGNORAR (publicidad no relacionada)\n```\n\n### ✅ PROCESAR - Despedida con \"pero\"\n```\nHistorial: \"Gracias, adiós\" (hace 1 hora)\nMensaje: \"Pero una pregunta...\"\n→ PROCESAR (\"pero\" indica continuación)\n```\n\n### ✅ PROCESAR - Confirmación ambigua\n```\nHistorial: Conversación activa sobre chatbots\nMensaje: \"ok\"\n→ PROCESAR (contexto activo, no hay despedida previa)\n```\n\n### ✅ PROCESAR - Mensaje con typos pero intención clara\n```\nMensaje: \"ola nesesito unna pajina web\"\n→ PROCESAR (errores ortográficos, pero intención clara)\n```\n\n---\n\n## REGLAS FINALES INQUEBRANTABLES\n\n1. **Principio de precaución:** Ante la mínima duda → PROCESAR\n\n2. **Ventana de 30 minutos:** Despedidas mayores a 30 min son obsoletas → PROCESAR todo\n\n3. **Saludos siempre se procesan:** \"Hola\" NUNCA se ignora, sin excepciones\n\n4. **Interrogaciones siempre se procesan:** \"?\" significa pregunta → PROCESAR\n\n5. **Reactivaciones siempre se procesan:** Cliente que vuelve → PROCESAR\n\n6. **Contexto comercial siempre se procesa:** Cualquier mención de servicios/precios → PROCESAR\n\n7. **Primer mensaje siempre se procesa:** Sin historial previo → PROCESAR\n\n8. **En caso de ambigüedad:** PROCESAR (es mejor sobreprocesar que perder un lead)\n\n---\n\n## RECORDATORIO CRÍTICO\n\n🚨 **El costo de ignorar un mensaje importante es 1000 veces mayor que procesar uno innecesario**\n\n- Ignorar lead = pérdida de cliente potencial\n- Procesar spam = solo un mensaje extra\n\n**Por lo tanto: Si dudas, PROCESA. Siempre.**\n\n---\n\nAnaliza el mensaje del cliente y responde únicamente: **PROCESAR** o **IGNORAR**"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        672,
+        192
+      ],
+      "id": "7f07c38b-ab7b-411e-9be0-5f5a5d244b27",
+      "name": "filtro de conversacion"
+    },
+    {
+      "parameters": {
+        "amount": "={{ Math.floor(Math.random() * 11) }}"
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1472,
+        192
+      ],
+      "id": "f22b45b0-0ea4-4371-be02-0dba69c181dd",
+      "name": "Wait",
+      "webhookId": "5d8a8009-4d5c-48b1-908b-e0ff6b72973d"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "y5vyBHTIxA0mIaO4",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/y5vyBHTIxA0mIaO4",
+          "cachedResultName": "agendamiento y ventas B2B COLD"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {
+          "waitForSubWorkflow": false
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        2144,
+        192
+      ],
+      "id": "a555234c-8095-4b6d-91ce-679dad949fa4",
+      "name": "Call 'agendamiento y ventas B2B COLD'"
+    }
+  ],
+  "pinData": {
+    "Webhook": [
+      {
+        "json": {
+          "headers": {
+            "host": "n8n.srv869127.hstgr.cloud",
+            "user-agent": "rest-client/2.1.0 (linux-musl x86_64) ruby/3.4.4p34",
+            "content-length": "3187",
+            "accept": "application/json",
+            "accept-encoding": "gzip;q=1.0,deflate;q=0.6,identity;q=0.3",
+            "content-type": "application/json",
+            "x-forwarded-for": "172.20.0.1",
+            "x-forwarded-host": "n8n.srv869127.hstgr.cloud",
+            "x-forwarded-port": "443",
+            "x-forwarded-proto": "https",
+            "x-forwarded-server": "df8eceeef8f9",
+            "x-real-ip": "172.20.0.1"
+          },
+          "params": {},
+          "query": {},
+          "body": {
+            "additional_attributes": {},
+            "can_reply": true,
+            "channel": "Channel::Api",
+            "contact_inbox": {
+              "id": 238,
+              "contact_id": 148,
+              "inbox_id": 13,
+              "source_id": "8abf9e4d-3e71-429b-b1c8-2f5fcb8b59e0",
+              "created_at": "2025-12-29T22:07:24.704Z",
+              "updated_at": "2025-12-29T22:07:24.704Z",
+              "hmac_verified": false,
+              "pubsub_token": "4vvPENxRuf5py9gnuJxhU7cd"
+            },
+            "id": 152,
+            "inbox_id": 13,
+            "messages": [
+              {
+                "id": 3522,
+                "content": "Lo atiende Miguel encargado de car service nuestros servicios al cliente solemos atender personalmente",
+                "account_id": 2,
+                "inbox_id": 13,
+                "conversation_id": 152,
+                "message_type": 0,
+                "created_at": 1767046186,
+                "updated_at": "2025-12-29T22:09:46.534Z",
+                "private": false,
+                "status": "sent",
+                "source_id": "WAID:ACFAC2B5317DC1317D4B756287B15DF7",
+                "content_type": "text",
+                "content_attributes": {},
+                "sender_type": "Contact",
+                "sender_id": 148,
+                "external_source_ids": {},
+                "additional_attributes": {},
+                "processed_message_content": "Lo atiende Miguel encargado de car service nuestros servicios al cliente solemos atender personalmente",
+                "sentiment": {},
+                "conversation": {
+                  "assignee_id": 2,
+                  "unread_count": 1,
+                  "last_activity_at": 1767046186,
+                  "contact_inbox": {
+                    "source_id": "8abf9e4d-3e71-429b-b1c8-2f5fcb8b59e0"
+                  }
+                },
+                "sender": {
+                  "additional_attributes": {},
+                  "custom_attributes": {},
+                  "email": null,
+                  "id": 148,
+                  "identifier": "5213334053108@s.whatsapp.net",
+                  "name": "A million my old man 👌",
+                  "phone_number": "+5213334053108",
+                  "thumbnail": "",
+                  "blocked": false,
+                  "type": "contact"
+                }
+              }
+            ],
+            "labels": [],
+            "meta": {
+              "sender": {
+                "additional_attributes": {},
+                "custom_attributes": {},
+                "email": null,
+                "id": 148,
+                "identifier": "5213334053108@s.whatsapp.net",
+                "name": "A million my old man 👌",
+                "phone_number": "+5213334053108",
+                "thumbnail": "",
+                "blocked": false,
+                "type": "contact"
+              },
+              "assignee": {
+                "id": 2,
+                "name": "Agente IA",
+                "available_name": "SocialMask",
+                "avatar_url": "https://chatwoot.srv869127.hstgr.cloud/rails/active_storage/representations/redirect/eyJfcmFpbHMiOnsibWVzc2FnZSI6IkJBaHBBZnc9IiwiZXhwIjpudWxsLCJwdXIiOiJibG9iX2lkIn19--99b8e2095acea2ad1bcd2ea63d525f293c0756ca/eyJfcmFpbHMiOnsibWVzc2FnZSI6IkJBaDdCem9MWm05eWJXRjBTU0lJY0c1bkJqb0dSVlE2RTNKbGMybDZaVjkwYjE5bWFXeHNXd2RwQWZvdyIsImV4cCI6bnVsbCwicHVyIjoidmFyaWF0aW9uIn19--e7507656c4df95bbac2e11627efcfea03c647cea/Generated%20Image%20December%2001,%202025%20-%203_13AM%20(1).png",
+                "type": "user",
+                "availability_status": null,
+                "thumbnail": "https://chatwoot.srv869127.hstgr.cloud/rails/active_storage/representations/redirect/eyJfcmFpbHMiOnsibWVzc2FnZSI6IkJBaHBBZnc9IiwiZXhwIjpudWxsLCJwdXIiOiJibG9iX2lkIn19--99b8e2095acea2ad1bcd2ea63d525f293c0756ca/eyJfcmFpbHMiOnsibWVzc2FnZSI6IkJBaDdCem9MWm05eWJXRjBTU0lJY0c1bkJqb0dSVlE2RTNKbGMybDZaVjkwYjE5bWFXeHNXd2RwQWZvdyIsImV4cCI6bnVsbCwicHVyIjoidmFyaWF0aW9uIn19--e7507656c4df95bbac2e11627efcfea03c647cea/Generated%20Image%20December%2001,%202025%20-%203_13AM%20(1).png"
+              },
+              "team": null,
+              "hmac_verified": false
+            },
+            "status": "open",
+            "custom_attributes": {},
+            "snoozed_until": null,
+            "unread_count": 1,
+            "first_reply_created_at": "2025-12-29T22:07:24.837Z",
+            "priority": null,
+            "waiting_since": 1767046130,
+            "agent_last_seen_at": 1767046178,
+            "contact_last_seen_at": 0,
+            "last_activity_at": 1767046186,
+            "timestamp": 1767046186,
+            "created_at": 1767046044,
+            "updated_at": 1767046186.535681,
+            "applied_sla": null,
+            "sla_events": [],
+            "sla_policy_id": null,
+            "event": "automation_event.message_created"
+          },
+          "webhookUrl": "https://n8n.srv869127.hstgr.cloud/webhook/2ae748c5-eb3e-4a79-a1d9-b11cb9b91568",
+          "executionMode": "production"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Data message extraction",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "extraer_prospecto": {
+      "main": [
+        [
+          {
+            "node": "obtener_citas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "enviar_variables_cliente": {
+      "main": [
+        [
+          {
+            "node": "Call 'agendamiento y ventas B2B COLD'",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "obtener_citas": {
+      "main": [
+        [
+          {
+            "node": "If2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "variables persistentes cliente": {
+      "main": [
+        [
+          {
+            "node": "enviar_variables_cliente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many rows": {
+      "main": [
+        [
+          {
+            "node": "extraer_prospecto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "extraer_clasificacion_anterior": {
+      "main": [
+        [
+          {
+            "node": "filtro de conversacion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "parsear salida del agente respuesta predeterminada": {
+      "main": [
+        [
+          {
+            "node": "ignorar mensaje",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ignorar mensaje": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If2": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "final_message_text1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "final_message_voice1": {
+      "main": [
+        [
+          {
+            "node": "buffer1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "final_message_text1": {
+      "main": [
+        [
+          {
+            "node": "buffer1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "buffer1": {
+      "main": [
+        [
+          {
+            "node": "get_buffer_data1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get_buffer_data1": {
+      "main": [
+        [
+          {
+            "node": "Switch1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch1": {
+      "main": [
+        [
+          {
+            "node": "No Operation, do nothing1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Delete_buffer1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Wait1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait1": {
+      "main": [
+        [
+          {
+            "node": "get_buffer_data1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete_buffer1": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transcribe a recording1": {
+      "main": [
+        [
+          {
+            "node": "final_message_voice1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Transcribe a recording1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "extraer_clasificacion_anterior",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "Get many rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Data message extraction": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "filtro de conversacion",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "filtro de conversacion": {
+      "main": [
+        [
+          {
+            "node": "parsear salida del agente respuesta predeterminada",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "variables persistentes cliente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "4705ef3f-d960-46bd-a9d0-cff900777678",
+  "meta": {
+    "instanceId": "d3431c007fca169642eb611ebf14349b33382eea645956206c574548fe4eeab7"
+  },
+  "id": "jZvEFAf9LmfXMtV6",
+  "tags": []
+}

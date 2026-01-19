@@ -1,0 +1,504 @@
+{
+  "name": "creador de IMAGENES redes sociales",
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "// Obtener input del nodo Set\nconst data = items[0].json;\n\n// Preparar body base\nlet body = {\n  model: data.model\n};\n\n// Agregar callBackUrl si existe y no está vacío\nif (data.callBackUrl && data.callBackUrl.trim() !== \"\") {\n  body.callBackUrl = data.callBackUrl.trim();\n}\n\n// Preparar input\nlet input = {};\n\n// prompt obligatorio\nif (data.prompt && data.prompt.trim() !== \"\") {\n  input.prompt = data.prompt.trim();\n}\n\n// output_format opcional\nif (data.output_format && data.output_format.trim() !== \"\") {\n  input.output_format = data.output_format.trim();\n}\n\n// image_size opcional\nif (data.image_size && data.image_size.trim() !== \"\") {\n  input.image_size = data.image_size.trim();\n}\n\n// image_urls solo si es modelo de edición\nif (data.model === \"google/nano-banana-edit\") {\n  // Construir array de URLs desde url_imagen_1, url_imagen_2, etc.\n  let imageUrls = [];\n  \n  for (let i = 1; i <= 5; i++) {\n    const urlKey = `url_imagen_${i}`;\n    if (data[urlKey] && data[urlKey].trim() !== \"\") {\n      imageUrls.push(data[urlKey].trim());\n    }\n  }\n  \n  // Solo agregar si hay al menos una URL\n  if (imageUrls.length > 0) {\n    input.image_urls = imageUrls;\n  }\n}\n\n// Asignar input solo si tiene campos\nif (Object.keys(input).length > 0) {\n  body.input = input;\n} else {\n  throw new Error(\"No hay campos válidos para 'input'.\");\n}\n\n// Construir salida para n8n\nreturn [{\n  json: {\n    bodyObject: body,\n    bodyJsonString: JSON.stringify(body, null, 2)\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1088,
+        272
+      ],
+      "id": "505515d4-9025-4817-a55e-a0ab80aaac7b",
+      "name": "prompt"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "d4a9065d-1e39-4815-9abe-485b3b768bb2",
+              "name": "model",
+              "value": "={{ $json.datos_imagen.modelo }}",
+              "type": "string"
+            },
+            {
+              "id": "9e7703ce-5930-40e0-90ed-b8d6238c4079",
+              "name": "prompt",
+              "value": "={{ $json.datos_imagen.prompt }}",
+              "type": "string"
+            },
+            {
+              "id": "2636e777-2808-4314-8ef6-1347c180a2e5",
+              "name": "output_format",
+              "value": "png",
+              "type": "string"
+            },
+            {
+              "id": "e473359e-f78e-400a-837a-2463cc5d7d4e",
+              "name": "image_size",
+              "value": "={{ $json.datos_imagen.image_size }}",
+              "type": "string"
+            },
+            {
+              "id": "c4400d21-719f-4b70-ab64-c7026b18024c",
+              "name": "callBackUrl",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "4d9ab41a-be2d-4ef0-b8ae-7d2f1a8779cd",
+              "name": "url_imagen_1",
+              "value": "={{ $json.datos_imagen.url_1 }}",
+              "type": "string"
+            },
+            {
+              "id": "af38e8d0-a6ad-481d-ab79-e57e43ffd5ca",
+              "name": "url_imagen_2",
+              "value": "={{ $json.datos_imagen.url_2 }}",
+              "type": "string"
+            },
+            {
+              "id": "8af6faf3-8f40-43a2-8e97-1e1990537915",
+              "name": "url_imagen_3",
+              "value": "={{ $json.datos_imagen.url_3 }}",
+              "type": "string"
+            },
+            {
+              "id": "c7cbc43b-f281-40c5-b11d-2364ad54dcd8",
+              "name": "url_imagen_4",
+              "value": "={{ $json.datos_imagen.url_4 }}",
+              "type": "string"
+            },
+            {
+              "id": "0b72c2fa-557f-4ea2-9889-6998a42cfd6d",
+              "name": "url_imagen_5",
+              "value": "={{ $json.datos_imagen.url_5 }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1312,
+        272
+      ],
+      "id": "149a4696-b3d2-4725-a2d9-d6d03d5da085",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -1536,
+        272
+      ],
+      "id": "3ed91dcd-9a78-4f20-ae68-4d8978e19baa",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "f7cf0fa5-3835-4f1a-8faf-23f0c9e9383f",
+              "leftValue": "={{ $json.data.state }}",
+              "rightValue": "success",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -416,
+        192
+      ],
+      "id": "6f1a5a8b-e7ce-4082-bacd-e1a221dcc488",
+      "name": "SUCCESS"
+    },
+    {
+      "parameters": {
+        "amount": 10
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        -192,
+        368
+      ],
+      "id": "deedb62b-e225-4eab-b999-dd79a53034a3",
+      "name": "ESPERAR",
+      "webhookId": "da4087e0-1b69-4216-a791-3043488a35e7"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Obtener el JSON completo\nconst response = items[0].json;\n\n// Parsear el resultJson donde viene la imagen generada\nconst resultJson = JSON.parse(response.data.resultJson);\n\n// URL generada final (la que necesitas)\nconst generatedUrl = resultJson.resultUrls?.[0] || null;\n\n// \"param\" viene como string → debemos convertirlo a JSON\nconst param = JSON.parse(response.data.param);\n\n// Extraer la URL original enviada al modelo\nconst originalUrl = param.input.image_urls?.[0] || null;\n\n// Retornar datos limpios\nreturn [{\n  json: {\n    taskId: response.data.taskId,\n    originalUrl: originalUrl,\n    generatedUrl: generatedUrl,\n    state: response.data.state,\n    costTime: response.data.costTime,\n    timestamp: new Date().toISOString()\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -192,
+        128
+      ],
+      "id": "e1b83e1b-7b39-4cc6-9410-ab3e7e4070b4",
+      "name": "EXTRAER URL VIDEO"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.generatedUrl }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        32,
+        128
+      ],
+      "id": "bc929a65-9b61-4e0a-a37d-1e16f03899dc",
+      "name": "DESCARGAR"
+    },
+    {
+      "parameters": {
+        "tableId": "videos_SORA_&_imagenes_nanobanana",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "type",
+              "fieldValue": "imagen"
+            },
+            {
+              "fieldId": "url",
+              "fieldValue": "={{ $json.generatedUrl }}"
+            },
+            {
+              "fieldId": "descripcion_para_copy",
+              "fieldValue": "={{ $('When Executed by Another Workflow').item.json.datos_imagen.prompt }}"
+            },
+            {
+              "fieldId": "nombre",
+              "fieldValue": "={{ $json.taskId }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        256,
+        -48
+      ],
+      "id": "2c45ddc6-e179-4b0e-b724-bc106660b5ee",
+      "name": "guardar en supabase"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.kie.ai/api/v1/jobs/createTask",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer "
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.bodyJsonString }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -864,
+        272
+      ],
+      "id": "2d0fa288-ed48-4389-8c0b-1127e2d9e418",
+      "name": "NANOBANANA"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.kie.ai/api/v1/jobs/recordInfo?taskId={{ $json.data.taskId }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer "
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -640,
+        272
+      ],
+      "id": "41cf8b14-ed3e-4d13-a0f1-1bc5770f1437",
+      "name": "GET IMAGEN"
+    },
+    {
+      "parameters": {
+        "name": "={{ $json.taskId }}",
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "1hAcVPMlhlkX3bOjevf5nalC0UDYimJ7f",
+          "mode": "list",
+          "cachedResultName": "sora y nanobanana",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/1hAcVPMlhlkX3bOjevf5nalC0UDYimJ7f"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        256,
+        336
+      ],
+      "id": "149ee342-f3c2-4b81-a59a-162e3f04dd16",
+      "name": "Upload file"
+    },
+    {
+      "parameters": {
+        "operation": "sendPhoto",
+        "chatId": "={{ $('When Executed by Another Workflow').item.json.chat_id }}",
+        "binaryData": true,
+        "replyMarkup": "inlineKeyboard",
+        "inlineKeyboard": {
+          "rows": [
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "Sí",
+                    "additionalFields": {
+                      "callback_data": "=resultado_de_imagen_bueno,{{ $json.taskId }}"
+                    }
+                  },
+                  {
+                    "text": "No",
+                    "additionalFields": {
+                      "callback_data": "=resultado_de_imagen_malo,{{ $json.taskId }}"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "additionalFields": {
+          "caption": "Esta bien el resultado?"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        256,
+        144
+      ],
+      "id": "3bfba9e0-0017-4b2e-864f-2c16ed8f8b21",
+      "name": "Send a photo message",
+      "webhookId": "db25e37a-dbe9-4d65-a13d-c3816dce66d7"
+    }
+  ],
+  "pinData": {
+    "When Executed by Another Workflow": [
+      {
+        "json": {
+          "datos_video": {
+            "objetivo": null,
+            "modelo": null,
+            "url_1": null,
+            "url_2": null,
+            "url_3": null,
+            "url_4": null,
+            "url_5": null,
+            "servicio_video": null,
+            "formato_de_imagen_video": null,
+            "duracion_video": null,
+            "descripcion_imagenes_video": null,
+            "url_logo": null
+          },
+          "datos_imagen": {
+            "prompt": "Colocar al sujeto con los brazos a los costados en una postura profesional, en una oficina en Guadalajara, con ventanales y vista al Hospicio Cabañas, recargado en un escritorio y observando a la cámara. Manejar la iluminación como profesional y generar la imagen hiperrealista.",
+            "modelo": "google/nano-banana-edit",
+            "image_size": null,
+            "url_1": "https://vwpofzjpujdo7tas.public.blob.vercel-storage.com/1764314159-uVmtCsI5IWmfiR3ZOcFiR7jOmFdzIn.png",
+            "url_2": "https://vwpofzjpujdo7tas.public.blob.vercel-storage.com/1764314159-DjJMoUlHmbysjeJlf5KFaA4OTyPpVY.png",
+            "url_3": "https://vwpofzjpujdo7tas.public.blob.vercel-storage.com/1764314159-ggaegOGTWo3Z1z4vVJE2uwU2TUYYQe.png",
+            "url_4": null,
+            "url_5": null
+          },
+          "chat_id": "6319432769"
+        }
+      }
+    ]
+  },
+  "connections": {
+    "prompt": {
+      "main": [
+        [
+          {
+            "node": "NANOBANANA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SUCCESS": {
+      "main": [
+        [
+          {
+            "node": "EXTRAER URL VIDEO",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "ESPERAR",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ESPERAR": {
+      "main": [
+        [
+          {
+            "node": "GET IMAGEN",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "EXTRAER URL VIDEO": {
+      "main": [
+        [
+          {
+            "node": "DESCARGAR",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DESCARGAR": {
+      "main": [
+        [
+          {
+            "node": "guardar en supabase",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Upload file",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send a photo message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "NANOBANANA": {
+      "main": [
+        [
+          {
+            "node": "GET IMAGEN",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GET IMAGEN": {
+      "main": [
+        [
+          {
+            "node": "SUCCESS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "3bce4aae-c7fa-411a-b102-8e18d34650de",
+  "meta": {
+    "instanceId": "d3431c007fca169642eb611ebf14349b33382eea645956206c574548fe4eeab7"
+  },
+  "id": "yXfDrSspKiBAnj7H",
+  "tags": []
+}
