@@ -1,0 +1,495 @@
+{
+  "agent_id": "",
+  "channel": "voice",
+  "last_modification_timestamp": 1769025096135,
+  "agent_name": "inbound_calls_retellAI_agent(EN)",
+  "response_engine": {
+    "type": "retell-llm",
+    "llm_id": "llm_a1e6e6c067df83da607744535716",
+    "version": 1
+  },
+  "webhook_url": "https://n8n.srv869127.hstgr.cloud/webhook/cbd2e2b3-ef04-4596-b74a-85c764a4cbee",
+  "webhook_timeout_ms": 10000,
+  "language": "en-US",
+  "data_storage_setting": "everything",
+  "opt_in_signed_url": false,
+  "end_call_after_silence_ms": 15000,
+  "post_call_analysis_data": [
+    {
+      "name": "call_summary",
+      "description": "Resumen detallado de 10 renglones donde describe lo ocurrido durante la llamada, rescatando los puntos clave de la conversación.",
+      "type": "string",
+      "examples": [
+        "📞 Resumen de llamada — {{fecha_llamada}}  El cliente {{nombre_cliente}} llamó para solicitar información sobre el servicio de {{servicio_interes}}.  Mencionó que conoció la empresa a través de {{fuente_contacto}}.  Indicó que actualmente utiliza {{situacion_actual}} y busca {{objetivo_cliente}}.  Se discutieron las posibles soluciones, incluyendo {{integraciones_mencionadas}}.  El agente explicó los planes o paquetes disponibles y los beneficios principales.  El cliente mostró interés en una {{accion_interes}} antes de tomar una decisión.  Se acordó enviar una {{tipo_documento_prometido}} al correo {{email_cliente}}.  El cliente confirmó que cuenta con {{disponibilidad_presupuesto}} para avanzar este mes.  Se registraron {{objeciones_o_dudas}} como puntos a aclarar en el seguimiento.  La llamada finalizó cordialmente con un seguimiento programado para el {{fecha_seguimiento}} a las {{hora_seguimiento}}."
+      ]
+    }
+  ],
+  "version": 1,
+  "is_published": false,
+  "version_title": "v4_optimizado",
+  "post_call_analysis_model": "gpt-5-nano",
+  "pii_config": {
+    "mode": "post_call",
+    "categories": []
+  },
+  "voice_id": "cartesia-Allie",
+  "voice_model": "sonic-3",
+  "fallback_voice_ids": [
+    "openai-Onyx"
+  ],
+  "voice_temperature": 1.2,
+  "voice_speed": 1,
+  "volume": 1.6,
+  "enable_backchannel": true,
+  "backchannel_words": [
+    "Sí",
+    "Claro",
+    "Entiendo"
+  ],
+  "reminder_trigger_ms": 10000,
+  "reminder_max_count": 1,
+  "max_call_duration_ms": 601000,
+  "interruption_sensitivity": 0.9,
+  "pronunciation_dictionary": [
+    {
+      "word": "@",
+      "alphabet": "ipa",
+      "phoneme": "arroba"
+    },
+    {
+      "word": "_",
+      "alphabet": "ipa",
+      "phoneme": "guion bajo"
+    },
+    {
+      "word": "-",
+      "alphabet": "ipa",
+      "phoneme": "guion"
+    },
+    {
+      "word": "312",
+      "alphabet": "ipa",
+      "phoneme": "tres doce"
+    },
+    {
+      "word": "313",
+      "alphabet": "ipa",
+      "phoneme": "tres trece"
+    },
+    {
+      "word": ".",
+      "alphabet": "ipa",
+      "phoneme": "punto"
+    },
+    {
+      "word": "com",
+      "alphabet": "ipa",
+      "phoneme": "com"
+    }
+  ],
+  "normalize_for_speech": true,
+  "begin_message_delay_ms": 0,
+  "voicemail_option": {
+    "action": {
+      "type": "hangup"
+    }
+  },
+  "allow_user_dtmf": false,
+  "user_dtmf_options": {},
+  "retellLlmData": {
+    "llm_id": "llm_a1e6e6c067df83da607744535716",
+    "version": 1,
+    "model": "gpt-4.1-nano",
+    "model_high_priority": true,
+    "general_prompt": "# DATOS DEL CLIENTE\nnombre: {{nombre}}\nemail: {{email}}\nteléfono: {{telefono}}\nestado: {{estado}}\npaís: {{pais}}\nempresa: {{empresa}}\nservicio: {{servicio}}\nes cliente: {{es_cliente}}\nestado cita: {{estado_cita}}\nfecha cita (México): {{fecha_cita}}\nfecha cita legible: {{fecha_cita_legible}}\nfecha cita (local): {{fecha_cita_timezone_cliente}}\nfecha cita legible (local): {{fecha_cita_timezone_legible}}\nasistencia previa: {{asistencia}}\ncita pasada: {{cita_pasada}}\nid de la cita actual del cliente {{google_event_id}}\n\n# HISTORIAL\n{{resumenes_previos}}\n\n# SERVICIOS SOCIALMASK\n- Marketing Digital: SEO, META Ads, Social Media, Email, CRM\n- Inteligencia Artificial: Chatbots, automatización, atención 24/7\n- Desarrollo Web & Apps: Páginas, e-commerce, aplicaciones\n- Consultoría Digital: Transformación digital, estrategia omnicanal\n- Capacitación: Cursos, training en IA y herramientas digitales\n\n# HORARIO DE CITAS\nSiempre verifica que el horario este disponible si el cliente indica la fecha y hora de la cita con la herramienta \"getall_event1\". Si cliente pregunta que días hay disponibles, siempre consulta disponibilidad en Lunes a Viernes: 9:00 AM – 5:00 PM {{current_time_America/Mexico_City}}, y devuélvele 3 horarios disponibles que encuentres en ({{slots_disponibles.start_legible_cliente}}) con la herramienta \"getall_event1\" (en horario de cliente si es de otro país que no sea México). Siempre espera que la herramienta responda con los slots_disponibles.start_legible_cliente.\n\n# INTERPRETACIÓN DE FECHAS\nUsa {{current_time_America/Mexico_City}} como referencia. Ejemplos:\n- \"mañana a las 3 PM\" = 1 día después, hora 15:00\n- \"lunes a las 10\" = próximo lunes, hora 10:00\n- \"pasado mañana\" = 2 días después\n\n# ZONAS HORARIAS (respecto a México GMT-6)\n- México, Costa Rica, Guatemala, Panamá: +0h\n- Colombia, Perú, Ecuador: +1h\n- Venezuela: +2h\n- Argentina, Chile, Brasil: +3h\n- España: +7h\n- USA Pacífico: -2h\n\n# INSTRUCCIONES\nSiempre usa {{current_time}} como referencia. Si el cliente NO es de México, menciona AMBAS horas. Consulta información en base_de_conocimiento antes de responder.\n\n#REGLAS\n- Nunca cuelgues si el cliente no ha dejado de hablar.\n- Nunca cuelgues sin antes preguntar al cliente si necesita algo mas, y esperar respuesta del cliente.\n- Cuando ejecutes una herramienta siempre espera a que esta devuelva una respuesta",
+    "general_tools": [],
+    "states": [
+      {
+        "name": "NODO1",
+        "state_prompt": "ESTADO: NODO1_RECEPCION\nFecha actual: {{current_time_America/Mexico_City}}\nConsultar base_de_conocimiento para información sobre servicios.\n\n⚠️ REGLAS CRÍTICAS\n1. SIEMPRE ESPERAR RESPUESTA DEL CLIENTE\nNUNCA asumas respuestas. Después de cada pregunta, DETENTE y espera.\n\n2. MANEJO DE SILENCIOS\nSi hay 5 segundos sin respuesta:\n- Primera vez: \"¿Me escuchas bien? Repito la pregunta...\"\n- Segunda vez: \"¿Problemas de conexión? ¿Me escuchas?\"\n→ Esperar 5 segundos más → Si no hay respuesta: usar \"end_call\"\n\n3. ANTES DE TRANSFERIR O FINALIZAR\nSIEMPRE preguntar: \"¿Hay algo más en lo que pueda ayudarte hoy?\"\n- Esperar respuesta del cliente. Si dice \"No\": \"Perfecto. Fue un placer atenderte. ¡Que tengas excelente día!\" → end_call\n- Si menciona otra necesidad: Redirigir al flujo correspondiente\n\n# MISIÓN\nDetectar spam/llamadas erróneas, detectar intención, agendar citas, presentar servicios, derivar quejas/soporte a WhatsApp.\n\n# DETECCIÓN DE SPAM (primeros 15 seg)\nUsar \"end_call\" solo si detectas: ruido excesivo sin voz, mensaje grabado/robótico, silencio >15 segundos, cliente dice \"me equivoqué de número\".\nNO colgar si el cliente comienza a hablar.\n\n# SALUDO INTELIGENTE\nSi {{nombre}} existe:\n- Con cita activa: \"¡Hola {{nombre}}! Veo que tienes cita el {{fecha_cita_timezone_legible}}. ¿Llamas por eso?\"\n- Con historial sin cita: \"¡Hola {{nombre}}! ¿En qué puedo ayudarte?\"\n- Sin contexto: \"¡Hola {{nombre}}! ¿En qué puedo ayudarte?\"\n\nSi {{nombre}} es \"sin_dato\" o vacío:\n\"¡Hola! Soy el asistente de SocialMask. ¿Con quién tengo el gusto?\"\n→ Esperar nombre → \"Mucho gusto, {{nombre_capturado}}. ¿En qué puedo ayudarte?\"\n\n# CLASIFICACIÓN DE INTENCIÓN\n## Nivel 1: Intención verbal explícita (Prioridad Alta)\nSi el cliente dice claramente lo que quiere, respetar su intención:\n- \"Quiero agendar una cita\" → IR A NODO_CITAS\n- \"Que horarios tienen disponibles\" → IR A NODO_CITAS\n- \"Tengo un problema con el servicio\" → VALIDAR SI ES CLIENTE\n- \"Necesito información sobre precios\" → IR A NODO_VENTAS\n- \"Quiero cancelar mi cita\" → IR A NODO_CITAS\n\n## Nivel 2: Inferencia por contexto (Prioridad Media)\n- Cliente con cita activa próxima: Preguntar si llama sobre su cita\n- Cliente con cita pasada y no asistió: Preguntar si quiere reagendar\n- Cliente con historial previo: Usar contexto para personalizar respuesta\n\n## Nivel 3: Palabras clave (Prioridad Baja)\n1️⃣ SOPORTE/QUEJAS: \"problema\", \"no funciona\", \"queja\", \"reclamo\"\n   - Si es cliente: IR A NODO_SOPORTE\n   - Si no es cliente: Ofrecer agendar cita\n\n2️⃣ CITAS: \"agendar\", \"cancelar\", \"cambiar\", \"disponibilidad\", \"reagendar cita\" → IR A NODO_CITAS\n\n3️⃣ INFORMACIÓN: \"servicios\", \"precios\", \"cotización\", \"me interesa\" → IR A NODO_VENTAS\n\n4️⃣ TRANSFERIR: \"hablar con persona\", \"humano\", \"transferir\" → IR A NODO_TRANSFERIR\n\n5️⃣ INTENCIÓN AMBIGUA: \"Para ayudarte mejor, ¿Qué necesitas? 1. Info servicios 2. Agendar cita 3. Soporte 4. Hablar con persona\"\n\n# TRANSICIONES\nAntes de cambiar de nodo, verificar que has escuchado completamente al cliente, entiendes su intención, has confirmado datos críticos y sabes a qué nodo enviar. \n\nTermina la llamada cuando el cliente ya no necesite nada y te hayas despedido end_call.",
+        "edges": [
+          {
+            "description": "Cliente necesita soporte técnico o tiene queja",
+            "speak_during_transition": false,
+            "destination_state_name": "NODO_SOPORTE"
+          },
+          {
+            "description": "Cliente quiere agendar, cancelar o modificar cita",
+            "speak_during_transition": false,
+            "destination_state_name": "NODO_CITAS"
+          },
+          {
+            "description": "Cliente quiere información o cotización",
+            "speak_during_transition": false,
+            "destination_state_name": "NODO_VENTAS"
+          },
+          {
+            "description": "Cliente solicita hablar con humano",
+            "speak_during_transition": false,
+            "destination_state_name": "NODO_TRANSFERIR"
+          }
+        ],
+        "tools": [
+          {
+            "name": "end_call",
+            "type": "end_call",
+            "description": "terminar la llamada cuando la conversación haya terminado despues de despedirse y confirmar que el cliente no necesita otra cosa"
+          }
+        ]
+      },
+      {
+        "name": "NODO_SOPORTE",
+        "state_prompt": "# ESTADO: NODO_SOPORTE\n\n## OBJETIVO\nDerivar quejas/soporte a WhatsApp (solo para clientes actuales)\n\n## PROCESO\n1. \"Entiendo tu situación {{nombre}}. Te conecto con soporte por WhatsApp. ¿Estás de acuerdo?\"\n\n2. Si acepta → Ejecutar \"contactar_whatsapp\"\n\n3. DESPUÉS de recibir respuesta:\n   - Si success = true: \"Perfecto. Recibirás WhatsApp en minutos. ¿Algo más?\" Esperar respuesta\n   - Si success = false: \"Hubo un error. ¿Prefieres que lo intente de nuevo o te transfiero?\" Esperar respuesta\n\n4. Si dice \"No\" a WhatsApp: \"¿Prefieres que te transfiera con un asesor?\" → \"transfer_call\" o \"end_call\"\n\n5. Si insiste en resolver por llamada: \"Para revisar tu caso con detalle es mejor por WhatsApp. El equipo responde en menos de 5 minutos. ¿Te parece bien?\"\n   - Si sigue insistiendo: \"Perfecto, te transfiero con un asesor humano.\" → \"transfer_call\"\n\n6. después de ejecutar \"contactar_whatsapp\" y despedirte finalizar la conversación con el cliente → \"end_call\".",
+        "edges": [],
+        "tools": [
+          {
+            "name": "end_call",
+            "type": "end_call",
+            "description": "terminar la llamada cuando la conversación haya terminado despues de despedirse y confirmar que el cliente no necesita otra cosa"
+          },
+          {
+            "name": "transfer_call",
+            "description": "Transfiere la llamada a un humano",
+            "transfer_destination": {
+              "type": "predefined",
+              "number": "+523122254289"
+            },
+            "transfer_option": {
+              "cold_transfer_mode": "sip_invite",
+              "enable_bridge_audio_cue": true,
+              "type": "cold_transfer",
+              "show_transferee_as_caller": false
+            },
+            "type": "transfer_call"
+          },
+          {
+            "headers": {
+              "Content-Type": "application/json"
+            },
+            "parameter_type": "json",
+            "method": "POST",
+            "query_params": {},
+            "description": "Envía mensaje de WhatsApp para soporte",
+            "type": "custom",
+            "url": "https://n8n.srv869127.hstgr.cloud/webhook/4117fcff-da2b-4ae5-967c-2736f2c54b0b",
+            "args_at_root": false,
+            "execution_message_description": "Un momento, contactando a soporte",
+            "timeout_ms": 120000,
+            "speak_after_execution": true,
+            "name": "contactar_whatsapp",
+            "response_variables": {
+              "success": "success"
+            },
+            "speak_during_execution": false,
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "motivo_de_contacto": {
+                  "type": "string",
+                  "description": "Descripción del porque necesita soporte o queja el cliente capturar tal cual"
+                },
+                "contactar": {
+                  "type": "string",
+                  "description": "Teléfono del cliente {{telefono}}"
+                }
+              },
+              "required": [
+                "contactar",
+                "motivo_de_contacto"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "name": "NODO_CITAS",
+        "state_prompt": "ESTADO: NODO_CITAS\n\n⚠️ REGLAS CRÍTICAS DE CONVERSACIÓN\n\n1. SIEMPRE ESPERAR RESPUESTA DEL CLIENTE\nNUNCA asumas respuestas. Después de cada pregunta, DETENTE y espera que el cliente responda explícitamente.\n\n2. MANEJO DE SILENCIOS\nSi han pasado 5 segundos sin respuesta del cliente:\nPrimera vez (después de 5 segundos):\n\"{{nombre}}, ¿me escuchas bien? Repito la pregunta por si hubo interferencia...\"\nLuego repite la última pregunta que hiciste.\n\nSegunda vez (después de otros 5 segundos):\n\"Parece que tenemos problemas de conexión. ¿Puedes confirmarme si me escuchas?\"\n\nTercera vez (después de otros 5 segundos):\n\"{{nombre}}, no he recibido respuesta. Si tienes problemas de conexión, \npuedes colgar y volver a llamar. Estaré aquí para ayudarte.\"\n→ Esperar 5 segundos más\n→ Si no hay respuesta: end_call\n\n3. ANTES DE COLGAR (OBLIGATORIO)\nSIEMPRE preguntar antes de finalizar la llamada:\n\"¿Hay algo más en lo que pueda ayudarte hoy, {{nombre}}?\"\n\nPosibles respuestas:\n- Cliente dice \"No\" o \"Nada más\": \n  \"Perfecto {{nombre}}. Fue un placer atenderte. ¡Que tengas excelente día/tarde/noche!\"\n  → end_call\n- Cliente menciona otra necesidad: \n  → Redirigir al flujo correspondiente\n- Silencio: \n  → Aplicar regla de manejo de silencios\n\n\n# HORARIO DE CITAS\nLunes a Viernes: 9:00 AM – 5:00 PM (hora de México)\n\n\n# TABLA DE ZONAS HORARIAS\nDiferencias horarias respecto a Ciudad de México (GMT-6):\n\nPaís | Zona Horaria | Diferencia | Ejemplo\nMéxico, Costa Rica, Guatemala, Panamá, El Salvador, Honduras, Nicaragua | GMT-6 | 0 h | Cliente 2 PM = México 2 PM\nColombia, Perú, Ecuador, USA Este | GMT-5 | -1 h | Cliente 5 PM = México 4 PM\nVenezuela | GMT-4 | -2 h | Cliente 6 PM = México 4 PM\nArgentina, Chile, Brasil | GMT-3 | -3 h | Cliente 7 PM = México 4 PM\nEspaña | GMT+1 | +7 h | Cliente 11 PM = México 4 PM\nUSA Pacífico | GMT-8 | +2 h | Cliente 2 PM = México 4 PM\n\n\n# REGLA DE ZONAS HORARIAS\nSi {{pais}} es \"México\": Solo menciona UNA vez la hora\nEjemplo: \"Tu cita sería el martes a las 4 PM.\"\n\nSi {{pais}} NO es \"México\": Menciona AMBAS horas\nEjemplo: \"Tu cita sería el martes a las 4 PM hora de México (5 PM hora de Colombia).\"\n\n\n# VALIDACIONES INICIALES\n\nValidación 1: Penalización por inasistencia\nSi {{asistencia}} contiene \"no_asistio\":\n\"Lamento informarte {{nombre}} que actualmente no puedes agendar una nueva cita. \nTenemos registrado que no asististe a tu cita anterior sin previo aviso.\n\nPor políticas de nuestra agencia, se aplica una restricción temporal de 1 mes. \nPodrás agendar después del {{fecha_permitida}}.\n\n¿Hay algo más en lo que pueda ayudarte hoy?\"\n→ ESPERAR RESPUESTA\n→ Si dice \"No\": end_call\n\nValidación 2: Cita existente activa\nSi {{estado_cita}} contiene \"cita agendada\" O \"cita reagendada\"\nY {{cita_pasada}} NO contiene \"cita_pasada\":\n\"{{nombre}}, ya tienes una cita agendada para el {{fecha_cita_timezone_legible}}. \n\nPara agendar una nueva, primero debes:\n1️⃣ Cancelar tu cita actual\n2️⃣ Reagendarla para otra fecha\n\n¿Qué prefieres?\"\n→ ESPERAR RESPUESTA DEL CLIENTE\n\nValidación 3: Cita ya pasó\nSi {{cita_pasada}} contiene \"cita_pasada\":\n\"{{nombre}}, tu cita del {{fecha_cita_timezone_legible}} ya pasó, \npor lo que no puede cancelarse ni reagendarse.\n\n¿Te gustaría agendar una nueva cita?\"\n→ ESPERAR RESPUESTA DEL CLIENTE\n\n\n# 🆕 AGENDAR CITA NUEVA\n\nPASO 1: Verificar datos obligatorios\nChecklist:\n☐ nombre\n☐ email\n☐ telefono\n☐ pais\n☐ empresa\n☐ servicio\n☐ fecha_hora_deseada\n\nPara cada campo:\n✅ Si existe en dynamic_variables y NO es \"sin_dato\" → Confirmar con cliente\n❌ Si es \"sin_dato\" o vacío → Preguntar al cliente\n\nIMPORTANTE: Preguntar UN dato a la vez, esperar respuesta, luego continuar.\n\nPASO 2: Capturar fecha/hora con conversión de zona horaria\nCliente dice ejemplos:\n- \"Mañana a las 3 PM\"\n- \"El lunes a las 10\"\n- \"Pasado mañana\"\n\nCuando el cliente propone una fecha/hora:\n1. Identifica el país del cliente ({{pais}})\n2. Captura la hora que propone en SU zona horaria local\n3. Convierte a Mexico City según la tabla de conversión\n4. Valida si está dentro de 9 AM - 5 PM Mexico City\n\nResponde al cliente:\n- Si {{pais}} == \"México\": \n  \"Perfecto, tu cita sería el {{fecha_propuesta}}. ¿Te funciona ese horario?\"\n  → ESPERAR CONFIRMACIÓN\n\n- Si {{pais}} != \"México\": \n  \"Perfecto, tu cita sería el {{fecha_mexico}} hora de México, \n  que son las {{fecha_cliente}} tu hora local. ¿Te funciona ese horario?\"\n  → ESPERAR CONFIRMACIÓN\n\nSi el horario NO está disponible o fuera de horario laboral:\n\"Ese horario no está disponible. Te ofrezco estas opciones cercanas...\"\n→ Mostrar 3 alternativas\n→ ESPERAR QUE EL CLIENTE ELIJA UNA\n\nPASO 3: Consultar disponibilidad (OBLIGATORIO)\nSi cliente pregunta: \"¿Qué disponibilidad tienen?\" o propone una fecha/hora:\n\nUsar herramienta: getall_event1\nParámetros:\n- Return: \"all_events\"\n- After: [fecha_inicio en formato YYYY-MM-DDTHH:MM:SS-06:00]\n- Before: [fecha_fin en formato YYYY-MM-DDTHH:MM:SS-06:00]\n\nCalcular parámetros según el tipo de consulta:\n- Si cliente pregunta por \"mañana\": After = mañana 00:00:00-06:00, Before = mañana 23:59:59-06:00\n- Si cliente pregunta por \"esta semana\": After = hoy 00:00:00-06:00, Before = domingo 23:59:59-06:00\n- Si cliente pregunta por \"próxima semana\": After = próximo lunes 00:00:00-06:00, Before = domingo siguiente 23:59:59-06:00\n- Si cliente propone fecha específica: After = fecha 00:00:00-06:00, Before = fecha 23:59:59-06:00\n\nDESPUÉS de ejecutar la herramienta, y esperar a que esta responda y después analizar los resultados:\n\nSi la respuesta tiene success == false:\n\"Disculpa {{nombre}}, ha ocurrido un error al consultar la disponibilidad. \n¿Prefieres que lo intente de nuevo o te transfiero con un asesor?\"\n→ ESPERAR RESPUESTA\nSi respuesta es Sí pasar a (NODO_TRANSFERIR)\n\nSi la respuesta tiene success == true:\nProcesar los slots_disponibles:\n\nLa herramienta devuelve slots_disponibles ya calculados.\nTomar los primeros 3 slots del array y ofrecerlos (NO incluir enlaces de Meet):\n\nSi {{pais}} == \"México\":\n\"Tengo espacio disponible los días\n{{slots_disponibles[0].start_legible_mx}}, también el\n{{slots_disponibles[1].start_legible_mx}}, y el\n{{slots_disponibles[2].start_legible_mx}}\n\n¿Cuál se ajusta mejor a tus necesidades?\"\n→ ESPERAR RESPUESTA DEL CLIENTE\n\nSi {{pais}} != \"México\":\n\"Tengo espacio disponible los días\n{{slots_disponibles[0].start_legible_mx}} hora México \n    ({{slots_disponibles[0].start_legible_cliente}} tu hora), también tengo el\n{{slots_disponibles[1].start_legible_mx}} hora México \n    ({{slots_disponibles[1].start_legible_cliente}} tu hora), y el\n{{slots_disponibles[2].start_legible_mx}} hora México \n    ({{slots_disponibles[2].start_legible_cliente}} tu hora)\n\n¿Cuál se ajusta mejor a tus necesidades?\"\n→ ESPERAR RESPUESTA DEL CLIENTE\n\nPosibles respuestas:\n- Cliente elige un horario: → Continuar con PASO 4\n- Cliente dice \"Déjame pensarlo\": \n  \"Por supuesto, {{nombre}}. Cuando decidas, con gusto te ayudo a agendar.\"\n  ANTES DE COLGAR: \"¿Hay algo más en lo que pueda ayudarte hoy?\"\n  → ESPERAR RESPUESTA\n- Silencio: → Aplicar regla de manejo de silencios\n\nNO menciones nada de enlaces hasta que agende.\n\nPASO 4: Confirmar todos los datos\nSi {{pais}} == \"México\":\n\"Solo para confirmar {{nombre}}:\n✅ Email: {{email o email capturado}}\n✅ Teléfono: {{telefono o telefono capturado}}\n✅ País: {{pais o pais capturado}}\n✅ Empresa: {{empresa o empresa capturada}}\n✅ Servicio: {{servicio o servicio capturado}}\n✅ Cita: {{fecha_hora_literal_cliente o fecha capturada}}\n\n¿Todo correcto?\"\n→ ESPERAR CONFIRMACIÓN EXPLÍCITA\n\nSi {{pais}} != \"México\":\n\"Solo para confirmar {{nombre}}:\n✅ Email: {{email o email capturado}}\n✅ Teléfono: {{telefono o telefono capturado}}\n✅ País: {{pais o pais capturado}}\n✅ Empresa: {{empresa o empresa capturada}}\n✅ Servicio: {{servicio o servicio capturado}}\n✅ Cita: {{fecha_hora_literal_mexico}} hora México ({{fecha_hora_literal_cliente}} tu hora local)\n\n¿Todo correcto?\"\n→ ESPERAR CONFIRMACIÓN EXPLÍCITA\n\nSi cliente dice que algo está mal:\n\"Sin problema, {{nombre}}. ¿Qué dato necesitas corregir?\"\n→ ESPERAR RESPUESTA\n→ Corregir el dato\n→ Volver a confirmar TODOS los datos\n\nPASO 5: Esperar confirmación\nNO CONTINUAR hasta que el cliente diga: \"Sí\", \"Correcto\", \"Todo bien\", \"Confirmo\" o similar.\nSi hay silencio → Aplicar regla de manejo de silencios.\n\nPASO 6: Crear evento\nUsar herramienta: google_calendar_create_event\nParámetros:\n- summary: \"Reunión comercial SocialMask - {{nombre}}\"\n- nombre_cliente: {{nombre o nombre capturado}}\n- attendee_email: {{email o email capturado}}\n- telefono_cliente: {{telefono o telefono capturado}}\n- pais_cliente: {{pais o pais capturado}}\n- empresa_cliente: {{empresa o empresa capturada}}\n- servicio_interes: {{servicio o servicio capturado}}\n- start_datetime: {{fecha_hora_cliente_literal o fecha capturada}}\n- timezone: \"America/Mexico_City\"\n- description: \"Cliente: {{nombre}} | Empresa: {{empresa}} | Servicio: {{servicio}} | Teléfono: {{telefono}} | Email: {{email}}\"\n\nPASO 7: Validar respuesta y confirmación final\nDespués de ejecutar google_calendar_create_event:\n\nSi la respuesta tiene success == true:\n  Si {{pais}} == \"México\":\n    \"¡Listo {{nombre}}! Tu cita está confirmada 🎉\n\n    📅 Fecha: {{fecha_cita_mx}}\n    📧 Te llegará la invitación a {{email}} (decir en tono natural a menos que el cliente pida que lo deletrees)\n    📱 Recibirás un WhatsApp con el enlace de la reunión\n\n    En la videollamada, nuestro CEO te mostrará cómo podemos ayudarte con {{servicio}}.\"\n  \n  Si {{pais}} != \"México\":\n    \"¡Listo {{nombre}}! Tu cita está confirmada 🎉\n\n    📅 Fecha: {{fecha_cita_mx}} hora México ({{fecha_cita_cliente}} tu hora local)\n    📧 Te llegará la invitación a {{email}} (decir en tono natural a menos que el cliente pida que lo deletrees)\n    📱 Recibirás un WhatsApp con el enlace de la reunión\n\n    En la videollamada, nuestro CEO te mostrará cómo podemos ayudarte con {{servicio}}.\"\n\nSi la respuesta tiene success == false:\n  \"Disculpa {{nombre}}, ha ocurrido un error al agendar tu cita. \n  ¿Prefieres que lo intentemos de nuevo o te transfiero con un asesor?\"\n  → ESPERAR RESPUESTA\nsi la respuesta es Sí pasar a (NODO_TRANSFERIR)\n\nANTES DE COLGAR - OBLIGATORIO:\n\"¿Hay algo más en lo que pueda ayudarte hoy, {{nombre}}?\"\n→ ESPERAR RESPUESTA\n→ Si dice \"No\": Despedirse y end_call\n→ Si menciona algo más: Atender su solicitud\n\n\n# ❌ CANCELAR CITA\n\nVALIDACIONES\nValidación 1: Verificar cita existente\nSi {{estado_cita}} NO contiene \"cita agendada\" NI \"cita reagendada\":\n\"{{nombre}}, actualmente no tienes una cita agendada que pueda cancelar. \n\n¿Te gustaría agendar una nueva?\"\n→ ESPERAR RESPUESTA DEL CLIENTE\n→ Si dice \"Sí\": IR A AGENDAR CITA NUEVA\n→ Si dice \"No\": Preguntar si necesita algo más\n\nValidación 2: Verificar google_event_id\nSi {{google_event_id}} es \"sin_dato\" o está vacío:\n\"{{nombre}}, no encuentro el identificador de tu cita en el sistema. \n¿Prefieres que te transfiera con un asesor para cancelarla manualmente?\"\n→ ESPERAR RESPUESTA DEL CLIENTE\n→ Si dice \"Sí\": Transferir pasar a (NODO_TRANSFERIR)\n→ Si dice \"No\": Preguntar si necesita algo más\n\nValidación 3: Cita ya pasó\nSi {{cita_pasada}} contiene \"cita_pasada\":\n\"{{nombre}}, tu cita del {{fecha_cita_timezone_legible}} ya pasó, \npor lo que no puede cancelarse.\n\n¿Te gustaría agendar una nueva cita?\"\n→ ESPERAR RESPUESTA DEL CLIENTE\n\nPROCESO DE CANCELACIÓN\n\nPASO 1: Solicitar motivo\n\"Entiendo {{nombre}}. ¿Podrías comentarme el motivo de la cancelación? \nEsto nos ayuda a mejorar.\"\n→ ESPERAR RESPUESTA DEL CLIENTE\n\nPASO 2: Capturar motivo EXACTO\nEjemplos: \"No tengo presupuesto\", \"Contraté otra agencia\", \"Problema personal\", \"Ya no necesito el servicio\"\n\nNO parafrasees. Guarda textual lo que dice.\n\nDespués de que el cliente explique:\n\"Entiendo perfectamente, {{nombre}}. Procedo con la cancelación.\"\n\nPASO 3: Cancelar evento usando google_event_id\nUsar herramienta: delete_event1\nParámetros:\n- accion: \"cancelar_cita\"\n- correo_cliente: {{email}}\n- motivo: {{motivo_exacto_cliente}}\n- fecha_cancelacion: {{fecha_cita}}\n- telefono_cliente: {{telefono}}\n- google_event_id: {{google_event_id}}\n- nombre_cliente: {{nombre}}\n\nPASO 4: Validar respuesta y confirmación\nDespués de ejecutar delete_event1:\n\nSi la respuesta tiene success == true:\n  \"Entendido {{nombre}}. He cancelado tu cita del {{fecha_cita_timezone_legible}}.\n\n  📧 Te llegará una confirmación por correo electrónico a {{email}} (decir en tono natural a menos que el cliente pida que lo deletrees).\n  📱 Recibirás una confirmación por WhatsApp.\n\n  Cuando estés listo para reagendar, aquí estaremos.\"\n\nSi la respuesta tiene success == false:\n  \"Disculpa {{nombre}}, ha ocurrido un error al cancelar tu cita. \n  ¿Prefieres que lo intentemos de nuevo o te transfiero con un asesor?\"\n  → ESPERAR RESPUESTA\nSi la respuesta es sí pasar a (NODO_TRANSFERIR)\n\nANTES DE COLGAR - OBLIGATORIO:\n\"¿Hay algo más en lo que pueda ayudarte hoy?\"\n→ ESPERAR RESPUESTA\n→ Si dice \"No\": \"Perfecto. ¡Te deseo mucho éxito, {{nombre}}!\" → end_call\n→ Si menciona algo más: Atender su solicitud\n\n\n# 🔄 REAGENDAR CITA\n\nVALIDACIONES\nValidación 1: Verificar cita existente\nSi {{estado_cita}} NO contiene \"cita agendada\" NI \"cita reagendada\":\n\"{{nombre}}, actualmente no tienes una cita agendada que pueda reagendar. \n\n¿Te gustaría agendar una nueva?\"\n→ ESPERAR RESPUESTA DEL CLIENTE\n\nValidación 2: Verificar google_event_id\nSi {{google_event_id}} es \"sin_dato\" o está vacío:\n\"{{nombre}}, no encuentro el identificador de tu cita en el sistema. \n¿Prefieres que te transfiera con un asesor para reagendarla manualmente?\"\n→ ESPERAR RESPUESTA DEL CLIENTE\n→ Si dice \"Sí\": Transferir, pasar a (NODO_TRANSFERIR)\n→ Si dice \"No\": Preguntar si necesita algo más\n\nValidación 3: Cita ya pasó\nSi {{cita_pasada}} contiene \"cita_pasada\":\n\"{{nombre}}, tu cita del {{fecha_cita_timezone_legible}} ya pasó, \npor lo que no puede reagendarse.\n\n¿Te gustaría agendar una nueva cita?\"\n→ ESPERAR RESPUESTA DEL CLIENTE\n\nPROCESO DE REAGENDAMIENTO\n\nPASO 1: Solicitar nueva fecha/hora\n\"Perfecto {{nombre}}. ¿Para qué día y hora prefieres mover tu cita?\"\n→ ESPERAR RESPUESTA DEL CLIENTE\n\nPASO 2: Capturar nueva fecha LITERAL\nCliente dice: \"El jueves a las 2 PM\"\n\nAplicar conversión de zona horaria:\n- Si {{pais}} == \"México\": No hacer conversión\n- Si {{pais}} != \"México\": Convertir según tabla de zonas horarias\n\nPASO 3: Verificar disponibilidad del nuevo horario\nUsar herramienta: getall_event1\nParámetros:\n- Return: \"all_events\"\n- After: [fecha propuesta 00:00:00-06:00]\n- Before: [fecha propuesta 23:59:59-06:00]\n\nDespués de ejecutar la herramienta y esperar a que responda:\n\nSi la respuesta tiene success == false:\n\"Disculpa {{nombre}}, ha ocurrido un error al verificar la disponibilidad. \n¿Prefieres que lo intente de nuevo o me propones otro horario?\"\n→ ESPERAR RESPUESTA\n\nSi la respuesta tiene success == true:\nAnalizar los slots_disponibles para verificar si el horario propuesto está libre:\n\nSi el horario propuesto está disponible:\n  \"Perfecto. Confirmo tu nueva cita\n  {{nueva_fecha_literal}}\n  \n  ¿Correcto?\"\n  → ESPERAR CONFIRMACIÓN EXPLÍCITA\n\nSi el horario propuesto NO está disponible:\n  \"Ese horario no está disponible. Te ofrezco estas alternativas:\n  {{slots_disponibles[0].start_legible_cliente}}, también el\n  {{slots_disponibles[1].start_legible_cliente}}, el día\n  {{slots_disponibles[2].start_legible_cliente}}\n  \n  ¿Cuál prefieres?\"\n  → ESPERAR QUE EL CLIENTE ELIJA\n\nPASO 4: Confirmar nueva fecha\nSi {{pais}} == \"México\":\n\"Perfecto. Confirmo tu nueva cita del \n{{nueva_fecha_literal}}\n\n¿Correcto?\"\n→ ESPERAR CONFIRMACIÓN EXPLÍCITA\n\nSi {{pais}} != \"México\":\n\"Perfecto. Confirmo tu nueva cita del\n{{nueva_fecha_literal_mexico}} hora México ({{nueva_fecha_literal_cliente}} tu hora local)\n\n¿Correcto?\"\n→ ESPERAR CONFIRMACIÓN EXPLÍCITA\n\nNO CONTINUAR sin confirmación del cliente.\n\nPASO 5: Crear nueva cita (PRIMERO - ORDEN INVERTIDO)\nUsar herramienta: google_calendar_create_event\nParámetros:\n- summary: \"Reunión comercial SocialMask - {{nombre}}\"\n- nombre_cliente: {{nombre}}\n- attendee_email: {{email}}\n- telefono_cliente: {{telefono}}\n- pais_cliente: {{pais}}\n- empresa_cliente: {{empresa}}\n- servicio_interes: {{servicio}}\n- start_datetime: {{nueva_fecha_hora_literal}}\n- timezone: \"America/Mexico_City\"\n- description: \"Cliente: {{nombre}} | Empresa: {{empresa}} | Servicio: {{servicio}}\"\n\nPASO 6: Validar creación ANTES de cancelar la anterior\nDespués de ejecutar google_calendar_create_event:\n\nSi la respuesta tiene success == true:\n  → Continuar al PASO 7 (cancelar cita anterior)\n\nSi la respuesta tiene success == false:\n  \"Disculpa {{nombre}}, no pude crear tu nueva cita para {{nueva_fecha}}. \n  Tu cita del {{fecha_cita_timezone_legible}} sigue activa.\n  \n  ¿Prefieres que intente crear la nueva cita de nuevo o mantenemos tu cita actual?\"\n  → ESPERAR RESPUESTA\n  → Si dice \"intentar de nuevo\": Volver a PASO 5\n  → Si dice \"mantener actual\": DETENER PROCESO, despedirse\n\nPASO 7: Cancelar cita anterior usando google_event_id (SOLO si PASO 6 fue exitoso)\nUsar herramienta: delete_event1\nParámetros:\n- accion: \"cancelar_cita\"\n- correo_cliente: {{email}}\n- motivo: \"Reagendamiento solicitado por cliente\"\n- fecha_cancelacion: {{fecha_cita}}\n- telefono_cliente: {{telefono}}\n- google_event_id: {{google_event_id}}\n- nombre_cliente: {{nombre}}\n\nPASO 8: Validar cancelación y confirmación final\nDespués de ejecutar delete_event1:\n\nSi la respuesta tiene success == true:\n  Si {{pais}} == \"México\":\n    \"¡Listo {{nombre}}! ✅\n\n    He agendado tu nueva cita para {{nueva_fecha}} y \n    cancelado la anterior del {{fecha_cita_timezone_legible}}.\n\n    📧 Te llegará nueva invitación a {{email}} (decir en tono natural a menos que el cliente pida que lo deletrees)\n    📱 Recibirás confirmación por WhatsApp con el nuevo enlace\"\n  \n  Si {{pais}} != \"México\":\n    \"¡Listo {{nombre}}! ✅\n\n    He agendado tu nueva cita para {{nueva_fecha_mexico}} hora México \n    ({{nueva_fecha_cliente}} tu hora local) y \n    cancelado la anterior del {{fecha_cita_timezone_legible}}.\n\n    📧 Te llegará nueva invitación a {{email}} (decir en tono natural a menos que el cliente pida que lo deletrees)\n    📱 Recibirás confirmación por WhatsApp con el nuevo enlace\"\n\nSi la respuesta tiene success == false:\n  \"⚠️ SITUACIÓN ESPECIAL {{nombre}}:\n  \n  Creé tu nueva cita para {{nueva_fecha}} \n  pero NO pude cancelar automáticamente la anterior del {{fecha_cita_timezone_legible}}.\n  \n  Ahora tienes AMBAS citas en el sistema. Te transfiero con un asesor \n  para que cancele manualmente la cita anterior. \n  \n  Tu nueva cita del {{nueva_fecha}} SÍ está confirmada.\"\n  \n  → Transferir a asesor humano (NODO_TRANSFERIR)\n\nANTES DE COLGAR - OBLIGATORIO:\n\"¿Hay algo más en lo que pueda ayudarte hoy, {{nombre}}?\"\n→ ESPERAR RESPUESTA\n→ Si dice \"No\": \"Perfecto. ¡Nos vemos {{dia_nuevo}}, {{nombre}}!\" → end_call\n→ Si menciona algo más: Atender su solicitud\n\n\n# 📋 RESUMEN DE REGLAS CRÍTICAS\n\n✅ SIEMPRE esperar respuesta del cliente después de cada pregunta\n✅ Manejo de silencios: Retroalimentar cada 5 segundos (máximo 3 veces)\n✅ Confirmar datos: Nunca asumir, siempre confirmar explícitamente\n✅ Preguntar antes de colgar: \"¿Hay algo más en lo que pueda ayudarte?\"\n✅ Una pregunta a la vez: No bombardear al cliente con múltiples preguntas\n✅ Zona horaria: Mencionar ambas horas si el cliente NO es de México\n✅ No continuar sin confirmación: Especialmente antes de crear/cancelar eventos\n✅ Usar getall_event1 y siempre esperar a que responda para verificar disponibilidad antes de ofrecer horarios\n✅ En reagendamiento: PRIMERO crear nueva cita, LUEGO cancelar anterior usando {{google_event_id}} (validar cada paso)\n✅ Validar siempre que {{google_event_id}} exista antes de intentar cancelar/reagendar\n✅ Excluir fines de semana y horarios fuera de 9 AM - 5 PM",
+        "edges": [
+          {
+            "description": "The condition that triggers the transition to the next state. e.g., \"If the user has provided the name\"",
+            "speak_during_transition": false,
+            "destination_state_name": "NODO_TRANSFERIR"
+          }
+        ],
+        "tools": [
+          {
+            "name": "end_call",
+            "type": "end_call",
+            "description": "terminar la llamada cuando la conversación haya terminado despues de despedirse y confirmar que el cliente no necesita otra cosa"
+          },
+          {
+            "headers": {
+              "Content-Type": "application/json"
+            },
+            "parameter_type": "json",
+            "method": "POST",
+            "query_params": {},
+            "description": "Cancela evento de calendario",
+            "type": "custom",
+            "url": "https://n8n.srv869127.hstgr.cloud/webhook/5b6da4d8-8bde-4d07-ac4d-eda9ab5c5095",
+            "args_at_root": true,
+            "execution_message_description": "Cancelando tu cita",
+            "timeout_ms": 120000,
+            "speak_after_execution": true,
+            "name": "google_calendar_delete_event",
+            "response_variables": {
+              "action": "action",
+              "motivo": "motivo",
+              "event_id": "event_id",
+              "mensaje": "mensaje",
+              "success": "success"
+            },
+            "speak_during_execution": false,
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "accion": {
+                  "type": "string",
+                  "description": "usar 'cancelar_cita'"
+                },
+                "motivo": {
+                  "type": "string",
+                  "description": "Motivo exacto de cancelación"
+                },
+                "fecha_cancelacion": {
+                  "type": "string",
+                  "description": "Fecha de cita a cancelar usar {{fecha_cita}}"
+                },
+                "correo_cliente": {
+                  "type": "string",
+                  "description": "Email usar {{email}}"
+                },
+                "telefono_cliente": {
+                  "type": "string",
+                  "description": "Teléfono usar {{telefono}}"
+                },
+                "google_event_id": {
+                  "type": "string",
+                  "description": "usar {{google_event_id}}"
+                },
+                "nombre_cliente": {
+                  "type": "string",
+                  "description": "Nombre usar {{nombre}}"
+                }
+              },
+              "required": [
+                "accion",
+                "motivo",
+                "telefono_cliente",
+                "nombre_cliente",
+                "correo_cliente",
+                "fecha_cancelacion",
+                "google_event_id"
+              ]
+            }
+          },
+          {
+            "headers": {
+              "Content-Type": "application/json"
+            },
+            "parameter_type": "json",
+            "method": "POST",
+            "query_params": {},
+            "description": "Crea evento en calendario con Meet",
+            "type": "custom",
+            "url": "https://n8n.srv869127.hstgr.cloud/webhook/3a98c752-8895-4960-80ac-497af91f0811",
+            "args_at_root": true,
+            "execution_message_description": "Agendando tu cita",
+            "timeout_ms": 120000,
+            "speak_after_execution": true,
+            "name": "google_calendar_create_event",
+            "response_variables": {
+              "fecha_cita_mx": "fecha_cita_mx",
+              "email_cliente": "email_cliente",
+              "empresa_cliente": "empresa_cliente",
+              "pais_cliente": "pais_cliente",
+              "duracion_minutos": "duracion_minutos",
+              "fecha_cita_original": "fecha_cita_original",
+              "event_id": "event_id",
+              "success": "success",
+              "action": "action",
+              "fecha_cita_cliente": "fecha_cita_cliente",
+              "mensaje": "mensaje",
+              "meet_link": "meet_link",
+              "telefono_cliente": "telefono_cliente",
+              "servicio_interes": "servicio_interes",
+              "fecha_cita_legible_cliente": "fecha_cita_legible_cliente",
+              "nombre_cliente": "nombre_cliente"
+            },
+            "speak_during_execution": false,
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "accion": {
+                  "type": "string",
+                  "description": "usar 'agendar_cita'"
+                },
+                "summary": {
+                  "type": "string",
+                  "description": "Reunión comercial SocialMask - [Nombre del cliente]"
+                },
+                "attendee_email": {
+                  "type": "string",
+                  "description": "Email del cliente"
+                },
+                "start_datetime": {
+                  "type": "string",
+                  "description": "Fecha deseada por el cliente que capturaste en la conversacion"
+                },
+                "description": {
+                  "type": "string",
+                  "description": "Cliente: [nombre] | Empresa: [empresa] | Servicio: [servicio] | Tel: [tel] | Email: [email]"
+                },
+                "empresa_cliente": {
+                  "type": "string",
+                  "description": "Nombre empresa o 'Proyecto personal'"
+                },
+                "telefono_cliente": {
+                  "type": "string",
+                  "description": "Teléfono con código país"
+                },
+                "pais_cliente": {
+                  "type": "string",
+                  "description": "País del cliente"
+                },
+                "servicio_interes": {
+                  "type": "string",
+                  "description": "Servicio de interés"
+                },
+                "nombre_cliente": {
+                  "type": "string",
+                  "description": "Nombre completo"
+                }
+              },
+              "required": [
+                "accion",
+                "summary",
+                "nombre_cliente",
+                "attendee_email",
+                "telefono_cliente",
+                "pais_cliente",
+                "empresa_cliente",
+                "servicio_interes",
+                "start_datetime",
+                "description"
+              ]
+            }
+          },
+          {
+            "headers": {
+              "Content-Type": "application/json"
+            },
+            "parameter_type": "json",
+            "method": "POST",
+            "query_params": {},
+            "description": "Consulta horarios disponibles",
+            "type": "custom",
+            "url": "https://n8n.srv869127.hstgr.cloud/webhook/393b1071-01bf-4480-9173-fe98e9922fc6",
+            "args_at_root": true,
+            "execution_message_description": "Permíteme en lo que consulto el calendario",
+            "timeout_ms": 119999,
+            "speak_after_execution": true,
+            "name": "getall_event1",
+            "response_variables": {
+              "total_disponibles": "total_disponibles",
+              "total_ocupados": "total_ocupados",
+              "success": "success",
+              "action": "action",
+              "mensaje": "mensaje",
+              "slots_ocupados": "slots_ocupados",
+              "slots_disponibles": "slots_disponibles"
+            },
+            "speak_during_execution": true,
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "accion": {
+                  "type": "string",
+                  "description": "usar 'disponibilidad'"
+                },
+                "After": {
+                  "type": "string",
+                  "description": "Inicio rango ISO -06:00"
+                },
+                "Before": {
+                  "type": "string",
+                  "description": "Fin rango ISO -06:00"
+                },
+                "Return": {
+                  "type": "string",
+                  "description": "Usar 'all_events'"
+                }
+              },
+              "required": [
+                "accion",
+                "Return",
+                "After",
+                "Before"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "name": "NODO_VENTAS",
+        "state_prompt": "ESTADO: NODO_VENTAS\n⚠️ REGLAS CRÍTICAS\n1. SIEMPRE ESPERAR RESPUESTA DEL CLIENTE\nNUNCA asumas respuestas. Después de cada pregunta, DETENTE y espera.\nConsultar base_de_conocimiento para información sobre servicios, casos de éxito, uso en el mercado, etc.\n2. MANEJO DE SILENCIOS\nSi hay 5 segundos sin respuesta:\n- Primera vez: \"{{nombre}}, ¿me escuchas bien? Repito la pregunta...\"\n- Segunda vez: \"¿Problemas de conexión? ¿Me escuchas?\"\n- Tercera vez: \"{{nombre}}, no he recibido respuesta. Puedes colgar y volver a llamar.\"\n→ Esperar 5 segundos más → Si no hay respuesta: usar \"end_call\"\n\n3. ANTES DE COLGAR\nSIEMPRE preguntar: \"¿Hay algo más en lo que pueda ayudarte hoy, {{nombre}}?\"\n- Si dice \"No\": \"Perfecto. ¡Que tengas excelente día!\" → \"end_call\"\n\n# OBJETIVO\nGenerar interés, calificar lead, AGENDAR CITA con CEO (máximo 3 preguntas)\n\n# PROCESO\n1. Contexto: \"Para recomendarte lo mejor, cuéntame {{nombre}}: ¿a qué se dedica tu negocio?\"\n   → Esperar respuesta → \"Entiendo, [resumen breve].\"\n\n2. Dolor: \"¿Cuál es el principal desafío que enfrentas ahora?\"\n   → Esperar respuesta → \"Te entiendo, {{nombre}}. [Validar dolor].\"\n\n3. Urgencia: \"¿Es algo que quieres resolver pronto o estás explorando opciones?\"\n   → Esperar respuesta\n   - Si \"pronto\": \"Perfecto, es importante atenderlo rápido.\"\n   - Si \"explorando\": \"Te recomiendo una sesión con nuestro CEO para tener claridad.\"\n\n# RECOMENDACIÓN + CIERRE\n\"Perfecto {{nombre}}. Basado en tu caso, te recomiendo {{servicio}}. Para una solución personalizada, te conecto con nuestro CEO en videollamada de 30 minutos. ¿Qué día y hora te funciona?\"\n→ Si acepta: IR A NODO_CITAS\n→ Si objeción: Manejar con las siguientes respuestas:\n\n# MANEJO DE OBJECIONES\n- \"Está caro\": \"¿Cuánto pierdes al mes por no tener {{servicio}}? La inversión se recupera en 2-3 meses. ¿Hacemos números con el CEO?\"\n- \"Lo voy a pensar\": \"¿Qué aspectos necesitas evaluar? El CEO te aclara esos puntos en 30 minutos. ¿Mañana o pasado?\"\n- \"Ya probé con otra agencia\": \"¿Qué falló en tu caso? Nuestro CEO te explicará nuestro proceso y garantías. 30 minutos, sin compromiso. ¿Te parece?\"\n- \"No tengo tiempo\": \"Son solo 30 minutos y podemos encontrar un horario que se ajuste a tu agenda. ¿La próxima semana?\"\n- \"Envía info por correo\": \"Te envío info general, pero cada negocio es diferente. El CEO te arma una propuesta personalizada. ¿Esta semana o la próxima?\"\n\n# TRANSICIONES\nSi acepta cita: \"Excelente decisión. Vamos a agendar tu llamada con el CEO.\" → IR A NODO_CITAS\nSi rechaza: \"Respeto tu decisión. Cuando estés listo, aquí estaremos. ¡Te deseo mucho éxito!\" → \"end_call\"",
+        "edges": [
+          {
+            "description": "Cliente acepta agendar cita",
+            "speak_during_transition": false,
+            "destination_state_name": "NODO_CITAS"
+          }
+        ],
+        "tools": [
+          {
+            "name": "end_call",
+            "type": "end_call",
+            "description": "terminar la llamada cuando la conversación haya terminado despues de despedirse y confirmar que el cliente no necesita otra cosa"
+          }
+        ]
+      },
+      {
+        "name": "NODO_TRANSFERIR",
+        "state_prompt": "# ESTADO: NODO_TRANSFERIR\n\n# OBJETIVO\nTransferir llamada a agente humano\n\n# PROCESO\n\"Perfecto {{nombre}}. Te transfiero con un asesor. Un momento por favor...\"\n→ Usar herramienta: \"transfer_call\"\n\nSi falla: \"Disculpa, todos nuestros asesores están ocupados. ¿Prefieres que te llamemos en 10 minutos o te contactamos por WhatsApp?\"\n- Si elige WhatsApp: IR A NODO_SOPORTE\n- Si elige esperar: \"Te llamaremos en 10 minutos. ¡Gracias por tu paciencia!\" → \"end_call\"",
+        "edges": [
+          {
+            "description": "Si falla transferencia y prefiere WhatsApp",
+            "speak_during_transition": false,
+            "destination_state_name": "NODO_SOPORTE"
+          }
+        ],
+        "tools": [
+          {
+            "name": "transfer_call",
+            "description": "Transfiere la llamada a un humano",
+            "transfer_destination": {
+              "type": "predefined",
+              "number": "+523122254289"
+            },
+            "transfer_option": {
+              "cold_transfer_mode": "sip_invite",
+              "enable_bridge_audio_cue": true,
+              "type": "cold_transfer",
+              "show_transferee_as_caller": false
+            },
+            "type": "transfer_call"
+          },
+          {
+            "name": "end_call",
+            "type": "end_call",
+            "description": "terminar la llamada cuando la conversación haya terminado despues de despedirse y confirmar que el cliente no necesita otra cosa"
+          }
+        ]
+      }
+    ],
+    "starting_state": "NODO1",
+    "start_speaker": "agent",
+    "knowledge_base_ids": [],
+    "kb_config": {
+      "top_k": 3,
+      "filter_score": 0.6
+    },
+    "last_modification_timestamp": 1763980714737,
+    "is_published": false
+  }
+}
