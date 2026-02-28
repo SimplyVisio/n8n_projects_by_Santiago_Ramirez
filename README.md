@@ -160,16 +160,19 @@ This repository contains the core orchestration layer (n8n workflows + infrastru
 The full ecosystem is distributed across dedicated microservice repositories:
 
 Lead Ingestion API (Meta → Supabase)
-https://github.com/SimplyVisio/NOMBRE_DEL_REPO
+https://github.com/SimplyVisio/LEADS-META-LANDING.git
 
 Meta Conversion API Service
-https://github.com/SimplyVisio/NOMBRE_DEL_REPO
+https://github.com/SimplyVisio/API-DE-CONVERSIONES.git
 
-Python AI Scoring Service (FastAPI)
-https://github.com/SimplyVisio/NOMBRE_DEL_REPO
+iframe CRM Chatwoot
+https://github.com/SimplyVisio/CRM2.git
 
-Content / Social Automation Microservice
-https://github.com/SimplyVisio/NOMBRE_DEL_REPO
+iframe DataBase API Chatwoot
+https://github.com/SimplyVisio/BASE-DE-DATOS-DE-CLIENTES.git
+
+Content / Social Automation Microservice API
+https://github.com/SimplyVisio/subir_imagenes_nanobanana.git
 
 This separation follows microservice architecture principles:
 independent deployment, isolated scaling, and domain separation.
