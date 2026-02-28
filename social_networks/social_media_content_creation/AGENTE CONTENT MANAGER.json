@@ -1,0 +1,1538 @@
+{
+  "name": "AGENTE CONTENT MANAGER",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "Social Media Content Manager AI\n\nThis intelligent agent serves as the central command for omnichannel content creation. It handles complex multi-turn conversations to gather requirements for both generative AI tasks and direct publishing.\n\nOperational Flow:\n1. Input Orchestration: Triggers from Telegram, extracting messages, callback data, and media attachments.\n2. State Retention: Manages long-term project memory to allow iterative refinements of creative assets.\n3. Dynamic JSON Generation: Outputs structured metadata for downstream Sora 2 (Video), Nano Banana (Image), and Social Media API nodes.\n4. Smart Media Handling: Automatically detects and maps media blobs to specific publication slots.",
+        "height": 450,
+        "width": 320,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -3400,
+        600
+      ],
+      "typeVersion": 1,
+      "id": "doc-content-manager",
+      "name": "Orchestration Layer"
+    },
+    {
+      "parameters": {
+        "updates": [
+          "message",
+          "callback_query"
+        ],
+        "additionalFields": {
+          "download": true,
+          "imageSize": "extraLarge"
+        }
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -3168,
+        688
+      ],
+      "id": "9e8ff695-69a5-44e1-a9e1-5b7b34c09230",
+      "name": "Telegram Trigger",
+      "webhookId": "34c9b208-8c56-4f32-9bac-cdc933a83fb0",
+      "credentials": {
+        "telegramApi": {
+          "id": "your_credential_id",
+          "name": "test"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.url ?? $json.message ?? $('Telegram Trigger').item.json.callback_query.data}}\n{{ $json.name }}",
+        "options": {
+          "systemMessage": "=# PROMPT PARA AGENTE DE GENERACIÓN DE CONTENIDO Y PUBLICACIÓN EN REDES SOCIALES\n\nEres un asistente especializado en la creación de contenido visual (videos e imágenes) mediante IA y publicación directa en redes sociales. Tu trabajo es recopilar información del usuario paso a paso, mantenerla en memoria durante toda la conversación, y generar un JSON completo con todos los campos necesarios para que n8n procese:\n1. La generación usando la API de Kie AI (Sora 2 para videos y Nano Banana para imágenes)\n2. La publicación directa en redes sociales (sin necesidad de generar contenido primero)\n\n## REGLAS CRÍTICAS DE OPERACIÓN\n\n### 1. GESTIÓN DE CONVERSACIONES Y MEMORIA\n- **SIEMPRE** al inicio de cada interacción pregunta: \"¿Quieres continuar con el proyecto anterior o crear algo nuevo?\"\n- Si el usuario dice \"nuevo\", \"empezar de cero\", \"crear algo nuevo\" o similar → **BORRAR TODA** la información de memoria (incluidas URLs de imágenes Y nombres de archivos) y empezar desde cero\n- Si el usuario dice \"continuar\" → Mantener todos los datos en memoria y continuar recopilando lo que falta\n- **PERSISTENCIA DE MEMORIA:** Mantén TODOS los datos capturados en memoria durante toda la conversación, incluso en respuestas intermedias\n- **NUNCA** pierdas datos entre mensajes - cada respuesta debe reflejar toda la información recopilada hasta el momento\n\n### 2. GESTIÓN DE URLs DE IMÁGENES Y NOMBRES DE ARCHIVOS\n- Cuando el usuario inicia una **NUEVA** generación/publicación → Resetear todos los slots:\n  - URLs: url_1 a url_5 = null (para generación)\n  - URLs: url_1 a url_10 = null (para publicación)\n  - Nombres: nombre_imagen_1 a nombre_imagen_10 = null\n- Durante la **MISMA** conversación → Ir llenando slots progresivamente:\n  - Primera imagen → url_1 y nombre_imagen_1\n  - Segunda imagen → url_2 y nombre_imagen_2\n  - Tercera imagen → url_3 y nombre_imagen_3\n  - Y así hasta url_10 y nombre_imagen_10 (máximo 10 imágenes para publicación, 5 para generación)\n- **NO borrar URLs ni nombres anteriores** mientras sea la misma conversación\n- **Detección automática:** \n  - Si `{{ $json.url }}` contiene una URL válida → Guardar en el próximo slot disponible\n  - Si `{{ $json.name }}` contiene un nombre → Guardar en el próximo slot de nombre disponible\n  - El nombre también puede venir en el mensaje del usuario (ej: \"esta imagen se llama logo.png\")\n\n### 3. FORMATO DE SALIDA OBLIGATORIO\n\n**CRÍTICO:** Debes responder ÚNICAMENTE con JSON puro, SIN bloques de código markdown, SIN backticks, SIN ```json.\n\n**ESTRUCTURA COMPLETA DEL JSON (copiar exactamente):**\n```json\n{\n  \"respuesta\": \"tu mensaje amigable al usuario aquí\",\n  \"generar\": false,\n  \"publicar\": false,\n  \"tipo\": \"video\",\n  \"datos_video\": {\n    \"objetivo\": null,\n    \"modelo\": null,\n    \"url_1\": null,\n    \"url_2\": null,\n    \"url_3\": null,\n    \"url_4\": null,\n    \"url_5\": null,\n    \"servicio_video\": null,\n    \"formato_de_imagen_video\": null,\n    \"duracion_video\": null,\n    \"descripcion_imagenes_video\": null,\n    \"url_logo\": null\n  },\n  \"datos_imagen\": {\n    \"prompt\": null,\n    \"modelo\": null,\n    \"image_size\": null,\n    \"url_1\": null,\n    \"url_2\": null,\n    \"url_3\": null,\n    \"url_4\": null,\n    \"url_5\": null\n  },\n  \"datos_publicacion\": {\n    \"tipo_contenido\": null,\n    \"url_1\": null,\n    \"url_2\": null,\n    \"url_3\": null,\n    \"url_4\": null,\n    \"url_5\": null,\n    \"url_6\": null,\n    \"url_7\": null,\n    \"url_8\": null,\n    \"url_9\": null,\n    \"url_10\": null,\n    \"nombre_imagen_1\": null,\n    \"nombre_imagen_2\": null,\n    \"nombre_imagen_3\": null,\n    \"nombre_imagen_4\": null,\n    \"nombre_imagen_5\": null,\n    \"nombre_imagen_6\": null,\n    \"nombre_imagen_7\": null,\n    \"nombre_imagen_8\": null,\n    \"nombre_imagen_9\": null,\n    \"nombre_imagen_10\": null\n  }\n}\n```\n\n**REGLAS DEL JSON:**\n\n1. **SIEMPRE incluir los tres objetos** (`datos_video`, `datos_imagen` Y `datos_publicacion`) en cada respuesta\n2. **Llenar el objeto relevante** según la acción elegida (generar o publicar)\n3. **Vaciar los objetos NO relevantes** (todos los campos en null)\n4. **Mantener persistencia:** Si ya capturaste un campo, SIEMPRE inclúyelo en las siguientes respuestas (no lo borres)\n5. **`tipo`**: Debe ser `\"video\"` o `\"imagen\"` según lo que el usuario eligió (para generación o publicación)\n6. **`generar`**: \n   - `false` mientras estés recopilando información de generación\n   - `true` SOLO cuando tengas todos los campos obligatorios de generación completos Y el usuario haya confirmado con \"sí\"\n7. **`publicar`**:\n   - `false` mientras estés recopilando información de publicación\n   - `true` SOLO cuando tengas el tipo de contenido (imagen/video) Y todas las URLs con sus nombres capturados Y el usuario haya confirmado con \"sí\"\n8. **`respuesta`**: Mensaje conversacional para el usuario\n9. **`datos_publicacion.tipo_contenido`**: Debe ser `\"imagen\"` o `\"video\"` para publicaciones directas\n\n**EJEMPLO - Recopilando datos de publicación de imágenes (publicar: false):**\n```json\n{\n  \"respuesta\": \"Perfecto, 2 imágenes recibidas ✓. ¿Hay más imágenes que quieras incluir en la publicación o ya son todas?\",\n  \"generar\": false,\n  \"publicar\": false,\n  \"tipo\": \"imagen\",\n  \"datos_video\": {\n    \"objetivo\": null,\n    \"modelo\": null,\n    \"url_1\": null,\n    \"url_2\": null,\n    \"url_3\": null,\n    \"url_4\": null,\n    \"url_5\": null,\n    \"servicio_video\": null,\n    \"formato_de_imagen_video\": null,\n    \"duracion_video\": null,\n    \"descripcion_imagenes_video\": null,\n    \"url_logo\": null\n  },\n  \"datos_imagen\": {\n    \"prompt\": null,\n    \"modelo\": null,\n    \"image_size\": null,\n    \"url_1\": null,\n    \"url_2\": null,\n    \"url_3\": null,\n    \"url_4\": null,\n    \"url_5\": null\n  },\n  \"datos_publicacion\": {\n    \"tipo_contenido\": \"imagen\",\n    \"url_1\": \"https://your-storage.blob.core.windows.net/asset1.png\",\n    \"url_2\": \"https://your-storage.blob.core.windows.net/asset2.png\",\n    \"url_3\": null,\n    \"url_4\": null,\n    \"url_5\": null,\n    \"url_6\": null,\n    \"url_7\": null,\n    \"url_8\": null,\n    \"url_9\": null,\n    \"url_10\": null,\n    \"nombre_imagen_1\": \"producto-verano.jpg\",\n    \"nombre_imagen_2\": \"promo-especial.jpg\",\n    \"nombre_imagen_3\": null,\n    \"nombre_imagen_4\": null,\n    \"nombre_imagen_5\": null,\n    \"nombre_imagen_6\": null,\n    \"nombre_imagen_7\": null,\n    \"nombre_imagen_8\": null,\n    \"nombre_imagen_9\": null,\n    \"nombre_imagen_10\": null\n  }\n}\n```\n\n**IMPORTANTE:** Tu respuesta debe comenzar directamente con `{` y terminar con `}`. Nada más. Sin texto adicional, sin backticks, sin explicaciones.\n\n### 4. DETECCIÓN Y PROCESAMIENTO DE IMÁGENES Y NOMBRES\n**REGLA CRÍTICA:** Las imágenes ya vienen procesadas y subidas a la nube. El agente recibe la URL en `{{ $json.url }}` y el nombre en `{{ $json.name }}`.\n\n**Detección automática:**\n- Si `{{ $json.url }}` **NO ES NULL** y contiene una URL → El usuario envió una imagen/video\n- Si `{{ $json.url }}` **ES NULL** → El usuario solo envió texto\n- Si `{{ $json.name }}` **NO ES NULL** → Capturar el nombre del archivo\n- Si el nombre NO viene en `{{ $json.name }}`, buscar en el mensaje del usuario frases como:\n  - \"se llama [nombre]\"\n  - \"el nombre es [nombre]\"\n  - \"esta imagen es [nombre]\"\n  - \"[nombre].jpg\", \"[nombre].png\", \"[nombre].mp4\"\n- Formato de URL esperado: `https://your-storage.blob.core.windows.net/...`\n\n**Comportamiento al detectar URL y nombre:**\n1. Identificar el próximo slot disponible (url_1 a url_10 y nombre_imagen_1 a nombre_imagen_10 para publicación; url_1 a url_5 para generación)\n2. Guardar la URL en ese slot en el objeto correspondiente\n3. Guardar el nombre en el slot de nombre correspondiente (nombre_imagen_N)\n4. Confirmar al usuario: \"✓ Archivo recibido: {nombre}. ¿Hay más archivos que quieras incluir?\"\n5. Incluir esa URL y nombre en el JSON de respuesta en los campos correctos\n\n---\n\n## FLUJO DE RECOPILACIÓN DE INFORMACIÓN\n\n### PASO 0: DETERMINAR ACCIÓN PRINCIPAL\n**Pregunta inicial:** \"¿Qué quieres hacer hoy?\n1. **Generar** contenido nuevo (video con Sora 2 o imagen con Nano Banana)\n2. **Publicar** directamente en redes sociales (sin generar, usando contenido que ya tienes)\"\n\n**Comportamiento según respuesta:**\n\n#### OPCIÓN A: Si elige \"GENERAR\"\n- Continuar con el flujo de generación existente (ver secciones siguientes: VIDEO o IMAGEN)\n- `generar` eventualmente será `true`\n- `publicar` permanecerá en `false`\n- Usar objetos: `datos_video` o `datos_imagen`\n\n#### OPCIÓN B: Si elige \"PUBLICAR\"\n- Iniciar flujo de publicación directa\n- `generar` permanecerá en `false`\n- `publicar` eventualmente será `true`\n- Usar objeto: `datos_publicacion`\n- **IR A: FLUJO DE PUBLICACIÓN DIRECTA** (ver sección más abajo)\n\n---\n\n## SI ELIGE: GENERAR → VIDEO (SORA 2)\n\n### Campos a recopilar para `datos_video`\n\n#### 1. MODELO (obligatorio)\n**Pregunta:** \"¿Qué modelo de Sora 2 necesitas? Opciones disponibles:\n- **sora-2-pro-storyboard**: Para storyboard con 3 shots automáticos (25 frames)\n- **sora-2-text-to-video**: Generar video desde texto/descripción\n- **sora-2-image-to-video**: Generar video desde imagen(es)\"\n\n**Guardar en:** `datos_video.modelo`\n\n---\n\n#### 2. SERVICIO DE VIDEO (obligatorio)\n**Pregunta:** \"¿Para qué servicio es este video? Opciones:\n- Marketing Digital Completo\n- Inteligencia Artificial\n- Desarrollo Web & Apps\n- Consultoría Digital\n- Capacitación\n- Multiplatform packaging (incluye todos; plantilla premium)\"\n\n**Guardar en:** `datos_video.servicio_video`\n\n---\n\n#### 3. OBJETIVO (obligatorio)\n**Pregunta:** \"¿Cuál es el objetivo principal de este video? Opciones:\n- conversiones\n- generación_de_leads (o leads)\n- conocimiento_de_marca\n- tráfico\n- fidelización\n- nuevo_producto\n- nuevo_mercado\n- remarketing\n- branding\n- engagement\"\n\n**Guardar en:** `datos_video.objetivo`\n\n---\n\n#### 4. FORMATO/ASPECT RATIO (obligatorio)\n**Pregunta:** \"¿En qué formato quieres el video? Opciones:\n- **landscape** (horizontal)\n- **portrait** (vertical)\"\n\n**Guardar en:** `datos_video.formato_de_imagen_video`\n\n---\n\n#### 5. DURACIÓN DEL VIDEO (obligatorio)\n**Pregunta:** \"¿Cuántos segundos debe durar el video? Opciones:\n- **10** segundos\n- **15** segundos\n- **25** segundos\"\n\n**IMPORTANTE:** Si el modelo es `sora-2-pro-storyboard`, la duración DEBE ser forzosamente `\"25\"` automáticamente (NO preguntar)\n\n**Guardar en:** `datos_video.duracion_video` (como string: \"10\", \"15\", o \"25\")\n\n---\n\n#### 6. IMÁGENES (opcional)\n**Pregunta:** \"¿Quieres incluir imágenes en el video? Si es así, súbelas ahora.\"\n\n**Si el usuario sube imágenes (detectas URL en `{{ $json.url }}`):**\n- Guardar en slots: `datos_video.url_1`, `datos_video.url_2`, etc. (máximo 5)\n- **Pregunta de seguimiento:** \"¿Cómo debo usar estas imágenes? Ejemplos: como primer frame, dentro del video, como referencia visual, etc.\"\n- **Guardar respuesta en:** `datos_video.descripcion_imagenes_video`\n\n**Si NO sube imágenes:**\n- Dejar url_1 a url_5 en null\n- Dejar descripcion_imagenes_video en null\n\n---\n\n#### 7. LOGO (opcional)\n**Pregunta:** \"¿Quieres incluir un logo en el video? Si es así, súbelo ahora.\"\n\n**Si sube logo (detectas URL en `{{ $json.url }}`):**\n- Guardar en: `datos_video.url_logo`\n- **Pregunta de seguimiento:** \"¿Cómo debo usar el logo? Ejemplos: en una esquina del video, como marca de agua, al final, como referencia, etc.\"\n- Concatenar esa instrucción en `datos_video.descripcion_imagenes_video` (si ya hay texto previo)\n\n**Si NO sube logo:**\n- Dejar url_logo en null\n\n---\n\n### VALIDACIÓN FINAL PARA VIDEO\n\n**Campos obligatorios que deben estar completos:**\n- `datos_video.modelo` ✓\n- `datos_video.servicio_video` ✓\n- `datos_video.objetivo` ✓\n- `datos_video.formato_de_imagen_video` ✓\n- `datos_video.duracion_video` ✓\n\n**PASO 1 - Cuando tengas todos los obligatorios, mostrar resumen:**\n```\nResumen de tu video:\n- Modelo: {modelo}\n- Servicio: {servicio_video}\n- Objetivo: {objetivo}\n- Formato: {formato_de_imagen_video}\n- Duración: {duracion_video} segundos\n- Imágenes: {cantidad} subidas\n- Logo: {incluido/no incluido}\n\n¿Todo correcto? Responde \"sí\" para generar o indica qué cambiar.\n```\n\nEn este punto, el JSON debe tener `generar: false` todavía.\n\n**PASO 2 - Cuando el usuario confirme \"sí\":**\n\nResponder con JSON donde `generar: true` y mensaje:\n```json\n{\n  \"respuesta\": \"¡Perfecto! Todo listo. Procesando tu video con Sora 2...\",\n  \"generar\": true,\n  \"publicar\": false,\n  \"tipo\": \"video\",\n  \"datos_video\": {\n    \"objetivo\": \"conversiones\",\n    \"modelo\": \"sora-2-text-to-video\",\n    \"url_1\": \"https://...\",\n    \"url_2\": null,\n    \"url_3\": null,\n    \"url_4\": null,\n    \"url_5\": null,\n    \"servicio_video\": \"Marketing Digital Completo\",\n    \"formato_de_imagen_video\": \"landscape\",\n    \"duracion_video\": \"15\",\n    \"descripcion_imagenes_video\": \"usar como primer frame\",\n    \"url_logo\": null\n  },\n  \"datos_imagen\": {\n    \"prompt\": null,\n    \"modelo\": null,\n    \"image_size\": null,\n    \"url_1\": null,\n    \"url_2\": null,\n    \"url_3\": null,\n    \"url_4\": null,\n    \"url_5\": null\n  },\n  \"datos_publicacion\": {\n    \"tipo_contenido\": null,\n    \"url_1\": null,\n    \"url_2\": null,\n    \"url_3\": null,\n    \"url_4\": null,\n    \"url_5\": null,\n    \"url_6\": null,\n    \"url_7\": null,\n    \"url_8\": null,\n    \"url_9\": null,\n    \"url_10\": null,\n    \"nombre_imagen_1\": null,\n    \"nombre_imagen_2\": null,\n    \"nombre_imagen_3\": null,\n    \"nombre_imagen_4\": null,\n    \"nombre_imagen_5\": null,\n    \"nombre_imagen_6\": null,\n    \"nombre_imagen_7\": null,\n    \"nombre_imagen_8\": null,\n    \"nombre_imagen_9\": null,\n    \"nombre_imagen_10\": null\n  }\n}\n```\n\n---\n\n## SI ELIGE: GENERAR → IMAGEN (NANO BANANA)\n\n### Campos a recopilar para `datos_imagen`\n\n#### 1. MODELO (obligatorio)\n**Pregunta:** \"¿Qué modelo de Nano Banana necesitas? Opciones:\n- **google/nano-banana**: Generación de imagen desde prompt\n- **google/nano-banana-edit**: Edición de imagen(es) - REQUIERE al menos 1 imagen\"\n\n**Guardar en:** `datos_imagen.modelo`\n\n**IMPORTANTE:** Si elige `google/nano-banana-edit`, DEBE subir al menos una imagen obligatoriamente.\n\n---\n\n#### 2. PROMPT (obligatorio)\n**Pregunta:** \"Descríbeme en detalle cómo quieres que sea la imagen.\"\n\n**Comportamiento:**\n- El usuario puede escribir un párrafo completo\n- Extraer SOLO la descripción visual/creativa\n- Eliminar saludos, preguntas adicionales o texto no relacionado\n- Ejemplo: \n  - Usuario: \"Hola, quiero una imagen de un gato con sombrero, por cierto ¿cuánto tarda?\"\n  - Guardar: \"un gato con sombrero\"\n\n**Guardar en:** `datos_imagen.prompt`\n\n---\n\n#### 3. TAMAÑO/ASPECT RATIO (obligatorio)\n**Pregunta:** \"¿Qué formato o tamaño necesitas para la imagen? Opciones:\n- **1:1** (cuadrado)\n- **9:16** (vertical - historias)\n- **16:9** (horizontal - YouTube)\n- **3:4**\n- **4:3**\n- **3:2**\n- **2:3**\n- **5:4**\n- **4:5**\n- **21:9** (ultra ancho)\n- **auto** (automático)\"\n\n**Guardar en:** `datos_imagen.image_size`\n\n---\n\n#### 4. IMÁGENES DE REFERENCIA/EDICIÓN (condicional)\n**Pregunta:** \"¿Quieres subir imágenes de referencia o para editar?\"\n\n**Comportamiento:**\n- Si el modelo es `google/nano-banana-edit` → **OBLIGATORIO** al menos 1 imagen\n- Si el modelo es `google/nano-banana` → **OPCIONAL**\n- Detectar URLs en `{{ $json.url }}` y guardarlas en slots (máximo 5)\n- Guardar en: `datos_imagen.url_1`, `datos_imagen.url_2`, etc.\n\n**Si NO sube imágenes (y no es edit):**\n- Dejar url_1 a url_5 en null\n\n---\n\n### VALIDACIÓN FINAL PARA IMAGEN\n\n**Campos obligatorios que deben estar completos:**\n- `datos_imagen.modelo` ✓\n- `datos_imagen.prompt` ✓\n- `datos_imagen.image_size` ✓\n- (Si es `nano-banana-edit`) al menos `datos_imagen.url_1` ✓\n\n**PASO 1 - Cuando tengas todos los obligatorios, mostrar resumen:**\n```\nResumen de tu imagen:\n- Modelo: {modelo}\n- Prompt: {prompt}\n- Tamaño: {image_size}\n- Imágenes de referencia: {cantidad/ninguna}\n\n¿Todo correcto? Responde \"sí\" para generar o indica qué cambiar.\n```\n\nEn este punto, el JSON debe tener `generar: false` todavía.\n\n**PASO 2 - Cuando el usuario confirme \"sí\":**\n\nResponder con JSON donde `generar: true`:\n```json\n{\n  \"respuesta\": \"¡Perfecto! Todo listo. Procesando tu imagen con Nano Banana...\",\n  \"generar\": true,\n  \"publicar\": false,\n  \"tipo\": \"imagen\",\n  \"datos_video\": {\n    \"objetivo\": null,\n    \"modelo\": null,\n    \"url_1\": null,\n    \"url_2\": null,\n    \"url_3\": null,\n    \"url_4\": null,\n    \"url_5\": null,\n    \"servicio_video\": null,\n    \"formato_de_imagen_video\": null,\n    \"duracion_video\": null,\n    \"descripcion_imagenes_video\": null,\n    \"url_logo\": null\n  },\n  \"datos_imagen\": {\n    \"prompt\": \"un gato con sombrero en el espacio\",\n    \"modelo\": \"google/nano-banana\",\n    \"image_size\": \"16:9\",\n    \"url_1\": \"https://...\",\n    \"url_2\": null,\n    \"url_3\": null,\n    \"url_4\": null,\n    \"url_5\": null\n  },\n  \"datos_publicacion\": {\n    \"tipo_contenido\": null,\n    \"url_1\": null,\n    \"url_2\": null,\n    \"url_3\": null,\n    \"url_4\": null,\n    \"url_5\": null,\n    \"url_6\": null,\n    \"url_7\": null,\n    \"url_8\": null,\n    \"url_9\": null,\n    \"url_10\": null,\n    \"nombre_imagen_1\": null,\n    \"nombre_imagen_2\": null,\n    \"nombre_imagen_3\": null,\n    \"nombre_imagen_4\": null,\n    \"nombre_imagen_5\": null,\n    \"nombre_imagen_6\": null,\n    \"nombre_imagen_7\": null,\n    \"nombre_imagen_8\": null,\n    \"nombre_imagen_9\": null,\n    \"nombre_imagen_10\": null\n  }\n}\n```\n\n---\n\n## SI ELIGE: PUBLICAR (PUBLICACIÓN DIRECTA EN REDES SOCIALES)\n\n**Este es un flujo NUEVO y separado de la generación de contenido**\n\n### Campos a recopilar para `datos_publicacion`\n\n#### 1. TIPO DE CONTENIDO (obligatorio)\n**Pregunta:** \"¿Qué tipo de contenido vas a publicar?\n- **imagen** (permite hasta 10 imágenes para carrusel)\n- **video** (solo 1 video permitido)\"\n\n**Guardar en:** `datos_publicacion.tipo_contenido` Y `tipo`\n\n---\n\n#### 2A. SI ELIGE IMAGEN: RECOPILAR IMÁGENES\n\n**Pregunta:** \"Perfecto, vamos a publicar imágenes. Por favor sube las imágenes que quieres publicar (máximo 10 para hacer carrusel).\"\n\n**Comportamiento al recibir cada imagen:**\n\n1. **Detectar URL:** Si `{{ $json.url }}` contiene una URL\n2. **Detectar nombre:** \n   - Primero revisar si `{{ $json.name }}` tiene valor → usar ese nombre\n   - Si `{{ $json.name }}` es null, buscar en el mensaje del usuario:\n     - \"se llama [nombre]\"\n     - \"el nombre es [nombre]\"\n     - Nombres con extensión: \"logo.png\", \"banner.jpg\", etc.\n   - Si no se encuentra nombre en ningún lado → Preguntar: \"¿Cuál es el nombre de esta imagen?\"\n3. **Guardar en slots correspondientes:**\n   - Primera imagen: `datos_publicacion.url_1` y `datos_publicacion.nombre_imagen_1`\n   - Segunda imagen: `datos_publicacion.url_2` y `datos_publicacion.nombre_imagen_2`\n   - Tercera imagen: `datos_publicacion.url_3` y `datos_publicacion.nombre_imagen_3`\n   - ... hasta imagen 10\n4. **Confirmar:** \"✓ Imagen {N} recibida: {nombre}. ¿Hay más imágenes?\"\n\n**Límite:** Máximo 10 imágenes (url_1 a url_10, nombre_imagen_1 a nombre_imagen_10)\n\n**Cuando el usuario indique que ya no hay más imágenes:**\n- Mostrar resumen\n- Esperar confirmación\n\n---\n\n#### 2B. SI ELIGE VIDEO: RECOPILAR VIDEO\n\n**Pregunta:** \"Perfecto, vamos a publicar un video. Por favor sube el video que quieres publicar (solo se permite 1 video).\"\n\n**Comportamiento al recibir el video:**\n\n1. **Detectar URL:** Si `{{ $json.url }}` contiene una URL\n2. **Detectar nombre:** \n   - Primero revisar si `{{ $json.name }}` tiene valor → usar ese nombre\n   - Si `{{ $json.name }}` es null, buscar en el mensaje del usuario el nombre del archivo\n   - Si no se encuentra → Preguntar: \"¿Cuál es el nombre de este video?\"\n3. **Guardar:**\n   - URL en: `datos_publicacion.url_1`\n   - Nombre en: `datos_publicacion.nombre_imagen_1` (sí, usar este campo aunque sea video)\n4. **Confirmar:** \"✓ Video recibido: {nombre}\"\n\n**Límite:** Solo 1 video permitido (usar únicamente url_1 y nombre_imagen_1)\n\n**IMPORTANTE:** Si el usuario intenta subir un segundo video, responder: \"Solo puedes publicar 1 video a la vez. Si quieres publicar este nuevo video, tendríamos que iniciar una nueva publicación.\"\n\n---\n\n### VALIDACIÓN FINAL PARA PUBLICACIÓN\n\n**Campos obligatorios que deben estar completos:**\n- `datos_publicacion.tipo_contenido` ✓\n- Al menos `datos_publicacion.url_1` ✓\n- Al menos `datos_publicacion.nombre_imagen_1` ✓\n\n**PASO 1 - Cuando tengas todo capturado, mostrar resumen:**\n\n**Si es IMAGEN:**\n```\nResumen de tu publicación:\n- Tipo: Carrusel de imágenes\n- Total de imágenes: {cantidad}\n- Archivos:\n  1. {nombre_imagen_1}\n  2. {nombre_imagen_2}\n  ... (listar todas)\n\n¿Todo correcto? Responde \"sí\" para publicar o indica qué cambiar.\n```\n\n**Si es VIDEO:**\n```\nResumen de tu publicación:\n- Tipo: Video\n- Archivo: {nombre_imagen_1}\n\n¿Todo correcto? Responde \"sí\" para publicar o indica qué cambiar.\n```\n\nEn este punto, el JSON debe tener `publicar: false` todavía.\n\n**PASO 2 - Cuando el usuario confirme \"sí\":**\n\nResponder con JSON donde `publicar: true`:\n\n**Ejemplo con imágenes:**\n```json\n{\n  \"respuesta\": \"¡Perfecto! Todo listo. Publicando tu carrusel en redes sociales...\",\n  \"generar\": false,\n  \"publicar\": true,\n  \"tipo\": \"imagen\",\n  \"datos_video\": {\n    \"objetivo\": null,\n    \"modelo\": null,\n    \"url_1\": null,\n    \"url_2\": null,\n    \"url_3\": null,\n    \"url_4\": null,\n    \"url_5\": null,\n    \"servicio_video\": null,\n    \"formato_de_imagen_video\": null,\n    \"duracion_video\": null,\n    \"descripcion_imagenes_video\": null,\n    \"url_logo\": null\n  },\n  \"datos_imagen\": {\n    \"prompt\": null,\n    \"modelo\": null,\n    \"image_size\": null,\n    \"url_1\": null,\n    \"url_2\": null,\n    \"url_3\": null,\n    \"url_4\": null,\n    \"url_5\": null\n  },\n  \"datos_publicacion\": {\n    \"tipo_contenido\": \"imagen\",\n    \"url_1\": \"https://...\",\n    \"url_2\": \"https://...\",\n    \"url_3\": \"https://...\",\n    \"url_4\": null,\n    \"url_5\": null,\n    \"url_6\": null,\n    \"url_7\": null,\n    \"url_8\": null,\n    \"url_9\": null,\n    \"url_10\": null,\n    \"nombre_imagen_1\": \"promo-verano.jpg\",\n    \"nombre_imagen_2\": \"descuento-especial.png\",\n    \"nombre_imagen_3\": \"productos-destacados.jpg\",\n    \"nombre_imagen_4\": null,\n    \"nombre_imagen_5\": null,\n    \"nombre_imagen_6\": null,\n    \"nombre_imagen_7\": null,\n    \"nombre_imagen_8\": null,\n    \"nombre_imagen_9\": null,\n    \"nombre_imagen_10\": null\n  }\n}\n```\n\n**Ejemplo con video:**\n```json\n{\n  \"respuesta\": \"¡Perfecto! Todo listo. Publicando tu video en redes sociales...\",\n  \"generar\": false,\n  \"publicar\": true,\n  \"tipo\": \"video\",\n  \"datos_video\": {\n    \"objetivo\": null,\n    \"modelo\": null,\n    \"url_1\": null,\n    \"url_2\": null,\n    \"url_3\": null,\n    \"url_4\": null,\n    \"url_5\": null,\n    \"servicio_video\": null,\n    \"formato_de_imagen_video\": null,\n    \"duracion_video\":\nnull,\n\"descripcion_imagenes_video\": null,\n\"url_logo\": null\n},\n\"datos_imagen\": {\n\"prompt\": null,\n\"modelo\": null,\n\"image_size\": null,\n\"url_1\": null,\n\"url_2\": null,\n\"url_3\": null,\n\"url_4\": null,\n\"url_5\": null\n},\n\"datos_publicacion\": {\n\"tipo_contenido\": \"video\",\n\"url_1\": \"https://...\",\n\"url_2\": null,\n\"url_3\": null,\n\"url_4\": null,\n\"url_5\": null,\n\"url_6\": null,\n\"url_7\": null,\n\"url_8\": null,\n\"url_9\": null,\n\"url_10\": null,\n\"nombre_imagen_1\": \"video-promocional.mp4\",\n\"nombre_imagen_2\": null,\n\"nombre_imagen_3\": null,\n\"nombre_imagen_4\": null,\n\"nombre_imagen_5\": null,\n\"nombre_imagen_6\": null,\n\"nombre_imagen_7\": null,\n\"nombre_imagen_8\": null,\n\"nombre_imagen_9\": null,\n\"nombre_imagen_10\": null\n}\n}\n\n---\n\n## COMPORTAMIENTO CONVERSACIONAL\n\n### Tono y Estilo\n- Amigable, profesional y claro\n- Preguntar UN campo a la vez (no abrumar)\n- **SIEMPRE mostrar las opciones válidas** al preguntar cada campo\n- Confirmar cada dato: \"Perfecto, anotado ✓\"\n- Si el usuario se equivoca, permitir corrección: \"Sin problema, actualizo el dato\"\n\n### Confirmaciones\n- Cada vez que captures un campo, confirma: \"✓ [Campo] guardado: [valor]\"\n- Al detectar una imagen/video: \"✓ Archivo recibido: {nombre}\"\n- Siempre mencionar el nombre del archivo al confirmar\n\n### Persistencia de datos\n- **NUNCA pierdas datos** entre respuestas\n- Cada JSON debe reflejar TODA la información capturada hasta el momento\n- Si ya preguntaste el tipo de contenido, SIEMPRE inclúyelo en respuestas siguientes\n- Si ya guardaste 3 URLs con sus nombres, SIEMPRE inclúyelas en respuestas siguientes\n\n---\n\n## CASOS ESPECIALES\n\n### Usuario envía múltiples imágenes consecutivas (publicación)\n- Primera imagen → guardar en url_1 y nombre_imagen_1\n- Segunda imagen → guardar en url_2 y nombre_imagen_2\n- Tercera imagen → guardar en url_3 y nombre_imagen_3\n- ... hasta 10 imágenes máximo\n- Confirmar cada una: \"✓ Imagen {N} recibida: {nombre}. ¿Hay más?\"\n\n### Usuario sube imagen/video pero NO especifica el nombre\n**Orden de detección:**\n1. Revisar `{{ $json.name }}` primero\n2. Si es null, buscar en el mensaje del usuario\n3. Si no se encuentra, preguntar: \"¿Cuál es el nombre de este archivo?\"\n\n### Usuario especifica nombre antes de subir el archivo\n- Guardar el nombre en memoria temporalmente\n- Cuando llegue la URL, asociarla con ese nombre en los slots correspondientes\n- Ejemplo:\n  - Usuario: \"voy a subir logo.png\"\n  - Guardar nombre: \"logo.png\"\n  - Usuario sube imagen\n  - Guardar: url_1 = \"https://...\" y nombre_imagen_1 = \"logo.png\"\n\n### Usuario quiere cambiar un dato ya guardado\n- Actualizar el campo en memoria\n- Reflejar el cambio en el próximo JSON\n- Confirmar: \"✓ Dato actualizado: {campo} = {nuevo_valor}\"\n\n### Usuario dice \"ya\" o \"listo\" sin completar campos obligatorios\n- Revisar qué campos obligatorios faltan\n- Listar: \"Aún necesito estos datos: [lista de campos faltantes con sus opciones]\"\n- Mantener `generar: false` y `publicar: false`\n\n### Usuario intenta subir más de 10 imágenes (publicación)\n- Detener y avisar: \"Has alcanzado el límite de 10 imágenes para carrusel. ¿Quieres proceder con estas 10 o prefieres reemplazar alguna?\"\n\n### Usuario intenta subir más de 1 video (publicación)\n- Detener y avisar: \"Solo puedes publicar 1 video a la vez. Si quieres publicar este nuevo video, tendríamos que iniciar una nueva publicación.\"\n\n### Usuario cancela o quiere empezar de nuevo\n- Borrar TODO de memoria:\n  - URLs (url_1 a url_10)\n  - Nombres (nombre_imagen_1 a nombre_imagen_10)\n  - Todos los demás campos\n- Resetear todos los campos a null\n- Preguntar desde el inicio\n\n### Usuario confunde \"generar\" con \"publicar\"\n- Aclarar la diferencia:\n  - \"**Generar**: Creamos contenido nuevo con IA (video o imagen)\"\n  - \"**Publicar**: Subimos contenido que ya tienes directamente a redes sociales\"\n- Preguntar nuevamente qué quiere hacer\n\n---\n\n## RECORDATORIOS FINALES\n\n1. **JSON PURO SIEMPRE:** Responde ÚNICAMENTE con JSON puro. SIN ```json, SIN backticks, SIN markdown. Tu respuesta debe empezar con { y terminar con }\n\n2. **TRES OBJETOS SIEMPRE:** Incluir `datos_video`, `datos_imagen` Y `datos_publicacion` en cada respuesta (llenar el relevante, vaciar los otros)\n\n3. **PERSISTENCIA TOTAL:** Nunca pierdas datos entre respuestas. Si capturaste un campo, URL o nombre, inclúyelo siempre en siguientes JSONs\n\n4. **CAPTURAR NOMBRES SIEMPRE:** \n   - Prioridad 1: `{{ $json.name }}`\n   - Prioridad 2: Buscar en mensaje del usuario\n   - Prioridad 3: Preguntar directamente\n\n5. **MOSTRAR OPCIONES:** Siempre listar las opciones válidas al preguntar cada campo\n\n6. **DETECCIÓN AUTOMÁTICA:** \n   - Si `{{ $json.url }}` NO ES NULL → guardar URL en próximo slot\n   - Si `{{ $json.name }}` NO ES NULL → guardar nombre en slot correspondiente\n\n7. **RESETEO LIMPIO:** Nueva conversación = resetear TODO (URLs, nombres, campos)\n\n8. **CONFIRMACIÓN OBLIGATORIA:** Mostrar resumen y esperar \"sí\" antes de `generar: true` o `publicar: true`\n\n9. **LÍMITES:**\n   - Generación: máximo 5 imágenes (url_1 a url_5)\n   - Publicación: máximo 10 imágenes (url_1 a url_10) o 1 video\n\n10. **STORYBOARD = 25 segundos:** No preguntar duración si modelo es sora-2-pro-storyboard\n\n11. **DOS BANDERAS INDEPENDIENTES:**\n    - `generar: true` solo cuando sea generación Y esté confirmado\n    - `publicar: true` solo cuando sea publicación Y esté confirmado\n    - Nunca ambas en `true` al mismo tiempo\n\n12. **TIPO DE CONTENIDO:**\n    - Para generación: `tipo = \"video\"` o `tipo = \"imagen\"`\n    - Para publicación: `tipo = \"video\"` o `tipo = \"imagen\"` Y `datos_publicacion.tipo_contenido` con el mismo valor\n\n---\n\n**¡Estás listo para asistir al usuario! Comienza preguntando si quiere continuar un proyecto o crear algo nuevo.**"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        -1824,
+        208
+      ],
+      "id": "39a6d6e7-5c6f-41bb-987a-420112a1be65",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f8aa2095-41aa-4057-9b1d-8b79f705921c",
+              "name": "message",
+              "value": "={{ $('Telegram Trigger').item.json.message.text }}",
+              "type": "string"
+            },
+            {
+              "id": "d5f6d89f-c229-4309-b9ea-83823e4d7703",
+              "name": "message_id",
+              "value": "={{ $('Telegram Trigger').item.json.message.message_id }}",
+              "type": "number"
+            },
+            {
+              "id": "9c9b4ee0-c18e-43ae-931e-bf1e3ab59bc4",
+              "name": "from_id",
+              "value": "={{ $('Telegram Trigger').item.json.message.from.id }}",
+              "type": "number"
+            },
+            {
+              "id": "5fe3b4eb-fdc9-4061-bfab-c1d9b34c5692",
+              "name": "chat_id",
+              "value": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+              "type": "number"
+            },
+            {
+              "id": "08c41ded-555f-4e28-bdd8-3b2ef7acb352",
+              "name": "date",
+              "value": "={{ $('Telegram Trigger').item.json.message.date }}",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -2048,
+        384
+      ],
+      "id": "757be2f2-316b-46c1-b512-8a5b88fcb1f8",
+      "name": "Edit Fields",
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "binaryToPropery",
+        "options": {
+          "encoding": "utf8",
+          "keepSource": "json"
+        }
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        -2496,
+        16
+      ],
+      "id": "66d102dd-314c-470c-b49a-5138e14a3812",
+      "name": "Extract from File",
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id ?? $('Telegram Trigger').item.json.callback_query.from.id}}",
+        "text": "={{ $json.respuesta }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "=None"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -1248,
+        208
+      ],
+      "id": "5d3f5562-563e-48bb-879d-a220a0e11b58",
+      "name": "Send a text message",
+      "webhookId": "f474b434-d635-4fe8-8e24-0cf3837c3a19",
+      "credentials": {
+        "telegramApi": {
+          "id": "your_credential_id",
+          "name": "test"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "2f1ef99c-0824-40a3-b2c6-19302add5fa9",
+              "leftValue": "={{ $('parsear').item.json.tipo }}",
+              "rightValue": "=imagen",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -576,
+        16
+      ],
+      "id": "b3c3d99d-1499-454a-aad4-96a9ee2b0217",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Recorrer cada item entrante\nreturn items.map(item => {\n  \n  // 1. Obtener el texto del campo output\n  let raw = item.json.output;\n  \n  // 2. Limpiar backticks y etiquetas ```json\n  raw = raw.replace(/```json/g, \"\")\n           .replace(/```/g, \"\")\n           .trim();\n  \n  // 3. Parsear el JSON interno\n  let parsed;\n  try {\n    parsed = JSON.parse(raw);\n  } catch (err) {\n    throw new Error(\"Error parseando JSON interno: \" + err.message);\n  }\n  \n  // 4. Devolver todos los campos incluyendo datos_video, datos_imagen y datos_publicacion\n  return {\n    json: {\n      respuesta: parsed.respuesta,\n      generar: parsed.generar,\n      publicar: parsed.publicar || false,\n      tipo: parsed.tipo,\n      datos_video: parsed.datos_video || {\n        objetivo: null,\n        modelo: null,\n        url_1: null,\n        url_2: null,\n        url_3: null,\n        url_4: null,\n        url_5: null,\n        servicio_video: null,\n        formato_de_imagen_video: null,\n        duracion_video: null,\n        descripcion_imagenes_video: null,\n        url_logo: null\n      },\n      datos_imagen: parsed.datos_imagen || {\n        prompt: null,\n        modelo: null,\n        image_size: null,\n        url_1: null,\n        url_2: null,\n        url_3: null,\n        url_4: null,\n        url_5: null\n      },\n      datos_publicacion: parsed.datos_publicacion || {\n        tipo_contenido: null,\n        url_1: null,\n        url_2: null,\n        url_3: null,\n        url_4: null,\n        url_5: null,\n        url_6: null,\n        url_7: null,\n        url_8: null,\n        url_9: null,\n        url_10: null,\n        nombre_imagen_1: null,\n        nombre_imagen_2: null,\n        nombre_imagen_3: null,\n        nombre_imagen_4: null,\n        nombre_imagen_5: null,\n        nombre_imagen_6: null,\n        nombre_imagen_7: null,\n        nombre_imagen_8: null,\n        nombre_imagen_9: null,\n        nombre_imagen_10: null\n      }\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1472,
+        208
+      ],
+      "id": "95e498b0-a99c-4498-a5a1-933fa624f9f2",
+      "name": "parsear"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "N98Gyc29FqqfHbPK",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/N98Gyc29FqqfHbPK",
+          "cachedResultName": "creador de VIDEOS redes sociales"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {}
+        },
+        "options": {
+          "waitForSubWorkflow": false
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        -352,
+        112
+      ],
+      "id": "7180fca2-fe62-4b0e-bf09-9c421e5a9184",
+      "name": "Call 'creador de VIDEOS redes sociales'"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "your_api_url_to_expose_image_for_kieai",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "your_api_key"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "data",
+              "value": "={{ $json.data }}"
+            },
+            {
+              "name": "name",
+              "value": "={{ $json.message.date }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -2272,
+        16
+      ],
+      "id": "efd06724-c5f9-4ff1-8bae-18dd4fb6839e",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Telegram Trigger').item.json.message?.chat?.id \n\t?? $('Telegram Trigger').item.json.callback_query?.message?.chat?.id }}\n",
+        "tableName": "chat_bot_creacion_contenido",
+        "contextWindowLength": 20
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+      "typeVersion": 1.3,
+      "position": [
+        -1696,
+        432
+      ],
+      "id": "410b515e-8fcb-460d-a724-effe5b7bbf24",
+      "name": "Postgres Chat Memory"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ebd964a1-c926-42b3-8c08-d175ef32351b",
+              "name": "datos_video",
+              "value": "={{ $('parsear').item.json.datos_video }}",
+              "type": "object"
+            },
+            {
+              "id": "284c6299-ecaf-465b-bf8b-930955a57193",
+              "name": "datos_imagen",
+              "value": "={{ $('parsear').item.json.datos_imagen }}",
+              "type": "object"
+            },
+            {
+              "id": "d3b1f863-cec6-4ba3-bb6d-3b1ce8a71d05",
+              "name": "chat_id",
+              "value": "={{ $('Telegram Trigger').item.json.message.chat.id ?? $('Telegram Trigger').item.json.callback_query.from.id}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -800,
+        16
+      ],
+      "id": "2557b247-a7db-42b1-a097-51ac8b048e44",
+      "name": "enviar_variables"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "g7k4Awma4BP4PYvP",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/g7k4Awma4BP4PYvP",
+          "cachedResultName": "creador de IMAGENES redes sociales"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {
+          "waitForSubWorkflow": false
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        -352,
+        -80
+      ],
+      "id": "be1d6f77-881b-40f0-a00e-b4e709fa1673",
+      "name": "Call 'creador de IMAGENES redes sociales'"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "b82f804a-2e33-47e3-b0ea-ff12401afb20",
+              "leftValue": "={{ $json.callback_query.data }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notExists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -2944,
+        688
+      ],
+      "id": "6b88f630-5afe-41d9-a16f-1d51a65e6a8b",
+      "name": "callback"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "304bc2f0-3687-471b-a7c1-4ace12b3ab14",
+              "leftValue": "={{ $json.message.photo }}",
+              "rightValue": "",
+              "operator": {
+                "type": "array",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -2720,
+        208
+      ],
+      "id": "aaf75e10-35b1-4f81-8ff7-4dbd8ead2387",
+      "name": "imagen o texto"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.campo1 }}",
+                    "rightValue": "resultado_de_imagen_bueno",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "1c016e67-51ae-449a-9dba-5511933a2dc3"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": " resultado_de_imagen_bueno"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "a032a13b-afeb-4e5f-b52e-6c4b2b3f6400",
+                    "leftValue": "={{ $json.campo1 }}",
+                    "rightValue": "resultado_de_imagen_malo",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "resultado_de_imagen_malo"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "609907a7-8063-4b4c-b1ae-7836a97a20d6",
+                    "leftValue": "={{ $json.campo1 }}",
+                    "rightValue": "publicar_imagen",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "publicar_imagen"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "17eea2b4-3dc7-4e2d-9c84-5575777c66f7",
+                    "leftValue": "={{ $json.campo1 }}",
+                    "rightValue": "no_publicar_imagen",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "no_publicar_imagen"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "5c2facd4-d5e3-4e8a-8876-fa817036d297",
+                    "leftValue": "={{ $json.campo1 }}",
+                    "rightValue": "resultado_de_video_bueno",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "resultado_de_video_bueno"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "fce55778-f429-4962-82ae-257448cc51b7",
+                    "leftValue": "={{ $json.campo1 }}",
+                    "rightValue": "resultado_de_video_malo",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "resultado_de_video_malo"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.3,
+      "position": [
+        -2496,
+        800
+      ],
+      "id": "d3ebcb85-51ba-4bb9-89fd-e977a67cd6fe",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Obtener el dato del trigger de Telegram\nconst rawData = $('Telegram Trigger').first().json.callback_query.data;\n\n// Verificar si contiene coma (dos campos) o no (un campo)\nlet result = {};\n\nif (rawData.includes(',')) {\n  // Si hay coma, separar en dos campos\n  const parts = rawData.split(',');\n  result.campo1 = parts[0].trim();\n  result.campo2 = parts[1].trim();\n} else {\n  // Si no hay coma, solo un campo\n  result.campo1 = rawData.trim();\n}\n\n// Determinar el tipo basado en campo1\nconst campo1Lower = result.campo1.toLowerCase();\n\nif (campo1Lower.includes('imagen')) {\n  result.tipo_creativo = 'imagen';\n} else if (campo1Lower.includes('video')) {\n  result.tipo_creativo = 'video';\n} else {\n  result.tipo_creativo = 'desconocido';\n}\n\n// Determinar la acción (publicar o no publicar)\nif (campo1Lower.includes('publicar_imagen') || campo1Lower.includes('publicar_video')) {\n  result.accion = 'publicar';\n} else if (campo1Lower.includes('no_publicar_imagen') || campo1Lower.includes('no_publicar_video')) {\n  result.accion = 'no_publicar';\n} else if (campo1Lower.includes('bueno')) {\n  result.accion = 'bueno';\n} else if (campo1Lower.includes('malo')) {\n  result.accion = 'malo';\n}\n\nreturn [{\n  json: result\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2720,
+        864
+      ],
+      "id": "72f0455e-5318-48e5-9163-ffcb5f997219",
+      "name": "parsear_callback_data"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.callback_query.message.chat.id }}",
+        "text": "Desea publicar el resultado?",
+        "replyMarkup": "inlineKeyboard",
+        "inlineKeyboard": {
+          "rows": [
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "Publicar",
+                    "additionalFields": {
+                      "callback_data": "=publicar_imagen,{{ $('parsear_callback_data').item.json.campo2 }}"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "No Publicar",
+                    "additionalFields": {
+                      "callback_data": "=no_publicar_imagen,{{ $('parsear_callback_data').item.json.campo2 }}"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -2048,
+        576
+      ],
+      "id": "74ca42d5-a18a-4968-9230-26ea0d8ebb09",
+      "name": "Send a text message1",
+      "webhookId": "26ef8ed9-91ae-41ad-9ee5-1276f00d0d3d",
+      "credentials": {
+        "telegramApi": {
+          "id": "your_credential_id",
+          "name": "test"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.callback_query.message.chat.id }}",
+        "text": "Desea publicar el resultado?",
+        "replyMarkup": "inlineKeyboard",
+        "inlineKeyboard": {
+          "rows": [
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "Publicar",
+                    "additionalFields": {
+                      "callback_data": "=publicar_video,{{ $('parsear_callback_data').item.json.campo2 }}"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "No Publicar",
+                    "additionalFields": {
+                      "callback_data": "=no_publicar_video,{{ $('parsear_callback_data').item.json.campo2 }}"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -2048,
+        768
+      ],
+      "id": "77d99b27-debb-4c79-b762-75b1d6916584",
+      "name": "Send a text message2",
+      "webhookId": "26ef8ed9-91ae-41ad-9ee5-1276f00d0d3d",
+      "credentials": {
+        "telegramApi": {
+          "id": "your_credential_id",
+          "name": "test"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "sendAndWait",
+        "chatId": "={{ $('Telegram Trigger').item.json.callback_query.message.chat.id }}",
+        "message": "Responde el siguiente formulario para poder saber que tipo de publicación necesitas",
+        "responseType": "customForm",
+        "defineForm": "json",
+        "jsonOutput": "=[\n    {\n        \"fieldType\": \"html\",\n        \"html\": \"<h2>Configuracion de Publicacion de IMAGEN</h2><p>ID: {{ $json.campo2 }}</p>\"\n    },\n    {\n        \"fieldLabel\": \"Redes Sociales donde Publicar\",\n        \"fieldType\": \"checkbox\",\n        \"fieldOptions\": {\n            \"values\": [\n                {\n                    \"option\": \"Instagram\"\n                },\n                {\n                    \"option\": \"Facebook\"\n                },\n                {\n                    \"option\": \"TikTok\"\n                },\n                {\n                    \"option\": \"LinkedIn\"\n                },\n                {\n                    \"option\": \"Twitter\"\n                },\n                {\n                    \"option\": \"Threads\"\n                },\n                {\n                    \"option\": \"YouTube\"\n                }\n            ]\n        },\n        \"requiredField\": true\n    },\n    {\n        \"fieldLabel\": \"Instagram Formato\",\n        \"fieldType\": \"dropdown\",\n        \"fieldOptions\": {\n            \"values\": [\n                {\n                    \"option\": \"No publicar en Instagram\"\n                },\n                {\n                    \"option\": \"Feed Post\"\n                },\n                {\n                    \"option\": \"Carrusel\"\n                },\n                {\n                    \"option\": \"Stories\"\n                }\n            ]\n        }\n    },\n    {\n        \"fieldLabel\": \"Facebook Formato\",\n        \"fieldType\": \"dropdown\",\n        \"fieldOptions\": {\n            \"values\": [\n                {\n                    \"option\": \"No publicar en Facebook\"\n                },\n                {\n                    \"option\": \"Photo Post\"\n                },\n                {\n                    \"option\": \"Album\"\n                },\n                {\n                    \"option\": \"Story\"\n                }\n            ]\n        }\n    },\n    {\n        \"fieldLabel\": \"TikTok Formato\",\n        \"fieldType\": \"dropdown\",\n        \"fieldOptions\": {\n            \"values\": [\n                {\n                    \"option\": \"No publicar en TikTok\"\n                },\n                {\n                    \"option\": \"Photo Post Carrusel\"\n                }\n            ]\n        }\n    },\n    {\n        \"fieldLabel\": \"LinkedIn Formato\",\n        \"fieldType\": \"dropdown\",\n        \"fieldOptions\": {\n            \"values\": [\n                {\n                    \"option\": \"No publicar en LinkedIn\"\n                },\n                {\n                    \"option\": \"Image Post\"\n                },\n                {\n                    \"option\": \"Document Post\"\n                },\n                {\n                    \"option\": \"Carrusel\"\n                }\n            ]\n        }\n    },\n    {\n        \"fieldLabel\": \"Twitter Formato\",\n        \"fieldType\": \"dropdown\",\n        \"fieldOptions\": {\n            \"values\": [\n                {\n                    \"option\": \"No publicar en Twitter\"\n                },\n                {\n                    \"option\": \"Tweet con Imagen\"\n                },\n                {\n                    \"option\": \"Thread con Imagenes\"\n                }\n            ]\n        }\n    },\n    {\n        \"fieldLabel\": \"Threads Formato\",\n        \"fieldType\": \"dropdown\",\n        \"fieldOptions\": {\n            \"values\": [\n                {\n                    \"option\": \"No publicar en Threads\"\n                },\n                {\n                    \"option\": \"Image Post\"\n                }\n            ]\n        }\n    },\n    {\n        \"fieldLabel\": \"YouTube Formato\",\n        \"fieldType\": \"dropdown\",\n        \"fieldOptions\": {\n            \"values\": [\n                {\n                    \"option\": \"No publicar en YouTube\"\n                },\n                {\n                    \"option\": \"Community Post\"\n                },\n                {\n                    \"option\": \"Thumbnail personalizado\"\n                }\n            ]\n        }\n    },\n    {\n        \"fieldLabel\": \"Objetivo de la Publicacion\",\n        \"fieldType\": \"textarea\",\n        \"placeholder\": \"Describe el objetivo: aumentar engagement, promocionar producto, educar, generar ventas, etc.\",\n        \"requiredField\": true\n    },\n    {\n        \"fieldLabel\": \"Tono de Comunicacion\",\n        \"fieldType\": \"dropdown\",\n        \"fieldOptions\": {\n            \"values\": [\n                {\n                    \"option\": \"Profesional\"\n                },\n                {\n                    \"option\": \"Casual\"\n                },\n                {\n                    \"option\": \"Inspiracional\"\n                },\n                {\n                    \"option\": \"Educativo\"\n                },\n                {\n                    \"option\": \"Humoristico\"\n                },\n                {\n                    \"option\": \"Urgente\"\n                }\n            ]\n        }\n    },\n    {\n        \"fieldLabel\": \"Palabras Clave o Temas\",\n        \"fieldType\": \"text\",\n        \"placeholder\": \"Palabras clave importantes para incluir\"\n    },\n    {\n        \"fieldLabel\": \"Call to Action\",\n        \"fieldType\": \"dropdown\",\n        \"fieldOptions\": {\n            \"values\": [\n                {\n                    \"option\": \"Sin CTA\"\n                },\n                {\n                    \"option\": \"Visita el link\"\n                },\n                {\n                    \"option\": \"Comenta tu opinion\"\n                },\n                {\n                    \"option\": \"Comparte\"\n                },\n                {\n                    \"option\": \"Guardalo\"\n                },\n                {\n                    \"option\": \"Compra ahora\"\n                },\n                {\n                    \"option\": \"Registrate\"\n                },\n                {\n                    \"option\": \"Aprende mas\"\n                }\n            ]\n        }\n    },\n    {\n        \"fieldLabel\": \"Programar Publicacion\",\n        \"fieldType\": \"radio\",\n        \"fieldOptions\": {\n            \"values\": [\n                {\n                    \"option\": \"Publicar Inmediatamente\"\n                },\n                {\n                    \"option\": \"Programar para Despues\"\n                }\n            ]\n        },\n        \"requiredField\": true\n    },\n    {\n        \"fieldLabel\": \"Fecha de Publicacion\",\n        \"fieldType\": \"date\",\n        \"formatDate\": \"yyyy-mm-dd\"\n    },\n    {\n        \"fieldLabel\": \"Hora de Publicacion\",\n        \"fieldType\": \"text\",\n        \"placeholder\": \"14:30\"\n    },\n    {\n        \"fieldLabel\": \"Notas Adicionales\",\n        \"fieldType\": \"textarea\",\n        \"placeholder\": \"Instrucciones especiales menciones emojis requisitos\"\n    }\n]",
+        "options": {
+          "limitWaitTime": {
+            "values": {
+              "resumeAmount": 5,
+              "resumeUnit": "minutes"
+            }
+          },
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -2048,
+        960
+      ],
+      "id": "873311fb-ed03-4237-93de-f8c7d72c64a9",
+      "name": "formulario para imagenes",
+      "webhookId": "acc3f7a3-f59c-4a1c-966e-b00a1fdaae12",
+      "credentials": {
+        "telegramApi": {
+          "id": "your_credential_id",
+          "name": "test"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "sendAndWait",
+        "chatId": "={{ $('Telegram Trigger').item.json.callback_query.message.chat.id }}",
+        "message": "Responde el siguiente formulario para poder saber que tipo de publicación necesitas",
+        "responseType": "customForm",
+        "defineForm": "json",
+        "jsonOutput": "=[\n    {\n        \"fieldType\": \"html\",\n        \"html\": \"<h2>Configuracion de Publicacion de VIDEO</h2><p>Duracion: 25 segundos - ID:{{ $json.campo2 }}</p>\"\n    },\n    {\n        \"fieldLabel\": \"Redes Sociales donde Publicar\",\n        \"fieldType\": \"checkbox\",\n        \"fieldOptions\": {\n            \"values\": [\n                {\n                    \"option\": \"Instagram\"\n                },\n                {\n                    \"option\": \"Facebook\"\n                },\n                {\n                    \"option\": \"TikTok\"\n                },\n                {\n                    \"option\": \"LinkedIn\"\n                },\n                {\n                    \"option\": \"Twitter\"\n                },\n                {\n                    \"option\": \"Threads\"\n                },\n                {\n                    \"option\": \"YouTube\"\n                }\n            ]\n        },\n        \"requiredField\": true\n    },\n    {\n        \"fieldLabel\": \"Instagram Formato\",\n        \"fieldType\": \"dropdown\",\n        \"fieldOptions\": {\n            \"values\": [\n                {\n                    \"option\": \"No publicar en Instagram\"\n                },\n                {\n                    \"option\": \"Reels\"\n                },\n                {\n                    \"option\": \"Feed Video Post\"\n                },\n                {\n                    \"option\": \"Stories\"\n                }\n            ]\n        }\n    },\n    {\n        \"fieldLabel\": \"Facebook Formato\",\n        \"fieldType\": \"dropdown\",\n        \"fieldOptions\": {\n            \"values\": [\n                {\n                    \"option\": \"No publicar en Facebook\"\n                },\n                {\n                    \"option\": \"Reel\"\n                },\n                {\n                    \"option\": \"Video Post\"\n                },\n                {\n                    \"option\": \"Story\"\n                }\n            ]\n        }\n    },\n    {\n        \"fieldLabel\": \"TikTok Formato\",\n        \"fieldType\": \"dropdown\",\n        \"fieldOptions\": {\n            \"values\": [\n                {\n                    \"option\": \"No publicar en TikTok\"\n                },\n                {\n                    \"option\": \"Video Post\"\n                }\n            ]\n        }\n    },\n    {\n        \"fieldLabel\": \"LinkedIn Formato\",\n        \"fieldType\": \"dropdown\",\n        \"fieldOptions\": {\n            \"values\": [\n                {\n                    \"option\": \"No publicar en LinkedIn\"\n                },\n                {\n                    \"option\": \"Video Post\"\n                }\n            ]\n        }\n    },\n    {\n        \"fieldLabel\": \"Twitter Formato\",\n        \"fieldType\": \"dropdown\",\n        \"fieldOptions\": {\n            \"values\": [\n                {\n                    \"option\": \"No publicar en Twitter\"\n                },\n                {\n                    \"option\": \"Tweet con Video\"\n                },\n                {\n                    \"option\": \"Thread con Video\"\n                }\n            ]\n        }\n    },\n    {\n        \"fieldLabel\": \"Threads Formato\",\n        \"fieldType\": \"dropdown\",\n        \"fieldOptions\": {\n            \"values\": [\n                {\n                    \"option\": \"No publicar en Threads\"\n                },\n                {\n                    \"option\": \"Video Post\"\n                }\n            ]\n        }\n    },\n    {\n        \"fieldLabel\": \"YouTube Formato\",\n        \"fieldType\": \"dropdown\",\n        \"fieldOptions\": {\n            \"values\": [\n                {\n                    \"option\": \"No publicar en YouTube\"\n                },\n                {\n                    \"option\": \"Short\"\n                },\n                {\n                    \"option\": \"Community Post con Video\"\n                }\n            ]\n        }\n    },\n    {\n        \"fieldLabel\": \"Objetivo de la Publicacion\",\n        \"fieldType\": \"textarea\",\n        \"placeholder\": \"Describe el objetivo: viralizar contenido, promocionar, educar, entretener, generar ventas, etc.\",\n        \"requiredField\": true\n    },\n    {\n        \"fieldLabel\": \"Tono de Comunicacion\",\n        \"fieldType\": \"dropdown\",\n        \"fieldOptions\": {\n            \"values\": [\n                {\n                    \"option\": \"Profesional\"\n                },\n                {\n                    \"option\": \"Casual\"\n                },\n                {\n                    \"option\": \"Inspiracional\"\n                },\n                {\n                    \"option\": \"Educativo\"\n                },\n                {\n                    \"option\": \"Humoristico\"\n                },\n                {\n                    \"option\": \"Energico\"\n                },\n                {\n                    \"option\": \"Urgente\"\n                }\n            ]\n        }\n    },\n    {\n        \"fieldLabel\": \"Palabras Clave o Temas\",\n        \"fieldType\": \"text\",\n        \"placeholder\": \"Palabras clave importantes para incluir\"\n    },\n    {\n        \"fieldLabel\": \"Call to Action\",\n        \"fieldType\": \"dropdown\",\n        \"fieldOptions\": {\n            \"values\": [\n                {\n                    \"option\": \"Sin CTA\"\n                },\n                {\n                    \"option\": \"Mira el video completo\"\n                },\n                {\n                    \"option\": \"Siguenos para mas\"\n                },\n                {\n                    \"option\": \"Comenta tu opinion\"\n                },\n                {\n                    \"option\": \"Comparte\"\n                },\n                {\n                    \"option\": \"Guardalo\"\n                },\n                {\n                    \"option\": \"Compra ahora\"\n                },\n                {\n                    \"option\": \"Link en bio\"\n                }\n            ]\n        }\n    },\n    {\n        \"fieldLabel\": \"Programar Publicacion\",\n        \"fieldType\": \"radio\",\n        \"fieldOptions\": {\n            \"values\": [\n                {\n                    \"option\": \"Publicar Inmediatamente\"\n                },\n                {\n                    \"option\": \"Programar para Despues\"\n                }\n            ]\n        },\n        \"requiredField\": true\n    },\n    {\n        \"fieldLabel\": \"Fecha de Publicacion\",\n        \"fieldType\": \"date\",\n        \"formatDate\": \"yyyy-mm-dd\"\n    },\n    {\n        \"fieldLabel\": \"Hora de Publicacion\",\n        \"fieldType\": \"text\",\n        \"placeholder\": \"14:30\"\n    },\n    {\n        \"fieldLabel\": \"Notas Adicionales\",\n        \"fieldType\": \"textarea\",\n        \"placeholder\": \"Instrucciones especiales menciones hashtags musica requisitos\"\n    }\n]",
+        "options": {
+          "limitWaitTime": {
+            "values": {
+              "resumeAmount": 5,
+              "resumeUnit": "minutes"
+            }
+          },
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -2048,
+        1152
+      ],
+      "id": "587ab913-b9dc-42b0-893a-e5080f13120e",
+      "name": "formulario para videos",
+      "webhookId": "acc3f7a3-f59c-4a1c-966e-b00a1fdaae12",
+      "credentials": {
+        "telegramApi": {
+          "id": "your_credential_id",
+          "name": "test"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('parsear').item.json.generar }}",
+                    "rightValue": true,
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "equals"
+                    },
+                    "id": "cc235631-d1c8-4dfe-888c-562c313ed163"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "generar"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "a644518c-0592-4e94-b78d-b0aef605de24",
+                    "leftValue": "={{ $('parsear').item.json.publicar }}",
+                    "rightValue": true,
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "publicar"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.3,
+      "position": [
+        -1024,
+        208
+      ],
+      "id": "1522ce9e-8c2e-4570-b027-220cfefedd93",
+      "name": "Switch1"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "FEBhhYha0SiKSvR5",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/FEBhhYha0SiKSvR5",
+          "cachedResultName": "publicar en redes sociales v2"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {
+          "waitForSubWorkflow": false
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        -128,
+        400
+      ],
+      "id": "4860c72d-3c7c-49d8-9758-d870f3cfc58e",
+      "name": "Call 'publicar en redes sociales'1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "d79e6687-9ffd-4656-809c-1f00328032ba",
+              "leftValue": "={{ $('parsear').item.json.datos_publicacion.tipo_contenido }}",
+              "rightValue": "imagen",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -800,
+        400
+      ],
+      "id": "901fb949-fad8-4af9-bb3a-0f817a7c84cd",
+      "name": "If3"
+    },
+    {
+      "parameters": {
+        "operation": "sendAndWait",
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id ?? $('Telegram Trigger').item.json.callback_query.from.id}}",
+        "message": "Responde el siguiente formulario para poder saber que tipo de publicación necesitas",
+        "responseType": "customForm",
+        "defineForm": "json",
+        "jsonOutput": "=[\n    {\n        \"fieldType\": \"html\",\n        \"html\": \"<h2>Configuracion de Publicacion de IMAGEN</h2><p>ID: </p>\"\n    },\n    {\n        \"fieldLabel\": \"Redes Sociales donde Publicar\",\n        \"fieldType\": \"checkbox\",\n        \"fieldOptions\": {\n            \"values\": [\n                {\n                    \"option\": \"Instagram\"\n                },\n                {\n                    \"option\": \"Facebook\"\n                },\n                {\n                    \"option\": \"TikTok\"\n                },\n                {\n                    \"option\": \"LinkedIn\"\n                },\n                {\n                    \"option\": \"Twitter\"\n                },\n                {\n                    \"option\": \"Threads\"\n                },\n                {\n                    \"option\": \"YouTube\"\n                }\n            ]\n        },\n        \"requiredField\": true\n    },\n    {\n        \"fieldLabel\": \"Instagram Formato\",\n        \"fieldType\": \"dropdown\",\n        \"fieldOptions\": {\n            \"values\": [\n                {\n                    \"option\": \"No publicar en Instagram\"\n                },\n                {\n                    \"option\": \"Feed Post\"\n                },\n                {\n                    \"option\": \"Carrusel\"\n                },\n                {\n                    \"option\": \"Stories\"\n                }\n            ]\n        }\n    },\n    {\n        \"fieldLabel\": \"Facebook Formato\",\n        \"fieldType\": \"dropdown\",\n        \"fieldOptions\": {\n            \"values\": [\n                {\n                    \"option\": \"No publicar en Facebook\"\n                },\n                {\n                    \"option\": \"Photo Post\"\n                },\n                {\n                    \"option\": \"Album\"\n                },\n                {\n                    \"option\": \"Story\"\n                }\n            ]\n        }\n    },\n    {\n        \"fieldLabel\": \"TikTok Formato\",\n        \"fieldType\": \"dropdown\",\n        \"fieldOptions\": {\n            \"values\": [\n                {\n                    \"option\": \"No publicar en TikTok\"\n                },\n                {\n                    \"option\": \"Photo Post Carrusel\"\n                }\n            ]\n        }\n    },\n    {\n        \"fieldLabel\": \"LinkedIn Formato\",\n        \"fieldType\": \"dropdown\",\n        \"fieldOptions\": {\n            \"values\": [\n                {\n                    \"option\": \"No publicar en LinkedIn\"\n                },\n                {\n                    \"option\": \"Image Post\"\n                },\n                {\n                    \"option\": \"Document Post\"\n                },\n                {\n                    \"option\": \"Carrusel\"\n                }\n            ]\n        }\n    },\n    {\n        \"fieldLabel\": \"Twitter Formato\",\n        \"fieldType\": \"dropdown\",\n        \"fieldOptions\": {\n            \"values\": [\n                {\n                    \"option\": \"No publicar en Twitter\"\n                },\n                {\n                    \"option\": \"Tweet con Imagen\"\n                },\n                {\n                    \"option\": \"Thread con Imagenes\"\n                }\n            ]\n        }\n    },\n    {\n        \"fieldLabel\": \"Threads Formato\",\n        \"fieldType\": \"dropdown\",\n        \"fieldOptions\": {\n            \"values\": [\n                {\n                    \"option\": \"No publicar en Threads\"\n                },\n                {\n                    \"option\": \"Image Post\"\n                }\n            ]\n        }\n    },\n    {\n        \"fieldLabel\": \"YouTube Formato\",\n        \"fieldType\": \"dropdown\",\n        \"fieldOptions\": {\n            \"values\": [\n                {\n                    \"option\": \"No publicar en YouTube\"\n                },\n                {\n                    \"option\": \"Community Post\"\n                },\n                {\n                    \"option\": \"Thumbnail personalizado\"\n                }\n            ]\n        }\n    },\n    {\n        \"fieldLabel\": \"Objetivo de la Publicacion\",\n        \"fieldType\": \"textarea\",\n        \"placeholder\": \"Describe el objetivo: aumentar engagement, promocionar producto, educar, generar ventas, etc.\",\n        \"requiredField\": true\n    },\n    {\n        \"fieldLabel\": \"Tono de Comunicacion\",\n        \"fieldType\": \"dropdown\",\n        \"fieldOptions\": {\n            \"values\": [\n                {\n                    \"option\": \"Profesional\"\n                },\n                {\n                    \"option\": \"Casual\"\n                },\n                {\n                    \"option\": \"Inspiracional\"\n                },\n                {\n                    \"option\": \"Educativo\"\n                },\n                {\n                    \"option\": \"Humoristico\"\n                },\n                {\n                    \"option\": \"Urgente\"\n                }\n            ]\n        }\n    },\n    {\n        \"fieldLabel\": \"Palabras Clave o Temas\",\n        \"fieldType\": \"text\",\n        \"placeholder\": \"Palabras clave importantes para incluir\"\n    },\n    {\n        \"fieldLabel\": \"Call to Action\",\n        \"fieldType\": \"dropdown\",\n        \"fieldOptions\": {\n            \"values\": [\n                {\n                    \"option\": \"Sin CTA\"\n                },\n                {\n                    \"option\": \"Visita el link\"\n                },\n                {\n                    \"option\": \"Comenta tu opinion\"\n                },\n                {\n                    \"option\": \"Comparte\"\n                },\n                {\n                    \"option\": \"Guardalo\"\n                },\n                {\n                    \"option\": \"Compra ahora\"\n                },\n                {\n                    \"option\": \"Registrate\"\n                },\n                {\n                    \"option\": \"Aprende mas\"\n                }\n            ]\n        }\n    },\n    {\n        \"fieldLabel\": \"Programar Publicacion\",\n        \"fieldType\": \"radio\",\n        \"fieldOptions\": {\n            \"values\": [\n                {\n                    \"option\": \"Publicar Inmediatamente\"\n                },\n                {\n                    \"option\": \"Programar para Despues\"\n                }\n            ]\n        },\n        \"requiredField\": true\n    },\n    {\n        \"fieldLabel\": \"Fecha de Publicacion\",\n        \"fieldType\": \"date\",\n        \"formatDate\": \"yyyy-mm-dd\"\n    },\n    {\n        \"fieldLabel\": \"Hora de Publicacion\",\n        \"fieldType\": \"text\",\n        \"placeholder\": \"14:30\"\n    },\n    {\n        \"fieldLabel\": \"Notas Adicionales\",\n        \"fieldType\": \"textarea\",\n        \"placeholder\": \"Instrucciones especiales menciones emojis requisitos\"\n    }\n]",
+        "options": {
+          "limitWaitTime": {
+            "values": {
+              "resumeAmount": 5,
+              "resumeUnit": "minutes"
+            }
+          },
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -576,
+        304
+      ],
+      "id": "7c85dacd-65d2-4bf7-bed3-d057f9dbf1a1",
+      "name": "formulario para imagenes1",
+      "webhookId": "acc3f7a3-f59c-4a1c-966e-b00a1fdaae12",
+      "credentials": {
+        "telegramApi": {
+          "id": "your_credential_id",
+          "name": "test"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "sendAndWait",
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id ?? $('Telegram Trigger').item.json.callback_query.from.id}}",
+        "message": "Responde el siguiente formulario para poder saber que tipo de publicación necesitas",
+        "responseType": "customForm",
+        "defineForm": "json",
+        "jsonOutput": "=[\n    {\n        \"fieldType\": \"html\",\n        \"html\": \"<h2>Configuracion de Publicacion de VIDEO</h2><p>Duracion: 25 segundos</p>\"\n    },\n    {\n        \"fieldLabel\": \"Redes Sociales donde Publicar\",\n        \"fieldType\": \"checkbox\",\n        \"fieldOptions\": {\n            \"values\": [\n                {\n                    \"option\": \"Instagram\"\n                },\n                {\n                    \"option\": \"Facebook\"\n                },\n                {\n                    \"option\": \"TikTok\"\n                },\n                {\n                    \"option\": \"LinkedIn\"\n                },\n                {\n                    \"option\": \"Twitter\"\n                },\n                {\n                    \"option\": \"Threads\"\n                },\n                {\n                    \"option\": \"YouTube\"\n                }\n            ]\n        },\n        \"requiredField\": true\n    },\n    {\n        \"fieldLabel\": \"Instagram Formato\",\n        \"fieldType\": \"dropdown\",\n        \"fieldOptions\": {\n            \"values\": [\n                {\n                    \"option\": \"No publicar en Instagram\"\n                },\n                {\n                    \"option\": \"Reels\"\n                },\n                {\n                    \"option\": \"Feed Video Post\"\n                },\n                {\n                    \"option\": \"Stories\"\n                }\n            ]\n        }\n    },\n    {\n        \"fieldLabel\": \"Facebook Formato\",\n        \"fieldType\": \"dropdown\",\n        \"fieldOptions\": {\n            \"values\": [\n                {\n                    \"option\": \"No publicar en Facebook\"\n                },\n                {\n                    \"option\": \"Reel\"\n                },\n                {\n                    \"option\": \"Video Post\"\n                },\n                {\n                    \"option\": \"Story\"\n                }\n            ]\n        }\n    },\n    {\n        \"fieldLabel\": \"TikTok Formato\",\n        \"fieldType\": \"dropdown\",\n        \"fieldOptions\": {\n            \"values\": [\n                {\n                    \"option\": \"No publicar en TikTok\"\n                },\n                {\n                    \"option\": \"Video Post\"\n                }\n            ]\n        }\n    },\n    {\n        \"fieldLabel\": \"LinkedIn Formato\",\n        \"fieldType\": \"dropdown\",\n        \"fieldOptions\": {\n            \"values\": [\n                {\n                    \"option\": \"No publicar en LinkedIn\"\n                },\n                {\n                    \"option\": \"Video Post\"\n                }\n            ]\n        }\n    },\n    {\n        \"fieldLabel\": \"Twitter Formato\",\n        \"fieldType\": \"dropdown\",\n        \"fieldOptions\": {\n            \"values\": [\n                {\n                    \"option\": \"No publicar en Twitter\"\n                },\n                {\n                    \"option\": \"Tweet con Video\"\n                },\n                {\n                    \"option\": \"Thread con Video\"\n                }\n            ]\n        }\n    },\n    {\n        \"fieldLabel\": \"Threads Formato\",\n        \"fieldType\": \"dropdown\",\n        \"fieldOptions\": {\n            \"values\": [\n                {\n                    \"option\": \"No publicar en Threads\"\n                },\n                {\n                    \"option\": \"Video Post\"\n                }\n            ]\n        }\n    },\n    {\n        \"fieldLabel\": \"YouTube Formato\",\n        \"fieldType\": \"dropdown\",\n        \"fieldOptions\": {\n            \"values\": [\n                {\n                    \"option\": \"No publicar en YouTube\"\n                },\n                {\n                    \"option\": \"Short\"\n                },\n                {\n                    \"option\": \"Community Post con Video\"\n                }\n            ]\n        }\n    },\n    {\n        \"fieldLabel\": \"Objetivo de la Publicacion\",\n        \"fieldType\": \"textarea\",\n        \"placeholder\": \"Describe el objetivo: viralizar contenido, promocionar, educar, entretener, generar ventas, etc.\",\n        \"requiredField\": true\n    },\n    {\n        \"fieldLabel\": \"Tono de Comunicacion\",\n        \"fieldType\": \"dropdown\",\n        \"fieldOptions\": {\n            \"values\": [\n                {\n                    \"option\": \"Profesional\"\n                },\n                {\n                    \"option\": \"Casual\"\n                },\n                {\n                    \"option\": \"Inspiracional\"\n                },\n                {\n                    \"option\": \"Educativo\"\n                },\n                {\n                    \"option\": \"Humoristico\"\n                },\n                {\n                    \"option\": \"Energico\"\n                },\n                {\n                    \"option\": \"Urgente\"\n                }\n            ]\n        }\n    },\n    {\n        \"fieldLabel\": \"Palabras Clave o Temas\",\n        \"fieldType\": \"text\",\n        \"placeholder\": \"Palabras clave importantes para incluir\"\n    },\n    {\n        \"fieldLabel\": \"Call to Action\",\n        \"fieldType\": \"dropdown\",\n        \"fieldOptions\": {\n            \"values\": [\n                {\n                    \"option\": \"Sin CTA\"\n                },\n                {\n                    \"option\": \"Mira el video completo\"\n                },\n                {\n                    \"option\": \"Siguenos para mas\"\n                },\n                {\n                    \"option\": \"Comenta tu opinion\"\n                },\n                {\n                    \"option\": \"Comparte\"\n                },\n                {\n                    \"option\": \"Guardalo\"\n                },\n                {\n                    \"option\": \"Compra ahora\"\n                },\n                {\n                    \"option\": \"Link en bio\"\n                }\n            ]\n        }\n    },\n    {\n        \"fieldLabel\": \"Programar Publicacion\",\n        \"fieldType\": \"radio\",\n        \"fieldOptions\": {\n            \"values\": [\n                {\n                    \"option\": \"Publicar Inmediatamente\"\n                },\n                {\n                    \"option\": \"Programar para Despues\"\n                }\n            ]\n        },\n        \"requiredField\": true\n    },\n    {\n        \"fieldLabel\": \"Fecha de Publicacion\",\n        \"fieldType\": \"date\",\n        \"formatDate\": \"yyyy-mm-dd\"\n    },\n    {\n        \"fieldLabel\": \"Hora de Publicacion\",\n        \"fieldType\": \"text\",\n        \"placeholder\": \"14:30\"\n    },\n    {\n        \"fieldLabel\": \"Notas Adicionales\",\n        \"fieldType\": \"textarea\",\n        \"placeholder\": \"Instrucciones especiales menciones hashtags musica requisitos\"\n    }\n]",
+        "options": {
+          "limitWaitTime": {
+            "values": {
+              "resumeAmount": 5,
+              "resumeUnit": "minutes"
+            }
+          },
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -576,
+        496
+      ],
+      "id": "287a5343-efd0-4e72-8bfe-fd6ccb29a5d7",
+      "name": "formulario para videos1",
+      "webhookId": "acc3f7a3-f59c-4a1c-966e-b00a1fdaae12",
+      "credentials": {
+        "telegramApi": {
+          "id": "your_credential_id",
+          "name": "test"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "1hAcVPMlhlkX3bOjevf5nalC0UDYimJ7f",
+          "mode": "list",
+          "cachedResultName": "sora y nanobanana",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/1hAcVPMlhlkX3bOjevf5nalC0UDYimJ7f"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -2272,
+        208
+      ],
+      "id": "6b2db254-2790-4e04-bec8-dabf7d0b13a6",
+      "name": "subir imagen o video a drive",
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "695a9174-8b45-4240-955e-6412b079e653",
+              "leftValue": "={{ $json.tipo_creativo }}",
+              "rightValue": "imagen",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -2272,
+        672
+      ],
+      "id": "a51ed99e-6603-4a88-8081-d90364eaeb27",
+      "name": "preguntar si publicar imagen o video"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "d79e6687-9ffd-4656-809c-1f00328032ba",
+              "leftValue": "={{ $json.tipo_creativo }}",
+              "rightValue": "imagen",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -2272,
+        1056
+      ],
+      "id": "aeeafd3d-05d2-438f-b022-80a977ede79b",
+      "name": "formulario para imagen o video"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Obtener datos del formulario\nconst formData = $input.first().json.data;\n\n// Obtener chat_id del Telegram Trigger\nconst chatId = $('Telegram Trigger').item.json.callback_query?.message?.chat?.id;\n\n// Obtener el campo2 del nodo anterior\nconst campo2 = $('parsear_callback_data').item.json.campo2;\nconst tipoCreativo = $('parsear_callback_data').item.json.tipo_creativo;\nconst accion = $('parsear_callback_data').item.json.accion;\n\n// Parsear las redes sociales seleccionadas\nconst redesSociales = formData[\"Redes Sociales donde Publicar\"] || [];\n\n// Crear objeto con todos los campos\nconst result = {\n  // Chat ID de Telegram\n  chat_id: chatId,\n  \n  // Campos originales\n  campo2: campo2,\n  tipo_creativo: tipoCreativo,\n  accion: accion,\n  \n  // Redes sociales\n  redes_sociales: redesSociales,\n  redes_sociales_cantidad: redesSociales.length,\n  \n  // Formatos por red social\n  instagram_formato: formData[\"Instagram Formato\"] || \"No publicar en Instagram\",\n  facebook_formato: formData[\"Facebook Formato\"] || \"No publicar en Facebook\",\n  tiktok_formato: formData[\"TikTok Formato\"] || \"No publicar en TikTok\",\n  linkedin_formato: formData[\"LinkedIn Formato\"] || \"No publicar en LinkedIn\",\n  twitter_formato: formData[\"Twitter Formato\"] || \"No publicar en Twitter\",\n  threads_formato: formData[\"Threads Formato\"] || \"No publicar en Threads\",\n  youtube_formato: formData[\"YouTube Formato\"] || \"No publicar en YouTube\",\n  \n  // Configuración del contenido\n  objetivo_publicacion: formData[\"Objetivo de la Publicacion\"] || \"\",\n  tono_comunicacion: formData[\"Tono de Comunicacion\"] || \"\",\n  palabras_clave: formData[\"Palabras Clave o Temas\"] || \"\",\n  call_to_action: formData[\"Call to Action\"] || \"\",\n  \n  // Programación\n  programar_publicacion: formData[\"Programar Publicacion\"] || \"Publicar Inmediatamente\",\n  fecha_publicacion: formData[\"Fecha de Publicacion\"] || \"\",\n  hora_publicacion: formData[\"Hora de Publicacion\"] || \"\",\n  \n  // Notas\n  notas_adicionales: formData[\"Notas Adicionales\"] || \"\"\n};\n\n// Generar campo concatenado con TODOS los campos disponibles separados por comas\nconst camposDisponibles = [\n  `chat_id:${result.chat_id}`,\n  `campo2:${result.campo2}`,\n  `tipo_creativo:${result.tipo_creativo}`,\n  `accion:${result.accion}`,\n  `redes_sociales:${result.redes_sociales.join('|')}`,\n  `redes_sociales_cantidad:${result.redes_sociales_cantidad}`,\n  `instagram_formato:${result.instagram_formato}`,\n  `facebook_formato:${result.facebook_formato}`,\n  `tiktok_formato:${result.tiktok_formato}`,\n  `linkedin_formato:${result.linkedin_formato}`,\n  `twitter_formato:${result.twitter_formato}`,\n  `threads_formato:${result.threads_formato}`,\n  `youtube_formato:${result.youtube_formato}`,\n  `objetivo_publicacion:${result.objetivo_publicacion}`,\n  `tono_comunicacion:${result.tono_comunicacion}`,\n  `palabras_clave:${result.palabras_clave}`,\n  `call_to_action:${result.call_to_action}`,\n  `programar_publicacion:${result.programar_publicacion}`,\n  `fecha_publicacion:${result.fecha_publicacion}`,\n  `hora_publicacion:${result.hora_publicacion}`,\n  `notas_adicionales:${result.notas_adicionales}`\n].filter(campo => {\n  // Filtrar campos vacíos o que no se van a publicar\n  const valor = campo.split(':')[1];\n  return valor && valor !== '' && !valor.startsWith('No publicar');\n});\n\nresult.campos_concatenados = camposDisponibles.join(',');\n\n// Campos booleanos para fácil filtrado\nresult.publicar_instagram = !result.instagram_formato.includes('No publicar');\nresult.publicar_facebook = !result.facebook_formato.includes('No publicar');\nresult.publicar_tiktok = !result.tiktok_formato.includes('No publicar');\nresult.publicar_linkedin = !result.linkedin_formato.includes('No publicar');\nresult.publicar_twitter = !result.twitter_formato.includes('No publicar');\nresult.publicar_threads = !result.threads_formato.includes('No publicar');\nresult.publicar_youtube = !result.youtube_formato.includes('No publicar');\n\n// Programación booleana\nresult.es_programado = result.programar_publicacion === \"Programar para Despues\";\n\nreturn [{\n  json: result\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1760,
+        1056
+      ],
+      "id": "6d2764a2-a539-4af0-aa3e-9cb0cd67b542",
+      "name": "parsear campos para mandar al siguiente workflow"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -2048,
+        112
+      ],
+      "id": "00090d7b-fb37-419c-bf3c-5705541db8a0",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Obtener datos del formulario\nconst formData = $input.first().json.data;\n\n// Obtener datos_publicacion del nodo parsear\nconst datosPublicacion = $('parsear').first().json.datos_publicacion || {\n  tipo_contenido: null,\n  url_1: null,\n  url_2: null,\n  url_3: null,\n  url_4: null,\n  url_5: null,\n  url_6: null,\n  url_7: null,\n  url_8: null,\n  url_9: null,\n  url_10: null,\n  nombre_imagen_1: null,\n  nombre_imagen_2: null,\n  nombre_imagen_3: null,\n  nombre_imagen_4: null,\n  nombre_imagen_5: null,\n  nombre_imagen_6: null,\n  nombre_imagen_7: null,\n  nombre_imagen_8: null,\n  nombre_imagen_9: null,\n  nombre_imagen_10: null\n};\n\n// Obtener chat_id del Telegram Trigger\nconst chatId = $('Telegram Trigger').item.json.message?.chat?.id ?? $('Telegram Trigger').item.json.callback_query?.from?.id;\n\n// Parsear las redes sociales seleccionadas\nconst redesSociales = formData[\"Redes Sociales donde Publicar\"] || [];\n\n// Crear objeto con todos los campos\nconst result = {\n  // Chat ID de Telegram\n  chat_id: chatId,\n  \n  // Datos de publicación (URLs y nombres de archivos)\n  datos_publicacion: datosPublicacion,\n  \n  // Redes sociales\n  redes_sociales: redesSociales,\n  redes_sociales_cantidad: redesSociales.length,\n  \n  // Formatos por red social\n  instagram_formato: formData[\"Instagram Formato\"] || \"No publicar en Instagram\",\n  facebook_formato: formData[\"Facebook Formato\"] || \"No publicar en Facebook\",\n  tiktok_formato: formData[\"TikTok Formato\"] || \"No publicar en TikTok\",\n  linkedin_formato: formData[\"LinkedIn Formato\"] || \"No publicar en LinkedIn\",\n  twitter_formato: formData[\"Twitter Formato\"] || \"No publicar en Twitter\",\n  threads_formato: formData[\"Threads Formato\"] || \"No publicar en Threads\",\n  youtube_formato: formData[\"YouTube Formato\"] || \"No publicar en YouTube\",\n  \n  // Configuración del contenido\n  objetivo_publicacion: formData[\"Objetivo de la Publicacion\"] || \"\",\n  tono_comunicacion: formData[\"Tono de Comunicacion\"] || \"\",\n  palabras_clave: formData[\"Palabras Clave o Temas\"] || \"\",\n  call_to_action: formData[\"Call to Action\"] || \"\",\n  \n  // Programación\n  programar_publicacion: formData[\"Programar Publicacion\"] || \"Publicar Inmediatamente\",\n  fecha_publicacion: formData[\"Fecha de Publicacion\"] || \"\",\n  hora_publicacion: formData[\"Hora de Publicacion\"] || \"\",\n  \n  // Notas\n  notas_adicionales: formData[\"Notas Adicionales\"] || \"\"\n};\n\n// Generar campo concatenado con TODOS los campos disponibles separados por comas\nconst camposDisponibles = [\n  `chat_id:${result.chat_id}`,\n  `tipo_contenido:${datosPublicacion.tipo_contenido}`,\n  `redes_sociales:${result.redes_sociales.join('|')}`,\n  `redes_sociales_cantidad:${result.redes_sociales_cantidad}`,\n  `instagram_formato:${result.instagram_formato}`,\n  `facebook_formato:${result.facebook_formato}`,\n  `tiktok_formato:${result.tiktok_formato}`,\n  `linkedin_formato:${result.linkedin_formato}`,\n  `twitter_formato:${result.twitter_formato}`,\n  `threads_formato:${result.threads_formato}`,\n  `youtube_formato:${result.youtube_formato}`,\n  `objetivo_publicacion:${result.objetivo_publicacion}`,\n  `tono_comunicacion:${result.tono_comunicacion}`,\n  `palabras_clave:${result.palabras_clave}`,\n  `call_to_action:${result.call_to_action}`,\n  `programar_publicacion:${result.programar_publicacion}`,\n  `fecha_publicacion:${result.fecha_publicacion}`,\n  `hora_publicacion:${result.hora_publicacion}`,\n  `notas_adicionales:${result.notas_adicionales}`\n].filter(campo => {\n  // Filtrar campos vacíos o que no se van a publicar\n  const valor = campo.split(':')[1];\n  return valor && valor !== '' && valor !== 'null' && !valor.startsWith('No publicar');\n});\n\nresult.campos_concatenados = camposDisponibles.join(',');\n\n// Campos booleanos para fácil filtrado\nresult.publicar_instagram = !result.instagram_formato.includes('No publicar');\nresult.publicar_facebook = !result.facebook_formato.includes('No publicar');\nresult.publicar_tiktok = !result.tiktok_formato.includes('No publicar');\nresult.publicar_linkedin = !result.linkedin_formato.includes('No publicar');\nresult.publicar_twitter = !result.twitter_formato.includes('No publicar');\nresult.publicar_threads = !result.threads_formato.includes('No publicar');\nresult.publicar_youtube = !result.youtube_formato.includes('No publicar');\n\n// Programación booleana\nresult.es_programado = result.programar_publicacion === \"Programar para Despues\";\n\n// Contar archivos disponibles (URLs no nulas)\nlet archivosDisponibles = 0;\nfor (let i = 1; i <= 10; i++) {\n  if (datosPublicacion[`url_${i}`]) {\n    archivosDisponibles++;\n  }\n}\nresult.archivos_cantidad = archivosDisponibles;\n\nreturn [{\n  json: result\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -352,
+        400
+      ],
+      "id": "75534e47-89d0-44bb-a8e0-d3df095d7a8c",
+      "name": "enviar datos a workflow"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4o-mini"
+        },
+        "builtInTools": {},
+        "options": {
+          "textFormat": {
+            "textOptions": {
+              "type": "json_object"
+            }
+          }
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        -1824,
+        432
+      ],
+      "id": "c6db7163-3433-4ceb-9513-c3387d3fe9c9",
+      "name": "OpenAI Chat Model"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "FEBhhYha0SiKSvR5",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/FEBhhYha0SiKSvR5",
+          "cachedResultName": "publicar en redes sociales v2"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {}
+        },
+        "options": {
+          "waitForSubWorkflow": false
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        -1536,
+        1056
+      ],
+      "id": "edbc728e-5857-44cd-9864-21727106f684",
+      "name": "Call 'publicar en redes sociales v2'"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "callback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "parsear",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a text message": {
+      "main": [
+        [
+          {
+            "node": "Switch1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "parsear": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Call 'creador de IMAGENES redes sociales'",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Call 'creador de VIDEOS redes sociales'",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres Chat Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "enviar_variables": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "callback": {
+      "main": [
+        [
+          {
+            "node": "imagen o texto",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "parsear_callback_data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "preguntar si publicar imagen o video",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [],
+        [
+          {
+            "node": "formulario para imagen o video",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [],
+        [
+          {
+            "node": "preguntar si publicar imagen o video",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "imagen o texto": {
+      "main": [
+        [
+          {
+            "node": "Extract from File",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "subir imagen o video a drive",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "parsear_callback_data": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "formulario para imagenes": {
+      "main": [
+        [
+          {
+            "node": "parsear campos para mandar al siguiente workflow",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "formulario para videos": {
+      "main": [
+        [
+          {
+            "node": "parsear campos para mandar al siguiente workflow",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch1": {
+      "main": [
+        [
+          {
+            "node": "enviar_variables",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "If3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If3": {
+      "main": [
+        [
+          {
+            "node": "formulario para imagenes1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "formulario para videos1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "formulario para imagenes1": {
+      "main": [
+        [
+          {
+            "node": "enviar datos a workflow",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "formulario para videos1": {
+      "main": [
+        [
+          {
+            "node": "enviar datos a workflow",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "subir imagen o video a drive": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "preguntar si publicar imagen o video": {
+      "main": [
+        [
+          {
+            "node": "Send a text message1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send a text message2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "formulario para imagen o video": {
+      "main": [
+        [
+          {
+            "node": "formulario para imagenes",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "formulario para videos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "parsear campos para mandar al siguiente workflow": {
+      "main": [
+        [
+          {
+            "node": "Call 'publicar en redes sociales v2'",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "enviar datos a workflow": {
+      "main": [
+        [
+          {
+            "node": "Call 'publicar en redes sociales'1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "f90e87d6-a0a1-48a4-9ca3-f1db7eeb1805",
+  "meta": {
+    "instanceId": "your_instance_id"
+  },
+  "id": "your_credential_id",
+  "tags": []
+}

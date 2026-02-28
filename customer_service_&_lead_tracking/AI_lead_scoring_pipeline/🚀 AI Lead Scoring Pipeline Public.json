@@ -1,0 +1,342 @@
+{
+  "name": "🚀 AI Lead Scoring Pipeline Public",
+  "nodes": [
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://python-api:8000/score-lead",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "your_api_key"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{$json.body}}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -416,
+        272
+      ],
+      "id": "d70febb4-55b9-4f7a-9b9f-a7fdd642108e",
+      "name": "HTTP Request1",
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "f38eede0-1f9e-405a-8009-1845f779ef3f",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1008,
+        288
+      ],
+      "id": "988485fa-7f50-46ff-bb95-9f79768709b9",
+      "name": "Webhook",
+      "webhookId": "f38eede0-1f9e-405a-8009-1845f779ef3f"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "8b9b26c2-3b87-45a1-9964-9f5851a8448d",
+              "leftValue": "={{ $json.body.budget }}",
+              "rightValue": "",
+              "operator": {
+                "type": "number",
+                "operation": "exists",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "a919b22d-8e2e-455b-ba0d-23b74fb41f6a",
+              "leftValue": "={{ $json.body.company_size }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "exists",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "5ba769b2-cabb-4d5a-b3de-eb48a60aff73",
+              "leftValue": "={{ $json.body.engagement_level }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -736,
+        288
+      ],
+      "id": "b6001f91-6425-4d31-8532-d1da101d607c",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "={\n  \"lead_name\": \"{{ $('If').item.json.body.name }}{{ $('If').item.json.body.name }},\n  \"score\": \"{{$json.lead_score}}\",\n  \"classification\": \"{{$json.classification}}\",\n  \"mean_input\": \"{{ $json.analytics.mean_input }}\",\n  \"std_dev_input\": \"{{ $json.analytics.std_dev_input }}\",\n} ",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -160,
+        272
+      ],
+      "id": "92680130-6efb-43c6-aa41-efd813d93c57",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        144,
+        272
+      ],
+      "id": "20c8ea23-1754-4afd-bba4-d6643dc069eb",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "content": "TEST: \ncurl -X POST https://{{YOUR_URL}}/webhook-test/lead-score \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n    \"name\": \"John Wick\",\n    \"budget\": 85,\n    \"company_size\": 60,\n    \"engagement_level\": 90\n  }'\n",
+        "height": 256,
+        "width": 256,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -1088,
+        448
+      ],
+      "typeVersion": 1,
+      "id": "992b6541-a44e-4420-b7b1-a18430b8db8e",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "AI Lead Scoring Pipeline\n\nThis workflow demonstrates how n8n can orchestrate a microservice-based\narchitecture using a Python FastAPI backend for statistical data processing.\n\nThe system:\n1. Receives a lead via webhook\n2. Validates required fields\n3. Sends data to a Python microservice\n4. Processes lead scoring using pandas and numpy\n5. Returns classification (Hot / Warm / Cold)\n\nArchitecture Pattern:\nn8n (Orchestrator) → Python API (Processing Engine)",
+        "height": 432,
+        "width": 288,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -1408,
+        0
+      ],
+      "typeVersion": 1,
+      "id": "dae16a9e-1cce-443d-93ea-65705935d181",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "Webhook Layer\n\nThis node acts as the public entry point of the system.\n\nIt simulates incoming leads from:\n- CRM systems\n- Marketing forms\n- External APIs\n\nExpected JSON structure:\n{\n  name: string,\n  budget: number,\n  company_size: number,\n  engagement_level: number\n}",
+        "height": 432,
+        "width": 256,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -1088,
+        0
+      ],
+      "typeVersion": 1,
+      "id": "627001ef-2823-4f7d-8315-2e53f4b5807b",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "Validation Layer\n\nEnsures required numeric fields exist before\nsending data to the microservice.\n\nPrevents unnecessary processing and improves\nsystem reliability.\n\nThis demonstrates input validation at the orchestration layer.",
+        "height": 432,
+        "width": 256,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -800,
+        0
+      ],
+      "typeVersion": 1,
+      "id": "9ec863bb-c55b-4120-8ae0-12ab361c2267",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "content": "Microservice Communication\n\nThis HTTP node sends structured JSON data\nto a Dockerized FastAPI service.\n\nWhy separate services?\n\n- Clear separation of concerns\n- Independent scaling\n- Backend logic isolated from orchestration\n- Cleaner architecture",
+        "height": 432,
+        "width": 256,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -512,
+        0
+      ],
+      "typeVersion": 1,
+      "id": "7609c7e1-4a1a-4f56-9b19-54aea587b273",
+      "name": "Sticky Note4"
+    },
+    {
+      "parameters": {
+        "content": "Python Processing Engine\n\nThe FastAPI service:\n\n- Converts input into a pandas DataFrame\n- Cleans missing values\n- Uses numpy for weighted scoring\n- Computes statistical metrics (mean, std deviation)\n- Returns structured output\n\nDemonstrates backend data processing\nbeyond simple automation.",
+        "height": 432,
+        "width": 256,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -224,
+        0
+      ],
+      "typeVersion": 1,
+      "id": "bf437446-19ec-4c84-a78f-cfc16b99ab0e",
+      "name": "Sticky Note5"
+    },
+    {
+      "parameters": {
+        "content": "Response Layer\n\nThe workflow formats and returns the final response:\n\n{\n  lead_score,\n  classification,\n  analytics\n}\n\nThis simulates a production-ready scoring API\nthat could integrate with CRMs or databases.",
+        "height": 432,
+        "width": 256,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        64,
+        0
+      ],
+      "typeVersion": 1,
+      "id": "32682588-8608-4f53-afba-2f336fcdbb26",
+      "name": "Sticky Note6"
+    }
+  ],
+  "pinData": {
+    "Webhook": [
+      {
+        "json": {
+          "headers": {
+            "host": "n8n.your_brand.com.mx",
+            "user-agent": "curl/8.5.0",
+            "content-length": "98",
+            "accept": "*/*",
+            "accept-encoding": "gzip, br",
+            "cdn-loop": "cloudflare; loops=1",
+            "cf-connecting-ip": "2806:261:3480:17c5:dd3e:3317:238a:2f88",
+            "cf-ipcountry": "MX",
+            "cf-ray": "9d4a378c4d5c087e-DFW",
+            "cf-visitor": "{\"scheme\":\"https\"}",
+            "cf-warp-tag-id": "bbd113f8-8a5e-4ac0-93c6-0ecef8c4ebdf",
+            "connection": "keep-alive",
+            "content-type": "application/json",
+            "x-forwarded-for": "2806:261:3480:17c5:dd3e:3317:238a:2f88",
+            "x-forwarded-proto": "https"
+          },
+          "params": {},
+          "query": {},
+          "body": {
+            "name": "John Wick",
+            "budget": 85,
+            "company_size": 60,
+            "engagement_level": 90
+          },
+          "webhookUrl": "https://n8n.your_brand.com.mx/webhook-test/lead-score",
+          "executionMode": "test"
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request1": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "c0170923-0f48-4dcd-83e4-a1626097f658",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "your_instance_id"
+  },
+  "id": "your_credential_id",
+  "tags": []
+}

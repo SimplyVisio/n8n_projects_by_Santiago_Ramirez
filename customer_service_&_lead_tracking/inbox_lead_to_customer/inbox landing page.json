@@ -1,0 +1,1193 @@
+{
+  "name": "inbox landing page",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## 🌐 Omnichannel Entry: Web Landing Page\\n\\nThis workflow manages leads capturing from WordPress landing pages. It specializes in converting web form submissions into active CRM contacts and initiating an automated follow-up sequence via WhatsApp.\\n\\n### Key Features:\\n1. **Webhook Listener**: Receives structured data from web forms, including name, session info, and initial inquiry.\\n2. **Postgres CRM Integration**: Queries the database to identify returning users or creates new records for first-time visitors.\\n3. **AI-Powered Personalization**: Uses GPT-4o-mini to analyze the lead's intent and generate a tailored response.\\n4. **WhatsApp Sequence**: Automatically sends a templated WhatsApp message to the lead to initiate a direct conversation.\\n5. **Knowledge Base Retrieval**: Integrates with a RAG system (LightRAG) to provide accurate answers based on the brand's documentation.",
+        "height": 450,
+        "width": 320,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -200,
+        -100
+      ],
+      "typeVersion": 1,
+      "id": "your_brand-landing-inbox",
+      "name": "Architecture Documentation"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "your_webhook_path",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        -48
+      ],
+      "id": "your_webhook_id",
+      "name": "Webhook",
+      "webhookId": "your_webhook_id_2"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "3a23d346-5d24-4b0c-a229-c6ac10216c76",
+              "name": "nombre",
+              "value": "={{ $json.body.meta.sender.name }}",
+              "type": "string"
+            },
+            {
+              "id": "945beb09-c767-4ce1-a23a-338980128546",
+              "name": "source_id",
+              "value": "={{ $json.body.sessionId }}",
+              "type": "string"
+            },
+            {
+              "id": "574cb380-4491-4557-8313-cb80e80ed912",
+              "name": "mensaje",
+              "value": "={{ $json.body.message }}",
+              "type": "string"
+            },
+            {
+              "id": "c897ad3b-878f-4494-bccc-48d4bd929652",
+              "name": "fecha_LOCAL",
+              "value": "={{ DateTime.now().toLocal() }}",
+              "type": "string"
+            },
+            {
+              "id": "a2a1a8cf-5e6c-4d61-8bbd-8b8cfe761a9e",
+              "name": "fecha_UTC",
+              "value": "={{ $json.body.timestamp.toDateTime('s').toUTC() }}",
+              "type": "string"
+            },
+            {
+              "id": "70924f60-ac97-4f13-b473-d9b5f6aa08c3",
+              "name": "conversation_id",
+              "value": "={{ $json.body.messages[0].conversation_id }}",
+              "type": "number"
+            },
+            {
+              "id": "ffbefb99-b234-485f-b75d-ad2306e31aaf",
+              "name": "account_id",
+              "value": "={{ $json.body.messages[0].account_id }}",
+              "type": "number"
+            },
+            {
+              "id": "308eeaf3-db90-4b1e-a984-0048c6931c56",
+              "name": "private",
+              "value": "={{ $json.body.messages[0].private }}",
+              "type": "boolean"
+            },
+            {
+              "id": "38400048-bcff-4bce-8009-eb5747450764",
+              "name": "content_type",
+              "value": "={{ $json.body.messages[0].content_type }}",
+              "type": "string"
+            },
+            {
+              "id": "5258220e-c9b8-49b5-8fe7-905a4054d907",
+              "name": "content_attributes",
+              "value": "={{ $json.body.messages[0].content_attributes }}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        224,
+        -48
+      ],
+      "id": "2d24815c-9cfe-4a50-bb4a-f0dd4c8f3228",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT *\nFROM leads_formularios_optimizada\nWHERE \n  source_id_web = '{{ $json.source_id }}'\nORDER BY created_at DESC\nLIMIT 1;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        448,
+        -48
+      ],
+      "id": "c676c5ef-2fec-4a8d-b13c-d6f6bdcd50c4",
+      "name": "Execute a SQL query",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "your_postgres_credential_id",
+          "name": "Postgres account 2"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4o-mini"
+        },
+        "builtInTools": {},
+        "options": {
+          "textFormat": {
+            "textOptions": {
+              "type": "json_object"
+            }
+          },
+          "temperature": 0.1
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        1792,
+        80
+      ],
+      "id": "a58ff50f-446a-43e6-a67c-d0b6f55b5881",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "your_openai_credential_id",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Execute a SQL query').item.json.client_id ?? $('Edit Fields2').item.json.source_id }}",
+        "tableName": "conversaciones"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+      "typeVersion": 1.3,
+      "position": [
+        1920,
+        80
+      ],
+      "id": "ee23fe5c-9b75-4f4e-a1b1-2cdc011ecc8b",
+      "name": "Postgres Chat Memory",
+      "credentials": {
+        "postgres": {
+          "id": "your_postgres_credential_id",
+          "name": "Postgres account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "push",
+        "list": "={{ $('Edit Fields').item.json.source_id }}",
+        "messageData": "={{ JSON.stringify(\n{\n'message': $('Edit Fields').item.json.mensaje ,\n'sessionId': $('Edit Fields').item.json.source_id, \n'date_time': $('Edit Fields').item.json.fecha_LOCAL \n}\n) }}",
+        "tail": true
+      },
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        672,
+        -48
+      ],
+      "id": "f0f5e247-4fd9-4c38-9498-422ca2301cba",
+      "name": "buffer",
+      "credentials": {
+        "redis": {
+          "id": "your_redis_credential_id",
+          "name": "n8n_redis"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "propertyName": "message",
+        "key": "={{ $('Edit Fields').item.json.source_id }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        896,
+        -48
+      ],
+      "id": "605165be-b88d-4160-a653-fd1e0649e5bc",
+      "name": "get_buffer_data",
+      "credentials": {
+        "redis": {
+          "id": "your_redis_credential_id",
+          "name": "n8n_redis"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ JSON.parse($json.message.last()).sessionId }}",
+                    "rightValue": "={{ $('Edit Fields').item.json.source_id }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "notEquals"
+                    },
+                    "id": "a476894f-bb93-4167-aad2-4b63f275e969"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Ignorar"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "340f7c66-134b-4b22-9d7b-2326d886aa76",
+                    "leftValue": "={{ JSON.parse($json.message.last()).date_time}}",
+                    "rightValue": "={{ $now.minus(5,'seconds').toLocal() }}",
+                    "operator": {
+                      "type": "dateTime",
+                      "operation": "before"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Continuar"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra",
+          "renameFallbackOutput": "Esperar"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        1120,
+        -160
+      ],
+      "id": "66ff603d-ecdb-4c71-946a-983013d0e173",
+      "name": "Switch"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1344,
+        48
+      ],
+      "id": "cb1cdb6b-f46f-4a12-af2c-5abd244dfecc",
+      "name": "Wait",
+      "webhookId": "your_webhook_id_3"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1344,
+        -336
+      ],
+      "id": "44162526-60a7-47d9-b706-894861f5758f",
+      "name": "No Operation, do nothing"
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "key": "={{ $('Edit Fields').item.json.source_id }}"
+      },
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        1344,
+        -144
+      ],
+      "id": "ce97b48d-0cb4-4f09-be94-0c9bcd917364",
+      "name": "Delete_buffer",
+      "credentials": {
+        "redis": {
+          "id": "your_redis_credential_id",
+          "name": "n8n_redis"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "de2ee357-32a4-4717-8618-f281f4b54299",
+              "name": "concat_message",
+              "value": "={{ $json.message.map(m=> JSON.parse(m).message).join('\\n') }}",
+              "type": "string"
+            },
+            {
+              "id": "8e5fec61-09c9-4a4a-a336-b6977ef6c993",
+              "name": "source_id",
+              "value": "={{ $('Edit Fields').item.json.source_id }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1568,
+        -144
+      ],
+      "id": "5309b9bb-6795-4686-8eea-e094801793dc",
+      "name": "Edit Fields2"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://your_lightrag_domain_service/query",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "accept",
+              "value": "application/json"
+            },
+            {
+              "name": "X-API-Key",
+              "value": "your_lightrag_api_key"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "query",
+              "value": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('parameters0_Value', ``, 'string') }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.2,
+      "position": [
+        2048,
+        80
+      ],
+      "id": "1f692162-fc96-4bb4-9579-ebed04d81ef8",
+      "name": "database"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ====================================\n// NORMALIZADOR PARA N8N - your_brand\n// Normaliza: nombre, número de WhatsApp con código de país\n// Soporta TODOS los formatos posibles de output del agente\n// ====================================\n\nconst agentOutput = $input.first().json.output;\n\n// ====================================\n// FUNCIONES DE NORMALIZACIÓN\n// ====================================\n\n/**\n * Normaliza nombre: sin acentos, sin espacios, minúsculas\n */\nfunction normalizarNombre(nombre) {\n  if (!nombre || nombre === \"null\" || nombre.trim() === \"\") return \"\";\n  return nombre\n    .normalize('NFD')\n    .replace(/[\\u0300-\\u036f]/g, '') // Quita acentos\n    .replace(/[^a-zA-ZñÑ\\s]/g, '') // Solo letras y ñ\n    .toLowerCase()\n    .trim()\n    .replace(/\\s+/g, ''); // Elimina espacios\n}\n\n/**\n * Normaliza teléfono: agrega código de país según el país y evita duplicados\n */\nfunction normalizarTelefono(telefono, pais) {\n  if (!telefono || telefono === \"null\" || telefono.trim() === \"\") return \"\";\n  \n  // Limpiar número (solo dígitos y +)\n  let numeroLimpio = telefono.replace(/[^\\d+]/g, '');\n  \n  // Normalizar país\n  const paisNormalizado = (pais || '').toLowerCase().trim();\n  \n  // Códigos de país\n  const codigosPais = {\n    'méxico': '52', 'mexico': '52',\n    'colombia': '57', \n    'españa': '34', 'spain': '34',\n    'argentina': '54', \n    'chile': '56', \n    'perú': '51', 'peru': '51',\n    'venezuela': '58', \n    'ecuador': '593', \n    'guatemala': '502',\n    'costa rica': '506', \n    'panamá': '507', 'panama': '507',\n    'brasil': '55', 'brazil': '55',\n    'estados unidos': '1', 'usa': '1', 'united states': '1',\n    'canadá': '1', 'canada': '1',\n    'república dominicana': '1809', \n    'puerto rico': '1787',\n    'el salvador': '503', \n    'honduras': '504', \n    'nicaragua': '505',\n    'bolivia': '591', \n    'paraguay': '595', \n    'uruguay': '598', \n    'cuba': '53'\n  };\n  \n  // Obtener código de país esperado\n  const codigoPais = codigosPais[paisNormalizado];\n  \n  // Si ya empieza con +, verificar que no esté duplicado\n  if (numeroLimpio.startsWith('+')) {\n    return numeroLimpio;\n  }\n  \n  // Si el número ya empieza con el código de país (sin +)\n  if (codigoPais && numeroLimpio.startsWith(codigoPais)) {\n    return '+' + numeroLimpio;\n  }\n  \n  // Caso especial para México: remover el \"1\" extra después del código\n  if ((paisNormalizado === 'méxico' || paisNormalizado === 'mexico')) {\n    // Si empieza con 521 y tiene 13 dígitos total (521 + 10 dígitos)\n    if (numeroLimpio.startsWith('521') && numeroLimpio.length === 13) {\n      return '+52' + numeroLimpio.substring(3);\n    }\n    // Si empieza con 52 y tiene 12 dígitos\n    if (numeroLimpio.startsWith('52') && numeroLimpio.length === 12) {\n      return '+' + numeroLimpio;\n    }\n    // Si empieza con 1 y tiene 11 dígitos (1 + 10 dígitos)\n    if (numeroLimpio.startsWith('1') && numeroLimpio.length === 11) {\n      return '+52' + numeroLimpio.substring(1);\n    }\n    // Si tiene 10 dígitos exactos\n    if (numeroLimpio.length === 10) {\n      return '+52' + numeroLimpio;\n    }\n  }\n  \n  // Para otros países, agregar código si existe\n  if (codigoPais) {\n    return '+' + codigoPais + numeroLimpio;\n  }\n  \n  return numeroLimpio;\n}\n\n/**\n * Extrae JSON del output del agente con múltiples estrategias\n * ULTRA MEJORADO: Maneja TODOS los formatos posibles incluyendo JSON incompleto\n */\nfunction extraerJSON(output) {\n  if (!output) return null;\n  \n  let texto = output.trim();\n  \n  // ========================================\n  // ESTRATEGIA 1: Buscar el JSON entre llaves\n  // ========================================\n  const inicioJSON = texto.indexOf('{');\n  const finJSON = texto.lastIndexOf('}');\n  \n  if (inicioJSON !== -1 && finJSON !== -1 && finJSON > inicioJSON) {\n    // Extraer solo la parte del JSON (desde { hasta })\n    texto = texto.substring(inicioJSON, finJSON + 1);\n  }\n  \n  // ========================================\n  // ESTRATEGIA 2: Limpiar prefijos comunes\n  // ========================================\n  \n  // Eliminar backticks de markdown\n  texto = texto.replace(/^```json\\s*/i, '');\n  texto = texto.replace(/^```\\s*/, '');\n  texto = texto.replace(/\\s*```$/g, '');\n  \n  // Eliminar \"json\" o \"json\\n\" al inicio\n  texto = texto.replace(/^json[\\s\\n]*/i, '');\n  \n  // ========================================\n  // ESTRATEGIA 3: Limpiar texto después del JSON\n  // ========================================\n  \n  // Si hay texto después de la última llave de cierre, cortarlo\n  const ultimaLlave = texto.lastIndexOf('}');\n  if (ultimaLlave !== -1 && ultimaLlave < texto.length - 1) {\n    texto = texto.substring(0, ultimaLlave + 1);\n  }\n  \n  // ========================================\n  // ESTRATEGIA 4: Manejo de strings escapados\n  // ========================================\n  \n  // Si el string completo está envuelto en comillas\n  if (texto.startsWith('\"') && texto.endsWith('\"')) {\n    try {\n      texto = JSON.parse(texto);\n    } catch (e) {\n      texto = texto.slice(1, -1);\n    }\n  }\n  \n  // ========================================\n  // ESTRATEGIA 5: Intentar parsear\n  // ========================================\n  \n  try {\n    return JSON.parse(texto);\n  } catch (error) {\n    // Si falla el parseo, intentar reparar el JSON\n    return repararJSON(texto);\n  }\n}\n\n/**\n * Intenta reparar un JSON malformado\n */\nfunction repararJSON(textoJSON) {\n  try {\n    // Intentar agregar llaves faltantes\n    let reparado = textoJSON.trim();\n    \n    // Contar llaves de apertura y cierre\n    const aperturas = (reparado.match(/{/g) || []).length;\n    const cierres = (reparado.match(/}/g) || []).length;\n    \n    // Si faltan llaves de cierre, agregarlas\n    if (aperturas > cierres) {\n      const faltantes = aperturas - cierres;\n      reparado += '}'.repeat(faltantes);\n    }\n    \n    // Intentar parsear de nuevo\n    return JSON.parse(reparado);\n  } catch (error) {\n    // Si aún falla, retornar null para usar valores por defecto\n    return null;\n  }\n}\n\n/**\n * Valida y extrae campos del JSON parseado\n */\nfunction extraerCampos(jsonData) {\n  if (!jsonData || typeof jsonData !== 'object') {\n    return {\n      nombre: null,\n      numero_de_whatsapp: null,\n      pais: null,\n      respuesta_al_cliente: \"\",\n      enviar_plantilla: null\n    };\n  }\n  \n  return {\n    nombre: jsonData.nombre || null,\n    numero_de_whatsapp: jsonData.numero_de_whatsapp || null,\n    pais: jsonData.pais || null,\n    respuesta_al_cliente: jsonData.respuesta_al_cliente || \"\",\n    enviar_plantilla: jsonData.enviar_plantilla || null\n  };\n}\n\n// ====================================\n// PROCESAMIENTO PRINCIPAL\n// ====================================\n\ntry {\n    // Intentar extraer y parsear el JSON con múltiples estrategias\n    const jsonData = extraerJSON(agentOutput);\n    \n    // Extraer campos con valores por defecto si no existen\n    const campos = extraerCampos(jsonData);\n    \n    // Normalizar datos\n    const nombreNormalizado = normalizarNombre(campos.nombre);\n    const whatsappNormalizado = normalizarTelefono(campos.numero_de_whatsapp, campos.pais);\n    \n    // Crear el item en el formato que n8n espera\n    const newItem = {\n        json: {\n            // ===== CAMPOS ORIGINALES =====\n            nombre: campos.nombre,\n            numero_de_whatsapp: campos.numero_de_whatsapp,\n            pais: campos.pais,\n            respuesta_al_cliente: campos.respuesta_al_cliente,\n            enviar_plantilla: campos.enviar_plantilla,\n            \n            // ===== CAMPOS NORMALIZADOS =====\n            nombre_normalizado: nombreNormalizado,\n            whatsapp_normalizado: whatsappNormalizado,\n            \n            // ===== METADATOS =====\n            procesado_correctamente: true,\n            json_reparado: jsonData === null ? true : false,\n            timestamp_procesamiento: new Date().toISOString()\n        }\n    };\n    \n    // Retornar como array - FORMATO CORRECTO PARA N8N\n    return [newItem];\n    \n} catch (error) {\n    // ÚLTIMO RECURSO: Intentar extraer la respuesta al cliente del texto plano\n    let respuestaExtraida = \"\";\n    \n    try {\n      // Buscar el campo respuesta_al_cliente en el texto\n      const match = agentOutput.match(/\"respuesta_al_cliente\"\\s*:\\s*\"([^\"]+)\"/);\n      if (match && match[1]) {\n        respuestaExtraida = match[1]\n          .replace(/\\\\n/g, '\\n')\n          .replace(/\\\\\"/g, '\"')\n          .replace(/\\\\\\\\/g, '\\\\');\n      }\n    } catch (e) {\n      respuestaExtraida = \"Error procesando la respuesta del agente\";\n    }\n    \n    // En caso de error total, retornar un item de error con más información\n    const errorItem = {\n        json: {\n            nombre: null,\n            numero_de_whatsapp: null,\n            pais: null,\n            respuesta_al_cliente: respuestaExtraida || \"Error procesando la respuesta del agente\",\n            enviar_plantilla: null,\n            nombre_normalizado: \"\",\n            whatsapp_normalizado: \"\",\n            procesado_correctamente: false,\n            json_reparado: false,\n            error_detalle: error.message,\n            output_recibido: agentOutput ? agentOutput.substring(0, 500) : \"vacío\",\n            output_completo_length: agentOutput ? agentOutput.length : 0,\n            timestamp_procesamiento: new Date().toISOString()\n        }\n    };\n    \n    return [errorItem];\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2256,
+        -144
+      ],
+      "id": "19e67365-7dc5-4af0-a7d1-4b21171aecc8",
+      "name": "parsear output a json"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cfce60a5-7de7-487a-9d67-ce3a7be3e293",
+              "leftValue": "={{ $('parsear output a json').item.json.enviar_plantilla }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        2912,
+        -144
+      ],
+      "id": "6751c6ae-9fec-47ca-a996-3d5db7383264",
+      "name": "Filter"
+    },
+    {
+      "parameters": {
+        "phoneNumberId": "your_whatsapp_phone_number_id",
+        "recipientPhoneNumber": "={{ $('parsear output a json').item.json.whatsapp_normalizado }}",
+        "template": "lead_landing_agente|es_MX",
+        "components": {
+          "component": [
+            {
+              "bodyParameters": {
+                "parameter": [
+                  {
+                    "text": "={{ $('parsear output a json').item.json.nombre }}"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        4032,
+        -144
+      ],
+      "id": "44f726db-f67e-42a9-9ec3-a95a3dc772cc",
+      "name": "Send template",
+      "webhookId": "your_webhook_id_4",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "your_whatsapp_credential_id",
+          "name": "WhatsApp account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO conversaciones (\n    session_id,\n    message,\n    etiqueta,\n    clasificacion_cita,\n    fecha\n)\nVALUES (\n    '{{ $('extraer registro nuevo').item.json.client_id }}',\n    jsonb_build_object(\n        'type', 'ai',\n        'content', jsonb_pretty(json_build_object(\n            'respuesta', 'your_brand\nHola {{ $('parsear output a json').item.json.nombre }}, soy el agente de your_brand',\n            'escalamiento', null,\n            'enviar_formulario', null,\n            'estado', null\n        )::jsonb),\n        'tool_calls', '[]'::jsonb,\n        'additional_kwargs', '{}'::jsonb,\n        'response_metadata', '{}'::jsonb,\n        'invalid_tool_calls', '[]'::jsonb\n    ),\n    'ventas',\n    'asesoria_de_ventas',\n    '{{ $('Edit Fields').item.json.fecha_UTC }}'::timestamptz\n);",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        4480,
+        -144
+      ],
+      "id": "cd64ce41-5a11-48f4-b45f-9fdf2d27b4d0",
+      "name": "actualizar memoria agente6",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "your_postgres_credential_id",
+          "name": "Postgres account 2"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE conversaciones \nSET session_id = '{{ $('extraer registro nuevo').item.json.client_id }}'\nWHERE session_id = '{{ $('Edit Fields').item.json.source_id }}';",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        4256,
+        -144
+      ],
+      "id": "d2415357-f9fe-4a99-8b33-28fdc4aa3c8a",
+      "name": "actualizar session_id memoria de chat2",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "your_postgres_credential_id",
+          "name": "Postgres account 2"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "leads_formularios_optimizada",
+        "returnAll": true,
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "nombre_normalizado",
+              "condition": "eq",
+              "keyValue": "={{ $('parsear output a json').item.json.nombre }}"
+            },
+            {
+              "keyName": "telefono",
+              "condition": "eq",
+              "keyValue": "={{ $('parsear output a json').item.json.whatsapp_normalizado }}"
+            },
+            {
+              "keyName": "whatsapp",
+              "condition": "eq",
+              "keyValue": "={{ $('parsear output a json').item.json.whatsapp_normalizado }}"
+            },
+            {
+              "keyName": "nombre",
+              "condition": "eq",
+              "keyValue": "={{ $('parsear output a json').item.json.nombre }}"
+            },
+            {
+              "keyName": "source_id_web",
+              "condition": "eq",
+              "keyValue": "={{ $('Edit Fields').item.json.source_id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        3808,
+        -144
+      ],
+      "id": "18aa9d3b-17d1-4da3-962f-155190aa5c63",
+      "name": "extraer registro nuevo",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "your_supabase_credential_id",
+          "name": "Supabase account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://your_chatwoot_domain.com/api/v1/accounts/{{ $('Edit Fields').item.json.account_id }}/conversations/{{ $('Edit Fields').item.json.conversation_id }}/labels",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "labels",
+              "value": "={{ Array('nuevo_lead') }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        4704,
+        -144
+      ],
+      "id": "798ade50-668c-44e0-98a7-39e2262b7b3b",
+      "name": "etiqueta nuevo lead",
+      "alwaysOutputData": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "your_chatwoot_credential_id",
+          "name": "chatwoot"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "leads_formularios_optimizada",
+        "returnAll": true,
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "nombre_normalizado",
+              "condition": "eq",
+              "keyValue": "={{ $('parsear output a json').item.json.nombre }}"
+            },
+            {
+              "keyName": "telefono",
+              "condition": "eq",
+              "keyValue": "={{ $('parsear output a json').item.json.whatsapp_normalizado }}"
+            },
+            {
+              "keyName": "whatsapp",
+              "condition": "eq",
+              "keyValue": "={{ $('parsear output a json').item.json.whatsapp_normalizado }}"
+            },
+            {
+              "keyName": "nombre",
+              "condition": "eq",
+              "keyValue": "={{ $('parsear output a json').item.json.nombre }}"
+            },
+            {
+              "keyName": "source_id_web",
+              "condition": "eq",
+              "keyValue": "={{ $('Edit Fields').item.json.source_id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        3136,
+        -144
+      ],
+      "id": "8f233fc5-a269-4692-9d78-c25333913923",
+      "name": "extraer registro si existe",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "your_supabase_credential_id",
+          "name": "Supabase account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "2829c50c-ed09-47cd-a59b-a43e93f72c2c",
+              "leftValue": "={{ $('extraer registro si existe').item.json.client_id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        3360,
+        -144
+      ],
+      "id": "babbc296-5f1e-4b02-973b-4028b5c27320",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "leads_formularios_optimizada",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "client_id",
+              "condition": "eq",
+              "keyValue": "={{ $('extraer registro si existe').item.json.client_id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "source_id_web",
+              "fieldValue": "={{ $('Edit Fields').item.json.source_id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        3584,
+        -240
+      ],
+      "id": "50eaf9e1-1992-47e3-af00-27bc7bd51b4a",
+      "name": "actualizar_lead",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "your_supabase_credential_id",
+          "name": "Supabase account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "tableId": "leads_formularios_optimizada",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "nombre",
+              "fieldValue": "={{ $('parsear output a json').item.json.nombre }}"
+            },
+            {
+              "fieldId": "estado_lead",
+              "fieldValue": "=Lead contactado"
+            },
+            {
+              "fieldId": "telefono",
+              "fieldValue": "={{ $('parsear output a json').item.json.whatsapp_normalizado }}"
+            },
+            {
+              "fieldId": "pais",
+              "fieldValue": "={{ $('parsear output a json').item.json.pais }}"
+            },
+            {
+              "fieldId": "nombre_normalizado",
+              "fieldValue": "={{ $('parsear output a json').item.json.nombre_normalizado }}"
+            },
+            {
+              "fieldId": "fuente",
+              "fieldValue": "WordPress"
+            },
+            {
+              "fieldId": "url_origen",
+              "fieldValue": "https://your_brand.com.mx/landing-page/"
+            },
+            {
+              "fieldId": "nombre_pagina",
+              "fieldValue": "www.your_brand.com.mx"
+            },
+            {
+              "fieldId": "source_id_web",
+              "fieldValue": "={{ $('Edit Fields').item.json.source_id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        3584,
+        -48
+      ],
+      "id": "7824c271-ca57-405d-bb09-ddda41cab7fd",
+      "name": "crear_lead",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "your_supabase_credential_id",
+          "name": "Supabase account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.concat_message }}",
+        "options": {
+          "systemMessage": "=Prompt para Agente de Chat - your_brand\nEres el asistente virtual de your_brand, una agencia líder en inteligencia artificial y desarrollo tecnológico. Tu misión es dar la bienvenida a los visitantes de nuestra página web, responder preguntas generales sobre nuestros servicios y capturar leads calificados.\nINFORMACIÓN BÁSICA DE LA AGENCIA\nHorario de atención: Lunes a viernes de 9:00 AM a 5:00 PM (Hora de México, GMT-6)\nServicios principales:\n\nInteligencia Artificial (Chatbots, automatización, atención 24/7)\nDesarrollo Web & Apps (Sitios web, e-commerce, apps móviles)\nConsultoría Digital (Transformación digital, estrategia omnicanal)\n\nTU FUNCIÓN\nObjetivo principal: Generar interés en nuestros servicios y capturar la información de contacto (nombre, WhatsApp, país) de visitantes interesados.\nTono: Profesional pero amigable, cercano y orientado a ayudar. Usa un lenguaje claro y directo.\nPROTOCOLO DE CONVERSACIÓN\n1. SALUDO INICIAL\n\nDa la bienvenida cordial a your_brand\nPreséntate brevemente como asistente virtual\nOfrece ayuda para conocer nuestros servicios\n\n2. RESPUESTAS A CONSULTAS\n\nResponde preguntas generales sobre servicios de forma concisa\nUsa la herramienta 'database' con el parámetro 'query' para consultar información específica sobre:\n\nDetalles de servicios\nCasos de uso\nResultados típicos\nPrecios o paquetes (si están en la base de datos)\nHorarios y disponibilidad\n\n\nNO des respuestas excesivamente técnicas; mantén un nivel general que genere interés\n\n3. DETECCIÓN DE INTENCIÓN DE COMPRA/CONTACTO\nIdentifica cuando el usuario muestra interés en:\n\nContratar algún servicio\nSolicitar más información detallada\nAgendar una consultoría gratuita\nObtener una cotización\nHablar con un asesor especializado\nResolver dudas específicas sobre implementación\n\nCuando detectes esta intención:\n\nMenciona que con gusto un asesor especializado lo contactará por WhatsApp\nSolicita amablemente: nombre completo, número de WhatsApp (sin código de país) y país\nIMPORTANTE: Confirma que el número esté asociado a una cuenta de WhatsApp activa\nConfirma los datos antes de generar el JSON\n\n4. CAPTURA DE DATOS\nCampos obligatorios:\n\nnombre: Nombre completo del cliente\nnumero_de_whatsapp: Número de teléfono SIN código de país (ejemplo: 5551234567). DEBE estar asociado a una cuenta de WhatsApp activa\npais: País desde donde se comunica (se usará para normalizar el número posteriormente)\nrespuesta_al_cliente: Tu mensaje de respuesta al cliente en ese momento de la conversación\nenviar_plantilla: true cuando tengas todos los datos obligatorios y el cliente haya mostrado intención de contacto, false o null en caso contrario\n\nReglas importantes:\n\nSi el usuario NO proporciona información o NO muestra intención de contacto: todos los campos deben ser null\nSi el usuario proporciona datos parciales: llena solo los campos que tengas y deja null en los faltantes\nNO generes el JSON hasta tener LOS 3 DATOS OBLIGATORIOS completos (nombre, WhatsApp, país)\nPregunta explícitamente si el número está asociado a WhatsApp antes de capturarlo\nEl campo respuesta_al_cliente siempre debe contener tu respuesta actual, incluso si otros campos son null\n\n⚠️ FORMATO DE RESPUESTA OBLIGATORIO ⚠️\nCRÍTICO: Debes SIEMPRE responder ÚNICAMENTE con un objeto JSON válido en texto plano. NO incluyas markdown, NO uses bloques de código con backticks (```), NO agregues texto adicional antes o después del JSON.\nFORMATO CORRECTO (SOLO ESTO):\n{\"nombre\": null, \"numero_de_whatsapp\": null, \"pais\": null, \"respuesta_al_cliente\": \"Tu mensaje aquí\", \"enviar_plantilla\": null}\n❌ FORMATOS INCORRECTOS (NUNCA HAGAS ESTO):\njson{\"nombre\": null, ...}\nO esto:\nAquí está la respuesta: {\"nombre\": null, ...}\nO esto:\n{\"nombre\": null, ...}\nEspero que te ayude.\nTODA tu respuesta debe ser ÚNICAMENTE el JSON en una sola línea, sin formato markdown, sin bloques de código, sin texto adicional.\nEJEMPLOS DE RESPUESTAS VÁLIDAS\nUsuario sin intención de contacto (solo preguntando):\n{\"nombre\": null, \"numero_de_whatsapp\": null, \"pais\": null, \"respuesta_al_cliente\": \"¡Claro! Nuestros servicios de Inteligencia Artificial incluyen desarrollo de chatbots personalizados, automatización de procesos y atención al cliente 24/7. Es ideal para negocios que buscan optimizar sus operaciones y mejorar la experiencia de sus clientes. ¿Te gustaría conocer más detalles sobre algún servicio en particular?\", \"enviar_plantilla\": null}\nUsuario proporcionando datos parciales:\n{\"nombre\": \"Juan Pérez\", \"numero_de_whatsapp\": null, \"pais\": null, \"respuesta_al_cliente\": \"Perfecto, Juan. Para que uno de nuestros asesores te contacte por WhatsApp, ¿me podrías compartir tu número de WhatsApp y desde qué país nos escribes?\", \"enviar_plantilla\": null}\nUsuario con datos completos e intención:\n{\"nombre\": \"your_client_name\", \"numero_de_whatsapp\": \"5551234567\", \"pais\": \"México\", \"respuesta_al_cliente\": \"¡Perfecto, Juan! Enseguida uno de nuestros asesores especializados se comunicará contigo por WhatsApp al 55 5123 4567. Estamos emocionados de ayudarte a transformar tu negocio con nuestras soluciones de IA. ¡Hasta pronto! 🚀\", \"enviar_plantilla\": true}\nINSTRUCCIONES IMPORTANTES\n❌ NO HAGAS:\n\nNo solicites datos si el usuario solo está explorando\nNo presiones para obtener información\nNo des cotizaciones específicas sin consultar la base de datos\nNo prometas descuentos o beneficios no autorizados\nNo generes el JSON hasta tener los 3 datos obligatorios\nNo aceptes números que el usuario indique que NO están en WhatsApp\nNO uses bloques de código markdown (json o )\nNO agregues texto antes o después del JSON\nNO formatees el JSON con saltos de línea o indentación\n\n✅ SÍ HAGAS:\n\nGenera interés genuino en nuestros servicios\nDestaca beneficios y resultados típicos\nUsa la herramienta database cuando necesites información específica\nSé empático y resuelve dudas generales\nConfirma que el número esté en WhatsApp antes de capturarlo\nSolicita el número SIN código de país (el sistema lo normalizará según el país)\nConfirma los datos antes de generar el JSON con enviar_plantilla: true\nSIEMPRE responde con JSON en texto plano en una sola línea\nSiempre incluye tu respuesta en el campo respuesta_al_cliente\nDespídete cordialmente después de capturar los datos completos\n\nVALIDACIÓN DE WHATSAPP\nCuando solicites el número, usa frases como:\n\n\"¿Cuál es tu número de WhatsApp para que te contactemos?\"\n\"Compárteme tu número de WhatsApp (asegúrate de que sea una cuenta activa de WhatsApp)\"\n\"¿A qué número de WhatsApp te podemos escribir?\"\n\nSi el usuario menciona que el número NO está en WhatsApp, solicita uno diferente que sí lo esté.\nRECORDATORIO FINAL\nREGLA ABSOLUTA: Tu respuesta completa debe ser SOLO el objeto JSON en texto plano, sin ningún formato adicional, sin backticks, sin markdown, sin texto antes o después. El JSON debe estar en una sola línea.\nEjemplo de lo que debes enviar exactamente:\n{\"nombre\": null, \"numero_de_whatsapp\": null, \"pais\": null, \"respuesta_al_cliente\": \"¡Hola! Bienvenido a your_brand. Somos una agencia especializada en inteligencia artificial y desarrollo tecnológico. ¿En qué puedo ayudarte hoy?\", \"enviar_plantilla\": null}\nRecuerda: Tu objetivo es ser la primera impresión positiva de your_brand. Sé útil, profesional y orientado a generar leads de calidad. SIEMPRE responde únicamente con JSON en texto plano."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        1856,
+        -144
+      ],
+      "id": "52044b4b-1402-476f-8c28-883fe028966e",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"text\": \"{{ $json.respuesta_al_cliente }}\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        2464,
+        -144
+      ],
+      "id": "2c4bb9c1-0968-449b-b39e-52e65a0f3967",
+      "name": "Respond to Webhook"
+    }
+  ],
+  "pinData": {
+    "Webhook": [
+      {
+        "json": {
+          "headers": {
+            "host": "your_n8n_domain_service",
+            "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36",
+            "content-length": "164",
+            "accept": "*/*",
+            "accept-encoding": "gzip, deflate, br, zstd",
+            "accept-language": "es-ES,es;q=0.9",
+            "content-type": "application/json",
+            "origin": "https://your_brand.com.mx",
+            "priority": "u=1, i",
+            "referer": "https://your_brand.com.mx/",
+            "sec-ch-ua": "\"Google Chrome\";v=\"143\", \"Chromium\";v=\"143\", \"Not A(Brand\";v=\"24\"",
+            "sec-ch-ua-mobile": "?0",
+            "sec-ch-ua-platform": "\"Windows\"",
+            "sec-fetch-dest": "empty",
+            "sec-fetch-mode": "cors",
+            "sec-fetch-site": "cross-site",
+            "x-forwarded-for": "your_ip_address",
+            "x-forwarded-host": "your_n8n_domain_service",
+            "x-forwarded-port": "443",
+            "x-forwarded-proto": "https",
+            "x-forwarded-server": "3fd501c40f83",
+            "x-real-ip": "your_ip_address"
+          },
+          "params": {},
+          "query": {},
+          "body": {
+            "sessionId": "sess_gj1lb1ljz_1765616349915",
+            "message": "si sobre agentes de voz para llamadas",
+            "sidebar": "your_brand_landing",
+            "timestamp": "2025-12-14T04:46:09.165Z"
+          },
+          "webhookUrl": "https://your_n8n_domain_service/webhook/f2106973-5372-49fa-a82b-4bfc9b83bdec",
+          "executionMode": "production"
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Execute a SQL query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute a SQL query": {
+      "main": [
+        [
+          {
+            "node": "buffer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres Chat Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "buffer": {
+      "main": [
+        [
+          {
+            "node": "get_buffer_data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get_buffer_data": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "No Operation, do nothing",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Delete_buffer",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "get_buffer_data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete_buffer": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields2": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "database": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "parsear output a json": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter": {
+      "main": [
+        [
+          {
+            "node": "extraer registro si existe",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send template": {
+      "main": [
+        [
+          {
+            "node": "actualizar session_id memoria de chat2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "actualizar memoria agente6": {
+      "main": [
+        [
+          {
+            "node": "etiqueta nuevo lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "extraer registro nuevo": {
+      "main": [
+        [
+          {
+            "node": "Send template",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "actualizar session_id memoria de chat2": {
+      "main": [
+        [
+          {
+            "node": "actualizar memoria agente6",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "etiqueta nuevo lead": {
+      "main": [
+        []
+      ]
+    },
+    "extraer registro si existe": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "actualizar_lead",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "crear_lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "actualizar_lead": {
+      "main": [
+        [
+          {
+            "node": "extraer registro nuevo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "crear_lead": {
+      "main": [
+        [
+          {
+            "node": "extraer registro nuevo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "parsear output a json",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respond to Webhook": {
+      "main": [
+        [
+          {
+            "node": "Filter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Mexico_City",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "versionId": "04a70ad2-828a-4c0e-a82b-61ebd755fa51",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "your_instance_id"
+  },
+  "id": "your_credential_id",
+  "tags": []
+}

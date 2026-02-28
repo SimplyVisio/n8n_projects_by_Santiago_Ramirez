@@ -1,0 +1,633 @@
+{
+  "name": "creador de VIDEOS redes sociales",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "Kinetic AI Video Engine (Sora 2)\n\nThis high-end workflow orchestrates the generation of cinematic video content using Sora 2. It translates abstract marketing goals into hyper-detailed visual prompts and manages the end-to-end rendering pipeline.\n\nOperational Pillars:\n1. Prompt Engineering: A specialized LLM node (re-mapped to production standards) converts business objectives into Sora-optimized visual descriptions.\n2. Storyboard Logic: Handles multi-shot sequences with precise duration control and frame-rate synchronization.\n3. Lifecycle Polling: Implements a robust wait-and-retry logic to handle high-latency video rendering tasks.\n4. Omnichannel Delivery: Syncs final binary files to cloud storage (Google Drive) and triggers a review cycle on messaging platforms.",
+        "height": 450,
+        "width": 320,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -2900,
+        200
+      ],
+      "typeVersion": 1,
+      "id": "doc-video-engine",
+      "name": "Video Generation Layer"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o",
+          "mode": "list",
+          "cachedResultName": "GPT-4o"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "={{ $json.openai_user_role }}"
+            },
+            {
+              "content": "={{ $json.openai_system_role }}",
+              "role": "system"
+            }
+          ]
+        },
+        "jsonOutput": true,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        -1920,
+        240
+      ],
+      "id": "040e9801-d785-4627-95a7-a80c0d0a0231",
+      "name": "generar_prompt"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.kie.ai/api/v1/jobs/recordInfo?taskId={{ $json.data.taskId }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{your_kie_ai_api_key}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -896,
+        320
+      ],
+      "id": "af2fac8b-a0fb-4ef3-b766-6d2eb19653f3",
+      "name": "GET VIDEO"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "f7cf0fa5-3835-4f1a-8faf-23f0c9e9383f",
+              "leftValue": "={{ $json.data.state }}",
+              "rightValue": "success",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -672,
+        240
+      ],
+      "id": "f6796444-f220-4acd-b0d9-1ccd22886dde",
+      "name": "SUCCESS"
+    },
+    {
+      "parameters": {
+        "amount": 10
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        -448,
+        416
+      ],
+      "id": "692bf735-539d-4fc8-aabd-89ad6b306c8",
+      "name": "ESPERAR",
+      "webhookId": "da4087e0-1b69-4216-a791-3043488a35e7"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parsea el JSON result\nconst response = items[0].json;\n\n// Extrae las URLs\nconst resultJson = JSON.parse(response.data.resultJson);\n\n// Video sin watermark (el bueno)\nconst videoUrl = resultJson.resultUrls[0];\n\n// Video con watermark (backup)\nconst watermarkUrl = resultJson.resultWaterMarkUrls[0];\n\nreturn [{\n  json: {\n    taskId: response.data.taskId,\n    videoUrl: videoUrl,\n    watermarkUrl: watermarkUrl,\n    state: response.data.state,\n    costTime: response.data.costTime,\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -448,
+        176
+      ],
+      "id": "33355590-327c-42af-9e4b-3c1731d31fd3",
+      "name": "EXTRAER URL VIDEO"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.videoUrl }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -224,
+        176
+      ],
+      "id": "8500cbfc-f069-449e-a62d-047bde953e81",
+      "name": "DESCARGAR"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "63e338cc-3aac-4fdb-9712-2bd6d1eb122f",
+              "name": "objetivo",
+              "value": "={{ $json.datos_video.objetivo }}",
+              "type": "string"
+            },
+            {
+              "id": "6629146e-e341-4db2-b42d-d4f31eee4a12",
+              "name": "url_imagen_1",
+              "value": "={{ $json.datos_video.url_1 }}",
+              "type": "string"
+            },
+            {
+              "id": "610050c6-236b-424e-8c38-32b60a580803",
+              "name": "url_imagen_2",
+              "value": "={{ $json.datos_video.url_2 }}",
+              "type": "string"
+            },
+            {
+              "id": "ee5317c0-e63c-4986-a8c4-ac4aadb3c40a",
+              "name": "url_imagen_3",
+              "value": "={{ $json.datos_video.url_3 }}",
+              "type": "string"
+            },
+            {
+              "id": "c4d91aae-c443-47b5-a477-2a36e1d8329a",
+              "name": "url_imagen_4",
+              "value": "={{ $json.datos_video.url_4 }}",
+              "type": "string"
+            },
+            {
+              "id": "5445c9d1-8935-40e0-add7-2cfdc1a233e4",
+              "name": "url_imagen_5",
+              "value": "={{ $json.datos_video.url_5 }}",
+              "type": "string"
+            },
+            {
+              "id": "3861edfc-6a37-46f2-ace3-62dc6e0819eb",
+              "name": "servicio",
+              "value": "={{ $json.datos_video.servicio_video }}",
+              "type": "string"
+            },
+            {
+              "id": "b5dc9b91-5a32-4096-8ba7-5d217941397c",
+              "name": "formato_de_imagen",
+              "value": "={{ $json.datos_video.formato_de_imagen_video }}",
+              "type": "string"
+            },
+            {
+              "id": "0cc46661-1af9-46ac-81f1-a9b687f4b863",
+              "name": "duracion",
+              "value": "={{ $json.datos_video.duracion_video }}",
+              "type": "string"
+            },
+            {
+              "id": "c13ab4dd-f4b1-429a-b02d-1cd642dc5a1c",
+              "name": "modelo",
+              "value": "={{ $json.datos_video.modelo }}",
+              "type": "string"
+            },
+            {
+              "id": "97e79ec8-714f-460c-913c-b947b18ba11b",
+              "name": "url_logo",
+              "value": "={{ $json.datos_video.url_logo }}",
+              "type": "string"
+            },
+            {
+              "id": "0b4c6e3f-bf86-44f4-b160-8217a7d3a228",
+              "name": "descripcion_imagenes",
+              "value": "={{ $json.datos_video.descripcion_imagenes_video }}",
+              "type": "string"
+            },
+            {
+              "id": "6a4567a8-9ade-4876-85c7-7e8f5ad3b72f",
+              "name": "idioma",
+              "value": "es-MX",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -2368,
+        320
+      ],
+      "id": "edb3acb9-a882-4ac4-abe5-626b4aad8d2a",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "jsCode": "// --- INPUT DEL NODO CODE ---\n// items[0].json contiene algo como:\n//\n// {\n//   \"objetivo\": \"conversiones\",\n//   \"url_imagen_1\": \"\",\n//   \"url_imagen_2\": \"\",\n//   \"url_imagen_3\": \"\",\n//   \"url_imagen_4\": \"\",\n//   \"url_imagen_5\": \"\",\n//   \"servicio\": \"\",\n//   \"formato_de_imagen\": \"landscape\",\n//   \"duracion\": \"25\",\n//   \"modelo\": \"sora-2-pro-storyboard\",\n//   \"url_logo\": \"\",\n//   \"descripcion_imagenes\": \"\",\n//   \"idioma\": \"es-MX\"\n// }\n// --------------------------------------------\n\nconst input = items[0].json;\n\n// Recolectar imágenes válidas\nconst imagenes = [\n  input.url_imagen_1,\n  input.url_imagen_2,\n  input.url_imagen_3,\n  input.url_imagen_4,\n  input.url_imagen_5\n].filter(u => u && u.trim() !== \"\");\n\n// Detecta si hay imágenes y si existe descripción\nconst hayImagenes = imagenes.length > 0;\nconst hayDescripcionImagenes = input.descripcion_imagenes && input.descripcion_imagenes.trim() !== \"\";\n\n// Forzar aspect ratio permitido por Sora\nconst aspectRatio = input.formato_de_imagen === \"portrait\" ? \"portrait\" : \"landscape\";\n\n// Selección automática del modelo si hay imágenes y el usuario eligió text-to-video\nlet modeloFinal = input.modelo;\nif (hayImagenes && input.modelo !== \"sora-2-pro-storyboard\") {\n  modeloFinal = \"sora-2-pro-image-to-video\";\n}\n\n// Construcción del System Role\nconst systemRole = `\nEres un generador profesional de prompts visuales estrictamente compatibles con Sora 2.\nSIEMPRE respondes únicamente en JSON válido sin texto fuera del JSON.\n\nREGLAS CRÍTICAS (OBLIGATORIAS):\n1. Nunca uses lenguaje cinematográfico técnico:\n   - NO: travelling, paneo, corte, transición, close-up, slow motion, etc.\n2. Describe solo lo que se ve en pantalla: entorno, objetos, iluminación, expresiones.\n3. No agregues narrativa emocional interna, metáforas o interpretaciones.\n4. Si el idioma es \"${input.idioma}\", genera todos los prompts en ese idioma.\n5. Respeta estrictamente el aspect_ratio: \"${aspectRatio}\".\n6. Si existe logo → intégralo de forma visual sutil sin dominar la escena, como parte del entorno físico.\n7. Si existen imágenes:\n   - y NO hay descripcion_imagenes → la PRIMERA imagen se usa como input_frame.\n   - si SÍ hay descripcion_imagenes → describe visualmente lo indicado en el texto.\n8. Nunca agregues texto en pantalla, subtítulos, rótulos, UI, interfaces, marcas o elementos escritos.\n9. Para storyboard (sora-2-pro-storyboard):\n   Debes devolver EXACTAMENTE:\n   {\n     \"shots\": [\n       { \"prompt\": \"...\", \"duration\": 10 },\n       { \"prompt\": \"...\", \"duration\": 8 },\n       { \"prompt\": \"...\", \"duration\": 7 }\n     ]\n   }\n   - Deben ser 3 escenas obligatorias.\n   - Descripciones completamente visuales.\n   - Sin movimientos de cámara (descríbelos como encuadres estáticos).\n   - Coherencia estética.\n10. Para text-to-video / image-to-video:\n   Devuelve únicamente:\n   {\n     \"prompt\": \"...\"\n   }\n\nTu salida siempre será JSON puro sin texto adicional.\n`;\n\n// Construcción del User Role\nconst userRole = `\nGenera el prompt en formato JSON dependiendo del modelo solicitado.\n\nDATOS DEL USUARIO:\n- Objetivo de marketing: \"${input.objetivo}\".\n- Servicio: \"${input.servicio}\".\n- Idioma: \"${input.idioma}\".\n- Aspect ratio: \"${aspectRatio}\".\n- Modelo final: \"${modeloFinal}\".\n- Tiene imágenes: ${hayImagenes}.\n- Tiene descripción_imagenes: ${hayDescripcionImagenes}.\n- Logo presente: ${input.url_logo ? \"sí\" : \"no\"}.\n\nCASO 1 — STORYBOARD (modelo \"sora-2-pro-storyboard\"):\nDebes devolver EXACTAMENTE:\n{\n  \"shots\": [\n    { \"prompt\": \"descripcion visual\", \"duration\": 10 },\n    { \"prompt\": \"descripcion visual\", \"duration\": 8 },\n    { \"prompt\": \"descripcion visual\", \"duration\": 7 }\n  ]\n}\n- Describe solo elementos visuales.\n- Prohibido lenguaje cinematográfico técnico.\n- Mantén coherencia estética.\n- Integra el servicio y objetivo en elementos visuales (no textuales).\n- Integra imágenes si existen, siguiendo reglas del system role.\n- Integra logo si existe, de forma sutil.\n\nCASO 2 — TEXT-TO-VIDEO o IMAGE-TO-VIDEO:\nDevuelve EXACTAMENTE:\n{\n  \"prompt\": \"descripcion visual\"\n}\n- Si NO hay descripcion_imagenes y SÍ hay imágenes → usar la primera como input_frame.\n- Si SÍ hay descripcion_imagenes → integrar visualmente lo descrito.\n- Prohibido movimiento de cámara explícito.\n- Describe solo lo que se ve.\n\nNO AGREGAR TEXTO FUERA DEL JSON.\n`;\n\n// Construir payload final para el nodo OpenAI\nreturn [\n  {\n    json: {\n      openai_system_role: systemRole.trim(),\n      openai_user_role: userRole.trim(),\n      modelo_final_para_sora: modeloFinal,\n      aspect_ratio: aspectRatio,\n      imagenes: imagenes,\n      usar_primer_fotograma: hayImagenes && !hayDescripcionImagenes,\n      logo: input.url_logo || \"\",\n      idioma: input.idioma\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2144,
+        320
+      ],
+      "id": "bb89ac4f-a213-4875-860b-ec03581a9588",
+      "name": "generar prompts"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = items[0].json;\n\n// Extraer valores principales\nconst model = data.modelo_final_para_sora || data.model || data.modelo;\nconst aspect_ratio = data.aspect_ratio || data.formato_de_imagen || \"landscape\";\nconst image_urls = data.imagenes || data.image_urls || [];\nconst callBackUrl = data.callBackUrl || null;\nconst remove_watermark = data.remove_watermark ?? true;\nconst n_frames_input = data.n_frames || data.n_frames_input || null;\n\n// Extraer contenido del agente\nlet agentContent = null;\nif (Array.isArray(data) && data[0]?.message?.content) {\n  agentContent = data[0].message.content;\n} else if (data.message?.content) {\n  agentContent = data.message.content;\n} else if (data.content) {\n  agentContent = data.content;\n} else {\n  agentContent = data.agent_output || data.agent || null;\n}\n\n// Preparar body base\nlet body = {\n  model\n};\n\n// Agregar callBackUrl si existe\nif (callBackUrl && callBackUrl.trim() !== \"\") {\n  body.callBackUrl = callBackUrl.trim();\n}\n\n// Lógica por modelo\nif (model === \"sora-2-pro-storyboard\") {\n  const rawShots = agentContent?.shots || data.shots || [];\n\n  if (!Array.isArray(rawShots) || rawShots.length === 0) {\n    return [{ json: { error: true, message: \"Storyboard requiere 'shots' generados por el agente.\" } }];\n  }\n\n  // Normalizar shots\n  const shots = rawShots.map(s => ({\n    Scene: s.prompt || s.Scene || \"\",\n    duration: Number(s.duration) || 0\n  }));\n\n  if (shots.length < 3) {\n    return [{ json: { error: true, message: `Storyboard debe tener 3 escenas. Se recibieron ${shots.length}.` } }];\n  }\n\n  const first3 = shots.slice(0, 3);\n\n  // Forzar n_frames = \"25\"\n  const n_frames = \"25\";\n\n  // Ajustar duraciones para sumar 25\n  const sumDur = first3.reduce((acc, s) => acc + s.duration, 0);\n  if (sumDur !== 25) {\n    const d1 = first3[0].duration;\n    const d2 = first3[1].duration;\n    let d3 = 25 - (d1 + d2);\n    first3[2].duration = d3 > 0 ? Number(d3.toFixed(3)) : Number((25 / 3).toFixed(3));\n  }\n\n  body.input = {\n    n_frames,\n    aspect_ratio,\n    image_urls: image_urls || [],\n    shots: first3\n  };\n\n} else if (model === \"sora-2-text-to-video\") {\n  const prompt = agentContent?.prompt || data.prompt || data.input?.prompt || null;\n  if (!prompt) return [{ json: { error: true, message: \"Text-to-video requiere 'prompt' válido.\" } }];\n\n  body.input = {\n    prompt,\n    aspect_ratio,\n    n_frames: n_frames_input ? String(n_frames_input) : \"10\",\n    remove_watermark\n  };\n\n} else if (model === \"sora-2-image-to-video\" || model === \"sora-2-pro-image-to-video\") {\n  const prompt = agentContent?.prompt || data.prompt || data.input?.prompt || null;\n  const imgs = image_urls.length ? image_urls : data.image_urls || [];\n\n  if (!imgs || !prompt) {\n    return [{ json: { error: true, message: \"Image-to-video requiere 'image_urls' y 'prompt' válidos.\" } }];\n  }\n\n  body.input = {\n    prompt,\n    image_urls: imgs,\n    aspect_ratio,\n    n_frames: n_frames_input ? String(n_frames_input) : \"10\",\n    remove_watermark\n  };\n\n} else if (model === \"google/nano-banana\" || model === \"google/nano-banana-edit\") {\n  // Nano Banana standard / edit\n  const prompt = data.prompt || null;\n  if (!prompt) return [{ json: { error: true, message: \"Nano Banana requiere 'prompt' válido.\" } }];\n\n  let input = { prompt };\n\n  if (image_urls.length > 0 && model === \"google/nano-banana-edit\") {\n    input.image_urls = image_urls;\n  }\n  if (data.output_format) input.output_format = data.output_format;\n  if (data.image_size) input.image_size = data.image_size;\n\n  body.input = input;\n}\n\n// Generar JSON limpio para bodyJsonString\nconst bodyJsonString = JSON.stringify(body, null, 2);\n\n// Retornar\nreturn [{\n  json: {\n    body_final: body,\n    bodyJsonString\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1344,
+        320
+      ],
+      "id": "8744f86e-78f8-4844-a2e3-fa83c92b9ae4",
+      "name": "validar formato de output"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineAll",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -1568,
+        320
+      ],
+      "id": "87f80410-3ae4-40de-84c3-3ce85533d4f2",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.kie.ai/api/v1/jobs/createTask",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer {{your_kie_ai_api_key}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.bodyJsonString }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -1120,
+        320
+      ],
+      "id": "9c774d0e-3017-4695-8d2c-87eea1cbc506",
+      "name": "SORA 2"
+    },
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -2592,
+        320
+      ],
+      "id": "3f35621f-8089-4d8c-ae0d-925569b05f40",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "tableId": "videos_SORA_&_imagenes_nanobanana",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "type",
+              "fieldValue": "video"
+            },
+            {
+              "fieldId": "url",
+              "fieldValue": "={{ $json.generatedUrl }}"
+            },
+            {
+              "fieldId": "nombre",
+              "fieldValue": "={{ $json.taskId }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "c4a67afd-6a44-4ed5-8612-99484413f9d9",
+      "name": "guardar en supabase"
+    },
+    {
+      "parameters": {
+        "name": "={{ $json.taskId }}",
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "your_google_drive_folder_id",
+          "mode": "list",
+          "cachedResultName": "AI Assets",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/your_google_drive_folder_id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        0,
+        384
+      ],
+      "id": "4b6a7618-f9ae-4a94-b0cc-966af0ae494b",
+      "name": "Upload file"
+    },
+    {
+      "parameters": {
+        "operation": "sendVideo",
+        "chatId": "={{ $('When Executed by Another Workflow').item.json.chat_id }}",
+        "binaryData": true,
+        "replyMarkup": "inlineKeyboard",
+        "inlineKeyboard": {
+          "rows": [
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "Sí",
+                    "additionalFields": {
+                      "callback_data": "=resultado_de_video_bueno,{{ $json.taskId }}"
+                    }
+                  },
+                  {
+                    "text": "No",
+                    "additionalFields": {
+                      "callback_data": "=resultado_de_video_malo,{{ $json.taskId }}"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "additionalFields": {
+          "caption": "Esta bien el resultado?"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        192
+      ],
+      "id": "9e6398e1-6fc9-4e13-9f31-fe870510dfcc",
+      "name": "Send a video",
+      "webhookId": "db25e37a-dbe9-4d65-a13d-c3816dce66d7"
+    }
+  ],
+  "pinData": {
+    "When Executed by Another Workflow": [
+      {
+        "json": {
+          "datos_video": {
+            "objetivo": "conversiones",
+            "modelo": "sora-2-text-to-video",
+            "url_1": null,
+            "url_2": null,
+            "url_3": null,
+            "url_4": null,
+            "url_5": null,
+            "servicio_video": "Multiplatform packaging",
+            "formato_de_imagen_video": "landscape",
+            "duracion_video": "25",
+            "descripcion_imagenes_video": "Aparecerán clientes o empresas de autos como agencias de autos que quieren vender.",
+            "url_logo": null
+          },
+          "datos_imagen": {
+            "prompt": null,
+            "modelo": null,
+            "image_size": null,
+            "url_1": null,
+            "url_2": null,
+            "url_3": null,
+            "url_4": null,
+            "url_5": null
+          },
+          "chat_id": "your_telegram_chat_id"
+        }
+      }
+    ]
+  },
+  "connections": {
+    "generar_prompt": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GET VIDEO": {
+      "main": [
+        [
+          {
+            "node": "SUCCESS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SUCCESS": {
+      "main": [
+        [
+          {
+            "node": "EXTRAER URL VIDEO",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "ESPERAR",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ESPERAR": {
+      "main": [
+        [
+          {
+            "node": "GET VIDEO",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "EXTRAER URL VIDEO": {
+      "main": [
+        [
+          {
+            "node": "DESCARGAR",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "generar prompts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "generar prompts": {
+      "main": [
+        [
+          {
+            "node": "generar_prompt",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "validar formato de output": {
+      "main": [
+        [
+          {
+            "node": "SORA 2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "validar formato de output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SORA 2": {
+      "main": [
+        [
+          {
+            "node": "GET VIDEO",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DESCARGAR": {
+      "main": [
+        [
+          {
+            "node": "guardar en supabase",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Upload file",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send a video",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "63bbc5df-7b19-4bb2-afc1-ca224815ea6b",
+  "meta": {
+    "instanceId": "your_instance_id"
+  },
+  "id": "your_credential_id",
+  "tags": []
+}

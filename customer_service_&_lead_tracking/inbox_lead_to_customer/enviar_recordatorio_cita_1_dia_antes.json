@@ -1,0 +1,198 @@
+{
+  "name": "enviar_recordatorio_cita_1_dia_antes",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## ⏰ Automated Meeting Reminders (24h Before)\\n\\nThis workflow ensures high attendance rates by automatically sending a WhatsApp reminder to customers 24 hours before their scheduled meeting.\\n\\n### Key Features:\\n1. **Dynamic Scheduling**: Triggered via a Supabase webhook when a meeting is exactly one day away.\\n2. **Personalized Messaging**: Uses a localized JavaScript block to format the meeting date and time into a human-friendly Spanish format (e.g., \\\"Lunes, 20 de octubre...\\\").\\n3. **WhatsApp Template Integration**: Utilizes the official WhatsApp API to send structured templates including the meeting link and a call-to-action.\\n4. **Memory Synchronization**: Logs the outgoing reminder into the Postgres `conversaciones` table, ensuring the AI agent is aware that the customer has been reminded.",
+        "height": 450,
+        "width": 320,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -600,
+        -100
+      ],
+      "typeVersion": 1,
+      "id": "doc-meeting-reminders",
+      "name": "Architecture Documentation"
+    },
+    {
+      "parameters": {
+        "phoneNumberId": "710637588808362",
+        "recipientPhoneNumber": "={{ $json.telefono }}",
+        "template": "recordatorio_cita_1_dia_antes|es_MX",
+        "components": {
+          "component": [
+            {
+              "bodyParameters": {
+                "parameter": [
+                  {
+                    "text": "={{ $json.nombre }}"
+                  },
+                  {
+                    "text": "={{ $json.fecha_cita_formateada }}"
+                  },
+                  {
+                    "text": "={{ $json.enlace_reunion }}"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1,
+      "position": [
+        208,
+        -32
+      ],
+      "id": "14b39901-7da7-429b-bdeb-2163e0ddf364",
+      "name": "Send template",
+      "webhookId": "4ba9a074-2f79-46f7-a66f-3befa8bcf63f",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "your_brand_whatsapp_credential_id",
+          "name": "WhatsApp account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Obtener los datos del webhook\nconst items = $input.all();\n\n// Función para formatear la fecha con hora\nfunction formatearFecha(fechaISO) {\n  const fecha = new Date(fechaISO);\n  \n  // Configurar opciones para formato en español\n  const opciones = {\n    weekday: 'long',\n    year: 'numeric',\n    month: 'long',\n    day: 'numeric',\n    hour: '2-digit',\n    minute: '2-digit',\n    hour12: true\n  };\n  \n  // Formatear la fecha\n  const fechaFormateada = fecha.toLocaleDateString('es-MX', opciones);\n  \n  // Capitalizar la primera letra\n  return fechaFormateada.charAt(0).toUpperCase() + fechaFormateada.slice(1);\n}\n\n// Procesar cada item\nreturn items.map(item => {\n  const body = item.json.body;\n  \n  // Crear nuevo objeto con todos los campos originales más el campo formateado\n  return {\n    json: {\n      ...body,\n      fecha_cita_formateada: formatearFecha(body.fecha_cita_timezone_cliente)\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -16,
+        -32
+      ],
+      "id": "809b61a1-9461-4b02-bacf-341e427f2d9a",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "9c4e25da-13c2-40de-ac21-2211ffc11376",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -240,
+        -32
+      ],
+      "id": "2238476c-0f96-487b-8bf1-4b3c6256aad7",
+      "name": "recibir_supabase",
+      "webhookId": "9c4e25da-13c2-40de-ac21-2211ffc11376"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO conversaciones (\n    session_id,\n    message,\n    etiqueta,\n    clasificacion_cita,\n    fecha\n)\nVALUES (\n    '{{ $('recibir_supabase').item.json.body.client_id }}',\n    jsonb_build_object(\n        'type', 'ai',\n        'content', jsonb_pretty(json_build_object(\n            'respuesta', 'Recordatorio de Cita\nHola {{ $('Code in JavaScript').item.json.body.nombre }}, te recuerdo tu cita para mañana {{ $('Code in JavaScript').item.json.fecha_cita_formateada }}.\nEste es tu enlace: {{ $('Code in JavaScript').item.json.enlace_reunion }}\n¡Estas a punto de conocer algo que va a cambiar tu perspectiva sobre la IA y los negocios🚀🤖!\nSi necesitas cancelar, posponer o reagendar tu cita actual puedes solicitármelo con tiempo. Saludos',\n            'escalamiento', null,\n            'enviar_formulario', null,\n            'estado', null\n        )::jsonb),\n        'tool_calls', '[]'::jsonb,\n        'additional_kwargs', '{}'::jsonb,\n        'response_metadata', '{}'::jsonb,\n        'invalid_tool_calls', '[]'::jsonb\n    ),\n    'ventas',\n    'agendar_cita',\n    '{{ $now.toISO() }}'::timestamptz\n);",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        432,
+        -32
+      ],
+      "id": "e88cdf81-0549-4b5c-99e1-3bbd4836a816",
+      "name": "actualizar memoria agente2",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "your_postgres_credential_id",
+          "name": "Postgres account 2"
+        }
+      },
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "pinData": {
+    "recibir_supabase": [
+      {
+        "json": {
+          "headers": {
+            "host": "your_n8n_domain.com",
+            "user-agent": "PostgreSQL 17.4 on aarch64-unknown-linux-gnu, compiled by gcc (GCC) 13.2.0, 64-bit",
+            "content-length": "213",
+            "accept": "*/*",
+            "accept-encoding": "deflate, gzip, br, zstd",
+            "charsets": "utf-8",
+            "content-type": "application/json",
+            "x-forwarded-for": "your_ip_address",
+            "x-forwarded-host": "your_n8n_domain.com",
+            "x-forwarded-port": "443",
+            "x-forwarded-proto": "https",
+            "x-forwarded-server": "a74e26de662c",
+            "x-real-ip": "your_ip_address"
+          },
+          "params": {},
+          "query": {},
+          "body": {
+            "id": 13,
+            "nombre": "your_client_name",
+            "telefono": "your_phone_number",
+            "client_id": 1,
+            "enlace_reunion": "https://meet.google.com/your-meeting-link",
+            "fecha_cita_timezone_cliente": "2025-10-19T07:57:16.183629+00:00"
+          },
+          "webhookUrl": "https://your_n8n_domain_service/webhook/9c4e25da-13c2-40de-ac21-2211ffc11376",
+          "executionMode": "production"
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Send template": {
+      "main": [
+        [
+          {
+            "node": "actualizar memoria agente2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Send template",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "recibir_supabase": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Mexico_City",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "versionId": "bbbc6b12-9c4f-4f88-b306-13af9945a924",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "your_instance_id"
+  },
+  "id": "your_credential_id",
+  "tags": []
+}

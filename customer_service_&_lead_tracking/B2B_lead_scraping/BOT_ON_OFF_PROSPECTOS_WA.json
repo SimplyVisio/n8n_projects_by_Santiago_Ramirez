@@ -1,0 +1,609 @@
+{
+  "name": "BOT_ON/OFF_PROSPECTOS_WA",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "Bot Control & Human Handoff (Chatwoot)\n\nThis workflow allows for manual override of the AI automation directly from the chat interface.\n\nActions:\n- 'bot_off': Assigns the conversation to a human agent and disables the AI response loop.\n- 'bot_on': Re-assigns the conversation to the AI agent to resume automated nurturing.\n\nIntegration: Chatwoot API + Phone Number Normalization.",
+        "height": 300,
+        "width": 280,
+        "color": 1
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -1000,
+        0
+      ],
+      "typeVersion": 1,
+      "id": "doc-bot-control",
+      "name": "Manual Override Layer"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "8b0b9f9d-b86a-4107-8c1b-dab57659cdc1",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -896,
+        176
+      ],
+      "id": "9363e0c1-6afd-47c2-bb8e-33a9077673e2",
+      "name": "Webhook",
+      "webhookId": "8b0b9f9d-b86a-4107-8c1b-dab57659cdc1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "af1f7148-4c50-41a4-95f1-5a6f6f09c381",
+              "leftValue": "={{ $json.text_message }}",
+              "rightValue": "bot_on",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "cc07168c-c383-47a5-b78f-5aff8b37ef7e",
+              "leftValue": "={{ $json.text_message }}",
+              "rightValue": "bot_off",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        -224,
+        176
+      ],
+      "id": "4f59fc89-192f-4f30-b60d-15db636f36a1",
+      "name": "Filter"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Función para normalizar números de teléfono mexicanos en n8n\n// Usar en un nodo \"Code\" o \"Function\"\n\nfunction normalizePhone(phoneNumber) {\n    // Si el número es null, undefined o vacío, retornarlo tal como está\n    if (!phoneNumber || phoneNumber === '') {\n        return phoneNumber;\n    }\n    \n    // Convertir a string y limpiar: quitar espacios, guiones, paréntesis, etc.\n    let cleanPhone = phoneNumber.toString().replace(/[^0-9+]/g, '');\n    \n    // Casos para números mexicanos (+52)\n    \n    // Patrón: +521XXXXXXXXXX -> +52XXXXXXXXXX (remover el 1 después de +52)\n    if (/^\\+521[0-9]{10}$/.test(cleanPhone)) {\n        return '+52' + cleanPhone.substring(4);\n    }\n    \n    // Patrón: 521XXXXXXXXXX -> +52XXXXXXXXXX (sin +, con 1)\n    if (/^521[0-9]{10}$/.test(cleanPhone)) {\n        return '+52' + cleanPhone.substring(3);\n    }\n    \n    // Patrón: +52XXXXXXXXXX -> ya está correcto\n    if (/^\\+52[0-9]{10}$/.test(cleanPhone)) {\n        return cleanPhone;\n    }\n    \n    // Patrón: 52XXXXXXXXXX -> +52XXXXXXXXXX (agregar +)\n    if (/^52[0-9]{10}$/.test(cleanPhone)) {\n        return '+' + cleanPhone;\n    }\n    \n    // Patrón: 1XXXXXXXXXX (11 dígitos empezando con 1) -> +52XXXXXXXXXX\n    if (/^1[0-9]{10}$/.test(cleanPhone)) {\n        return '+52' + cleanPhone.substring(1);\n    }\n    \n    // Patrón: XXXXXXXXXX (10 dígitos) -> +52XXXXXXXXXX (asumir México)\n    if (/^[0-9]{10}$/.test(cleanPhone)) {\n        return '+52' + cleanPhone;\n    }\n    \n    // Si no coincide con ningún patrón conocido, retornar original\n    return phoneNumber;\n}\n\n// Código adaptado para tu estructura específica\nconst phoneFromWebhook = $input.first().json.phone_number;\nconst normalizedPhone = normalizePhone(phoneFromWebhook);\n\nreturn [{\n    json: {\n        ...$input.first().json,  // Mantiene todos los datos originales del webhook\n        phone_number_normalized: normalizedPhone,\n        was_normalized: phoneFromWebhook !== normalizedPhone,\n        original_phone_number: phoneFromWebhook\n    }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -448,
+        176
+      ],
+      "id": "892fffa8-9b4c-4f76-826c-b31f2b1914d5",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1a586314-5928-4b62-bff6-7c784ac43200",
+              "name": "sender",
+              "value": "={{ $json.body.conversation.messages[0].sender_id }}",
+              "type": "string"
+            },
+            {
+              "id": "96227c45-6870-459d-90c9-76ce28cd56c5",
+              "name": "accountId",
+              "value": "={{ $json.body.account.id }}",
+              "type": "string"
+            },
+            {
+              "id": "2296800b-5382-4b4f-ac45-cfb4eef98753",
+              "name": "sessionId",
+              "value": "={{ $json.body.conversation.messages[0].conversation_id }}",
+              "type": "string"
+            },
+            {
+              "id": "9a03752f-dca9-4cc7-ab54-272156ccd62e",
+              "name": "content_type",
+              "value": "={{ $json.body.conversation.messages[0].content_type }}",
+              "type": "string"
+            },
+            {
+              "id": "c259b839-bb24-457e-93fa-7020c5b1d7de",
+              "name": "voice_message_type",
+              "value": "={{ $json.body.conversation.messages[0].attachments[0].file_type }}",
+              "type": "string"
+            },
+            {
+              "id": "06954d6a-a252-4848-a533-654dfdc19903",
+              "name": "voice_message_url",
+              "value": "={{ $json.body.conversation.messages[0].attachments[0].data_url }}",
+              "type": "string"
+            },
+            {
+              "id": "c186b8dc-11f7-4417-996a-6abd2a80d3b0",
+              "name": "text_message",
+              "value": "={{ $json.body.content }}",
+              "type": "string"
+            },
+            {
+              "id": "4121e376-2460-4dcd-9586-0a763db038d2",
+              "name": "data_time",
+              "value": "={{ $json.body.conversation.timestamp.toDateTime('s').toLocal() }}",
+              "type": "string"
+            },
+            {
+              "id": "f69184fa-fbe4-47d2-981b-58df4a294f59",
+              "name": "private",
+              "value": "={{ $json.body.conversation.messages[0].private }}",
+              "type": "string"
+            },
+            {
+              "id": "f8d4e2ab-f6f5-4b0a-b2e3-d80df515643b",
+              "name": "content_attributes",
+              "value": "={{ $json.body.conversation.messages[0].content_attributes }}",
+              "type": "string"
+            },
+            {
+              "id": "c48454c2-e580-4edd-b162-3abb0f482f7b",
+              "name": "conversationId",
+              "value": "={{ $json.body.conversation.messages[0].conversation_id }}",
+              "type": "string"
+            },
+            {
+              "id": "0f4b0104-58cb-431f-a8c4-35825d787d55",
+              "name": "sender_name",
+              "value": "={{ $json.body.conversation.meta.sender.name }}",
+              "type": "string"
+            },
+            {
+              "id": "8c1ac62c-c1b6-4b18-9f44-37e8cbe8d367",
+              "name": "inbox_id",
+              "value": "={{ $json.body.conversation.inbox_id }}",
+              "type": "string"
+            },
+            {
+              "id": "6b1f496c-5f93-4b3c-918a-9274f7bf2078",
+              "name": "channel",
+              "value": "={{ $json.body.conversation.channel }}",
+              "type": "string"
+            },
+            {
+              "id": "dd9215f9-4cdd-4a9b-800c-d84d3577f01e",
+              "name": "phone_number",
+              "value": "={{ $json.body.conversation.meta.sender.phone_number }}",
+              "type": "string"
+            },
+            {
+              "id": "b9412e9e-6c50-4a66-9c8d-ad7806974e4b",
+              "name": "fecha_UTC",
+              "value": "={{ $json.body.conversation.timestamp.toDateTime('s').toUTC()  }}",
+              "type": "string"
+            },
+            {
+              "id": "3c780d3d-cb73-41ef-89f6-3afb08da0abf",
+              "name": "nombre_normalizado",
+              "value": "={{ $json.body.conversation.meta.sender.name.normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').replace(/[^a-zA-ZñÑ]/g, '').toLowerCase() }}",
+              "type": "string"
+            },
+            {
+              "id": "ffba6980-26f7-4f17-8b4f-8bf9e8a9dbfd",
+              "name": "agente",
+              "value": "={{ $json.body.conversation.meta.assignee.name }}",
+              "type": "string"
+            },
+            {
+              "id": "3f0c1605-b6be-4197-9bbc-313dbc06f01a",
+              "name": "contact_id",
+              "value": "={{ $json.body.conversation.contact_inbox.contact_id }}",
+              "type": "number"
+            },
+            {
+              "id": "bb7f20cc-e8b2-4b2f-bb87-04b0f8bc9178",
+              "name": "etiqueta",
+              "value": "={{ $json.body.conversation.labels[0] }}",
+              "type": "string"
+            },
+            {
+              "id": "634fb0d2-c44f-469b-859f-c6e91bb168a5",
+              "name": "username_telegram",
+              "value": "={{ $json.body.messages[0].sender.additional_attributes.username }}",
+              "type": "string"
+            },
+            {
+              "id": "f3d41afb-eca3-4d2b-95af-78464654fb73",
+              "name": "fecha_queja",
+              "value": "={{ new Date().toLocaleString() }}",
+              "type": "string"
+            },
+            {
+              "id": "86eaad1d-71fa-405f-aa5e-629be1b490ca",
+              "name": "message_type",
+              "value": "={{ $json.body.conversation.messages[0].message_type }}",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -672,
+        176
+      ],
+      "id": "185036c3-e7e0-432e-8da0-f3ff94474113",
+      "name": "Data message extraction"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://chatwoot.url/api/v1/accounts/{{ $('Data message extraction').item.json.accountId }}/conversations/{{ $json.conversation_id }}/assignments\n\n",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"assignee_id\": 7\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        896,
+        80
+      ],
+      "id": "22775c77-dff0-4811-940c-9f84738ae5a0",
+      "name": "asignar conversacion a agente humano"
+    },
+    {
+      "parameters": {
+        "url": "=https://chatwoot.url/api/v1/accounts/{{ $('Data message extraction').item.json.accountId }}/conversations?inbox_id={{ $('Data message extraction').item.json.inbox_id }}\n\n\n",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"assignee_id\": 7\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        0,
+        176
+      ],
+      "id": "c4557095-709a-427f-9c79-b0bb3bcfabc2",
+      "name": "obtener id"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        672,
+        80
+      ],
+      "id": "d39c25db-d178-4d3e-b84b-37e3722c9797",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Suponiendo que el JSON del GET está en items[0].json\nconst conversations = items[0].json.data.payload;\n\nreturn conversations.map(conv => {\n  return {\n    json: {\n      conversation_id: conv.id\n    }\n  };\n});\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        176
+      ],
+      "id": "32ebe4a6-8f4a-43eb-97bb-a28fd36ea544",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        672,
+        272
+      ],
+      "id": "509b39db-2f6e-4ee0-9695-4ea83ea6489e",
+      "name": "Loop Over Items1"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('Data message extraction').item.json.text_message }}",
+                    "rightValue": "bot_off",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "4fbd2b3e-840a-46be-a870-7cb6866eece3"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "bot_off"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "e1277077-1fd4-40f0-a6f9-7c3758db9405",
+                    "leftValue": "={{ $('Data message extraction').item.json.text_message }}",
+                    "rightValue": "bot_on",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "bot_on"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.3,
+      "position": [
+        448,
+        176
+      ],
+      "id": "708f6c66-3644-4b2d-927f-f9c999fd23fe",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "url": "=https://chatwoot.url/api/v1/accounts/2/agents",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "644ecec6-03e8-41b5-a3f7-e88ceacc703e",
+      "name": "obtener id de agentes"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://chatwoot.urlapi/v1/accounts/{{ $('Data message extraction').item.json.accountId }}/conversations/{{ $json.conversation_id }}/assignments\n\n",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"assignee_id\": 2\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        896,
+        272
+      ],
+      "id": "be44919c-f796-4be8-84b2-881b4d41e1f1",
+      "name": "asignar conversacion a agente IA"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Data message extraction",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Data message extraction": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "Filter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter": {
+      "main": [
+        [
+          {
+            "node": "obtener id",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "obtener id": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [],
+        [
+          {
+            "node": "asignar conversacion a agente humano",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "asignar conversacion a agente humano": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items1": {
+      "main": [
+        [],
+        [
+          {
+            "node": "asignar conversacion a agente IA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Loop Over Items1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "asignar conversacion a agente IA": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "8831e590-1b35-4fde-b3f3-52ce222cb39f",
+  "meta": {
+    "instanceId": "your_instance_id"
+  },
+  "id": "your_credential_id",
+  "tags": []
+}

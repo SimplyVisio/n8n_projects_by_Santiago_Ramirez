@@ -1,0 +1,604 @@
+{
+  "name": "GUARDAR MEMORIA AGENTE HUMANO PROSPECTOS",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "Human-Agent Memory Synchronizer\n\nThis background utility ensures that the AI's long-term memory remains accurate even when a human agent is handling the conversation.\n\nWorkflow:\n1. Event Listener: Triggers on every new message in Chatwoot (Human or AI).\n2. Voice Transcription: Automatically converts voice notes to text using OpenAI Whisper to ensure content is searchable.\n3. Context Mapping: Links the external conversation ID with the internal CRM client ID.\n4. Database Sync: Appends the message to the 'conversaciones' table in Postgres, maintaining a unified truth for both human and AI agents.\n\nComponent: Chatwoot Webhook + OpenAI Whisper + Postgres Sync.",
+        "height": 450,
+        "width": 320,
+        "color": 1
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -1800,
+        0
+      ],
+      "typeVersion": 1,
+      "id": "doc-memory-sync",
+      "name": "Memory Persistence Layer"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "25edccc1-abac-456f-9798-5098d47a0812",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1472,
+        96
+      ],
+      "id": "8e8b7ed4-9a03-4426-8a5f-326fe028938a",
+      "name": "Webhook",
+      "webhookId": "25edccc1-abac-456f-9798-5098d47a0812"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1a586314-5928-4b62-bff6-7c784ac43200",
+              "name": "sender",
+              "value": "={{ $('Webhook').item.json.body.messages[0].sender_id }}",
+              "type": "string"
+            },
+            {
+              "id": "96227c45-6870-459d-90c9-76ce28cd56c5",
+              "name": "accountId",
+              "value": "={{ $('Webhook').item.json.body.messages[0].account_id }}",
+              "type": "string"
+            },
+            {
+              "id": "2296800b-5382-4b4f-ac45-cfb4eef98753",
+              "name": "sessionId",
+              "value": "={{ $('Webhook').item.json.body.messages[0].conversation_id }}",
+              "type": "string"
+            },
+            {
+              "id": "9a03752f-dca9-4cc7-ab54-272156ccd62e",
+              "name": "content_type",
+              "value": "={{ $('Webhook').item.json.body.messages[0].content_type }}",
+              "type": "string"
+            },
+            {
+              "id": "c259b839-bb24-457e-93fa-7020c5b1d7de",
+              "name": "voice_message_type",
+              "value": "={{ $('Webhook').item.json.body.messages[0].attachments[0].file_type }}",
+              "type": "string"
+            },
+            {
+              "id": "06954d6a-a252-4848-a533-654dfdc19903",
+              "name": "voice_message_url",
+              "value": "={{ $('Webhook').item.json.body.messages[0].attachments[0].data_url }}",
+              "type": "string"
+            },
+            {
+              "id": "c186b8dc-11f7-4417-996a-6abd2a80d3b0",
+              "name": "text_message",
+              "value": "={{ $('Webhook').item.json.body.messages[0].content ?? $json.text }}",
+              "type": "string"
+            },
+            {
+              "id": "4121e376-2460-4dcd-9586-0a763db038d2",
+              "name": "data_time",
+              "value": "={{ $('Webhook').item.json.body.timestamp.toDateTime('s').toLocal() }}",
+              "type": "string"
+            },
+            {
+              "id": "f69184fa-fbe4-47d2-981b-58df4a294f59",
+              "name": "private",
+              "value": "={{ $('Webhook').item.json.body.messages[0].private }}",
+              "type": "string"
+            },
+            {
+              "id": "f8d4e2ab-f6f5-4b0a-b2e3-d80df515643b",
+              "name": "content_attributes",
+              "value": "={{ $('Webhook').item.json.body.messages[0].content_attributes }}",
+              "type": "string"
+            },
+            {
+              "id": "c48454c2-e580-4edd-b162-3abb0f482f7b",
+              "name": "conversationId",
+              "value": "={{ $('Webhook').item.json.body.messages[0].conversation_id }}",
+              "type": "string"
+            },
+            {
+              "id": "0f4b0104-58cb-431f-a8c4-35825d787d55",
+              "name": "sender_name",
+              "value": "={{ $('Webhook').item.json.body.meta.sender.name }}",
+              "type": "string"
+            },
+            {
+              "id": "8c1ac62c-c1b6-4b18-9f44-37e8cbe8d367",
+              "name": "inbox_id",
+              "value": "={{ $('Webhook').item.json.body.inbox_id }}",
+              "type": "string"
+            },
+            {
+              "id": "6b1f496c-5f93-4b3c-918a-9274f7bf2078",
+              "name": "channel",
+              "value": "={{ $('Webhook').item.json.body.channel }}",
+              "type": "string"
+            },
+            {
+              "id": "dd9215f9-4cdd-4a9b-800c-d84d3577f01e",
+              "name": "phone_number",
+              "value": "={{ $('Webhook').item.json.body.meta.sender.phone_number }}",
+              "type": "string"
+            },
+            {
+              "id": "b9412e9e-6c50-4a66-9c8d-ad7806974e4b",
+              "name": "fecha_UTC",
+              "value": "={{ $('Webhook').item.json.body.timestamp.toDateTime('s').toUTC()  }}",
+              "type": "string"
+            },
+            {
+              "id": "3c780d3d-cb73-41ef-89f6-3afb08da0abf",
+              "name": "nombre_normalizado",
+              "value": "={{ $('Webhook').item.json.body.meta.sender.name.normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').replace(/[^a-zA-ZñÑ]/g, '').toLowerCase() }}",
+              "type": "string"
+            },
+            {
+              "id": "ffba6980-26f7-4f17-8b4f-8bf9e8a9dbfd",
+              "name": "agente",
+              "value": "={{ $('Webhook').item.json.body.meta.assignee.name }}",
+              "type": "string"
+            },
+            {
+              "id": "3f0c1605-b6be-4197-9bbc-313dbc06f01a",
+              "name": "contact_id",
+              "value": "={{ $('Webhook').item.json.body.contact_inbox.contact_id }}",
+              "type": "number"
+            },
+            {
+              "id": "bb7f20cc-e8b2-4b2f-bb87-04b0f8bc9178",
+              "name": "etiqueta",
+              "value": "={{ $('Webhook').item.json.body.labels[0] }}",
+              "type": "string"
+            },
+            {
+              "id": "634fb0d2-c44f-469b-859f-c6e91bb168a5",
+              "name": "username_telegram",
+              "value": "={{ $('Webhook').item.json.body.messages[0].sender.additional_attributes.username }}",
+              "type": "string"
+            },
+            {
+              "id": "f3d41afb-eca3-4d2b-95af-78464654fb73",
+              "name": "fecha_queja",
+              "value": "={{ new Date().toLocaleString() }}",
+              "type": "string"
+            },
+            {
+              "id": "86eaad1d-71fa-405f-aa5e-629be1b490ca",
+              "name": "message_type",
+              "value": "={{ $('Webhook').item.json.body.messages[0].message_type }}",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -544,
+        128
+      ],
+      "id": "77a4caec-d09a-4279-b2d5-798b0638d664",
+      "name": "Data message extraction"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO conversaciones (\n    session_id,\n    message,\n    etiqueta,\n    clasificacion_cita,\n    fecha\n)\nVALUES (\n    '{{ $json.client_id }}',\n    jsonb_build_object(\n        'type', CASE \n            WHEN {{ $('Data message extraction').item.json.message_type }} = 0 THEN 'human'\n            ELSE 'ai'\n        END,\n        'content', jsonb_pretty(json_build_object(\n            'respuesta', '{{ $('Data message extraction').item.json.text_message }}',\n            'escalamiento', null,\n            'enviar_formulario', null,\n            'estado', null\n        )::jsonb),\n        'tool_calls', '[]'::jsonb,\n        'additional_kwargs', '{}'::jsonb,\n        'response_metadata', '{}'::jsonb,\n        'invalid_tool_calls', '[]'::jsonb\n    ),\n    'ventas',\n    'asesoria_de_ventas',\n    NOW()::timestamptz\n);",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        112,
+        128
+      ],
+      "id": "1abebb46-fb1c-4461-97ab-9aaa90f02b1c",
+      "name": "Execute a SQL query",
+      "credentials": {
+        "postgres": {
+          "id": "your_credential_id",
+          "name": "Postgres account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Función para normalizar números de teléfono mexicanos en n8n\n// Usar en un nodo \"Code\" o \"Function\"\n\nfunction normalizePhone(phoneNumber) {\n    // Si el número es null, undefined o vacío, retornarlo tal como está\n    if (!phoneNumber || phoneNumber === '') {\n        return phoneNumber;\n    }\n    \n    // Convertir a string y limpiar: quitar espacios, guiones, paréntesis, etc.\n    let cleanPhone = phoneNumber.toString().replace(/[^0-9+]/g, '');\n    \n    // Casos para números mexicanos (+52)\n    \n    // Patrón: +521XXXXXXXXXX -> +52XXXXXXXXXX (remover el 1 después de +52)\n    if (/^\\+521[0-9]{10}$/.test(cleanPhone)) {\n        return '+52' + cleanPhone.substring(4);\n    }\n    \n    // Patrón: 521XXXXXXXXXX -> +52XXXXXXXXXX (sin +, con 1)\n    if (/^521[0-9]{10}$/.test(cleanPhone)) {\n        return '+52' + cleanPhone.substring(3);\n    }\n    \n    // Patrón: +52XXXXXXXXXX -> ya está correcto\n    if (/^\\+52[0-9]{10}$/.test(cleanPhone)) {\n        return cleanPhone;\n    }\n    \n    // Patrón: 52XXXXXXXXXX -> +52XXXXXXXXXX (agregar +)\n    if (/^52[0-9]{10}$/.test(cleanPhone)) {\n        return '+' + cleanPhone;\n    }\n    \n    // Patrón: 1XXXXXXXXXX (11 dígitos empezando con 1) -> +52XXXXXXXXXX\n    if (/^1[0-9]{10}$/.test(cleanPhone)) {\n        return '+52' + cleanPhone.substring(1);\n    }\n    \n    // Patrón: XXXXXXXXXX (10 dígitos) -> +52XXXXXXXXXX (asumir México)\n    if (/^[0-9]{10}$/.test(cleanPhone)) {\n        return '+52' + cleanPhone;\n    }\n    \n    // Si no coincide con ningún patrón conocido, retornar original\n    return phoneNumber;\n}\n\n// Código adaptado para tu estructura específica\nconst phoneFromWebhook = $input.first().json.phone_number;\nconst normalizedPhone = normalizePhone(phoneFromWebhook);\n\nreturn [{\n    json: {\n        ...$input.first().json,  // Mantiene todos los datos originales del webhook\n        phone_number_normalized: normalizedPhone,\n        was_normalized: phoneFromWebhook !== normalizedPhone,\n        original_phone_number: phoneFromWebhook\n    }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -320,
+        128
+      ],
+      "id": "79094ba2-e12a-4ae4-b0a7-3b349e84ae18",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "leads_formularios_optimizada",
+        "returnAll": true,
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "nombre_normalizado",
+              "condition": "eq",
+              "keyValue": "={{ $('Data message extraction').item.json.nombre_normalizado }}"
+            },
+            {
+              "keyName": "telefono",
+              "condition": "eq",
+              "keyValue": "={{ $('Code').item.json.phone_number_normalized }}"
+            },
+            {
+              "keyName": "messenger",
+              "condition": "eq",
+              "keyValue": "={{ $('Data message extraction').item.json.sender_name }}"
+            },
+            {
+              "keyName": "instagram",
+              "condition": "eq",
+              "keyValue": "={{ $('Data message extraction').item.json.sender_name }}"
+            },
+            {
+              "keyName": "whatsapp",
+              "condition": "eq",
+              "keyValue": "={{ $('Code').item.json.phone_number_normalized }}"
+            },
+            {
+              "keyName": "nombre",
+              "condition": "eq",
+              "keyValue": "={{ $('Data message extraction').item.json.sender_name }}"
+            },
+            {
+              "keyName": "messenger_normalizado",
+              "condition": "eq",
+              "keyValue": "={{ $('Data message extraction').item.json.nombre_normalizado }}"
+            },
+            {
+              "keyName": "instagram_normalizado",
+              "condition": "eq",
+              "keyValue": "={{ $('Data message extraction').item.json.nombre_normalizado }}"
+            },
+            {
+              "keyName": "chatwoot_contact_id",
+              "condition": "eq",
+              "keyValue": "={{ $('Data message extraction').item.json.contact_id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -112,
+        128
+      ],
+      "id": "9914bdbd-2bb4-46ee-9679-a16ba99c0762",
+      "name": "extraer cliente",
+      "alwaysOutputData": false,
+      "credentials": {
+        "supabaseApi": {
+          "id": "your_credential_id",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "audio",
+        "operation": "transcribe",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        -864,
+        -48
+      ],
+      "id": "e9238e81-cd0d-4525-89fa-297783efead1",
+      "name": "Transcribe a recording",
+      "alwaysOutputData": true,
+      "credentials": {
+        "openAiApi": {
+          "id": "your_credential_id",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.body.messages[0].attachments[0].data_url }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -1024,
+        -48
+      ],
+      "id": "ae3be5eb-f7d3-4e12-8ca3-789b6a8d2436",
+      "name": "HTTP Request4",
+      "alwaysOutputData": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "your_credential_id",
+          "name": "chatwoot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "1c354797-a754-4a28-9943-41bc5d72c94d",
+              "leftValue": "={{ $json.body.messages[0].attachments[0].data_url }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -1264,
+        96
+      ],
+      "id": "d23419ff-7731-47fb-bec0-f7ff77166405",
+      "name": "If"
+    }
+  ],
+  "pinData": {
+    "Webhook": [
+      {
+        "json": {
+          "headers": {
+            "host": "your_n8n_domain_service",
+            "user-agent": "rest-client/2.1.0 (linux-musl x86_64) ruby/3.4.4p34",
+            "content-length": "2849",
+            "accept": "application/json",
+            "accept-encoding": "gzip;q=1.0,deflate;q=0.6,identity;q=0.3",
+            "content-type": "application/json",
+            "x-forwarded-for": "your_ip_address",
+            "x-forwarded-host": "your_n8n_domain_service",
+            "x-forwarded-port": "443",
+            "x-forwarded-proto": "https",
+            "x-forwarded-server": "3fd501c40f83",
+            "x-real-ip": "your_ip_address"
+          },
+          "params": {},
+          "query": {},
+          "body": {
+            "additional_attributes": {},
+            "can_reply": true,
+            "channel": "Channel::Api",
+            "contact_inbox": {
+              "id": 130,
+              "contact_id": 100,
+              "inbox_id": 12,
+              "source_id": "3fa2e54c-49d4-479d-80bb-d4ccc9296a90",
+              "created_at": "2025-12-14T18:42:50.439Z",
+              "updated_at": "2025-12-14T18:42:50.439Z",
+              "hmac_verified": false,
+              "pubsub_token": "your_pubsub_token"
+            },
+            "id": 90,
+            "inbox_id": 12,
+            "messages": [
+              {
+                "id": 2674,
+                "content": "Hola que tal\n",
+                "account_id": 2,
+                "inbox_id": 12,
+                "conversation_id": 90,
+                "message_type": 1,
+                "created_at": 1765737959,
+                "updated_at": "2025-12-14T18:45:59.377Z",
+                "private": false,
+                "status": "sent",
+                "source_id": null,
+                "content_type": "text",
+                "content_attributes": {},
+                "sender_type": "User",
+                "sender_id": 2,
+                "external_source_ids": {},
+                "additional_attributes": {},
+                "processed_message_content": "Hola que tal\n",
+                "sentiment": {},
+                "conversation": {
+                  "assignee_id": 7,
+                  "unread_count": 0,
+                  "last_activity_at": 1765737960,
+                  "contact_inbox": {
+                    "source_id": "3fa2e54c-49d4-479d-80bb-d4ccc9296a90"
+                  }
+                },
+                "sender": {
+                  "id": 2,
+                  "name": "Agente IA",
+                  "available_name": "your_brand",
+                  "avatar_url": "https://your_chatwoot_url_domain/rails/active_storage/representations/redirect/eyJfcmFpbHMiOnsibWVzc2FnZSI6IkJBaHBBZnc9IiwiZXhwIjpudWxsLCJwdXIiOiJibG9iX2lkIn19--99b8e2095acea2ad1bcd2ea63d525f293c0756ca/eyJfcmFpbHMiOnsibWVzc2FnZSI6IkJBaDdCem9MWm05eWJXRjBTU0lJY0c1bkJqb0dSVlE2RTNKbGMybDZaVjkwYjE5bWFXeHNXd2RwQWZvdyIsImV4cCI6bnVsbCwicHVyIjoidmFyaWF0aW9uIn19--e7507656c4df95bbac2e11627efcfea03c647cea/Generated%20Image%20December%2001,%202025%20-%203_13AM%20(1).png",
+                  "type": "user",
+                  "availability_status": null,
+                  "thumbnail": "https://your_chatwoot_url_domain/rails/active_storage/representations/redirect/eyJfcmFpbHMiOnsibWVzc2FnZSI6IkJBaHBBZnc9IiwiZXhwIjpudWxsLCJwdXIiOiJibG9iX2lkIn19--99b8e2095acea2ad1bcd2ea63d525f293c0756ca/eyJfcmFpbHMiOnsibWVzc2FnZSI6IkJBaDdCem9MWm05eWJXRjBTU0lJY0c1bkJqb0dSVlE2RTNKbGMybDZaVjkwYjE5bWFXeHNXd2RwQWZvdyIsImV4cCI6bnVsbCwicHVyIjoidmFyaWF0aW9uIn19--e7507656c4df95bbac2e11627efcfea03c647cea/Generated%20Image%20December%2001,%202025%20-%203_13AM%20(1).png"
+                }
+              }
+            ],
+            "labels": [],
+            "meta": {
+              "sender": {
+                "additional_attributes": {},
+                "custom_attributes": {},
+                "email": null,
+                "id": 100,
+                "identifier": "247021420167362@lid",
+                "name": "Agente your_brand",
+                "phone_number": "+247021420167362",
+                "thumbnail": "",
+                "blocked": false,
+                "type": "contact"
+              },
+              "assignee": {
+                "id": 7,
+                "name": "Agente Humano",
+                "available_name": "Agente Humano",
+                "avatar_url": "",
+                "type": "user",
+                "availability_status": null,
+                "thumbnail": ""
+              },
+              "team": null,
+              "hmac_verified": false
+            },
+            "status": "open",
+            "custom_attributes": {},
+            "snoozed_until": null,
+            "unread_count": 0,
+            "first_reply_created_at": "2025-12-14T18:45:59.377Z",
+            "priority": null,
+            "waiting_since": 0,
+            "agent_last_seen_at": 1765737959,
+            "contact_last_seen_at": 0,
+            "last_activity_at": 1765737960,
+            "timestamp": 1765737960,
+            "created_at": 1765737770,
+            "updated_at": 1765737960.568635,
+            "applied_sla": null,
+            "sla_events": [],
+            "sla_policy_id": null,
+            "event": "automation_event.message_created"
+          },
+          "webhookUrl": "https://your_n8n_domain_service/webhook/25edccc1-abac-456f-9798-5098d47a0812",
+          "executionMode": "production"
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Data message extraction": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "extraer cliente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "extraer cliente": {
+      "main": [
+        [
+          {
+            "node": "Execute a SQL query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transcribe a recording": {
+      "main": [
+        [
+          {
+            "node": "Data message extraction",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request4": {
+      "main": [
+        [
+          {
+            "node": "Transcribe a recording",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request4",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Data message extraction",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "31b36098-641d-4fad-9ced-5e8b7d31d818",
+  "meta": {
+    "instanceId": "your_instance_id"
+  },
+  "id": "your_credential_id",
+  "tags": []
+}

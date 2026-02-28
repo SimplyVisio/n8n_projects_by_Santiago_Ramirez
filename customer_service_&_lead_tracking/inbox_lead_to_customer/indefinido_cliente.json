@@ -1,0 +1,372 @@
+{
+  "name": "indefinido_cliente",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## 🔍 Intent Discovery & Routing (Indefinido)\\n\\nThis workflow is triggered when a lead's intent is unclear or \"indefinido\". Its primary goal is to engage the user in a natural conversation to uncover their specific needs and route them to the appropriate department.\\n\\n### Key Features:\\n1. **Specialized AI Persona**: Uses a \"Discovery Agent\" persona that is trained to ask open-ended, non-intrusive questions rather than pushing for a sale.\\n2. **Dynamic Labeling**: Automatically tags conversations in Chatwoot as \"indefinido\" while trying to clarify the intent.\\n3. **Structured Output Parsing**: Includes a robust JavaScript parser to handle the AI's responses and ensure the conversation state is updated correctly in the database.\\n4. **CRM Integration**: Seamlessly retrieves customer data (Name, Email, Company) to provide a personalized experience and maintains history via Postgres Chat Memory.\\n5. **Human-in-the-Loop Protocol**: Can trigger an 'escalation' flag if the user's request remains ambiguous or if they specifically ask for a human.",
+        "height": 450,
+        "width": 320,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -400,
+        -200
+      ],
+      "typeVersion": 1,
+      "id": "doc-intent-discovery",
+      "name": "Architecture Documentation"
+    },
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        16,
+        0
+      ],
+      "id": "93a4ec1b-70a1-4d8b-8ac5-0e48a000fe5f",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('When Executed by Another Workflow').item.json.client_id }}",
+        "tableName": "conversaciones",
+        "contextWindowLength": 20
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+      "typeVersion": 1.3,
+      "position": [
+        416,
+        256
+      ],
+      "id": "d9b7becd-1fb8-4956-b37e-fc46317a7fd5",
+      "name": "Postgres Chat Memory5",
+      "credentials": {
+        "postgres": {
+          "id": "your_postgres_credential_id",
+          "name": "Postgres account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://your_chatwoot_url_domain/api/v1/accounts/{{ $('When Executed by Another Workflow').item.json.accountId }}/conversations/{{ $('When Executed by Another Workflow').item.json.conversationId }}/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "content",
+              "value": "={{ $('parsear output').item.json.respuesta }}"
+            },
+            {
+              "name": "message_type",
+              "value": "=outgoing"
+            },
+            {
+              "name": "private",
+              "value": "={{ $('When Executed by Another Workflow').item.json.private }}"
+            },
+            {
+              "name": "content_type",
+              "value": "={{ $('When Executed by Another Workflow').item.json.content_type }}"
+            },
+            {
+              "name": "content_attributes",
+              "value": "={{ $('When Executed by Another Workflow').item.json.content_attributes }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        880,
+        48
+      ],
+      "id": "f275bdd7-9ecb-40bd-8554-31e961e99854",
+      "name": "preguntar al cliente",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "your_chatwoot_credential_id",
+          "name": "chatwoot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://your_chatwoot_url_domain/api/v1/accounts/{{ $('When Executed by Another Workflow').item.json.accountId }}/conversations/{{ $('When Executed by Another Workflow').item.json.conversationId }}/labels",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "labels",
+              "value": "={{ Array('indefinido') }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        656,
+        -144
+      ],
+      "id": "7ca0cde5-128a-463f-87bf-780fdc5e7391",
+      "name": "etiqueta cliente indefinido",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "your_chatwoot_credential_id",
+          "name": "chatwoot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Objetivo del cliente no definido",
+        "height": 368,
+        "width": 496
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        176,
+        -48
+      ],
+      "id": "ac67e99d-067d-4d36-8436-2139d1df12fc",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ====================================\n// PARSER AGENTE DE TRANSICIÓN - your_brand\n// Parsea output del agente your_name (transición)\n// Soporta TODOS los formatos posibles de JSON\n// Campos: respuesta, escalamiento, agendar\n// ====================================\n\nconst agentOutput = $input.first().json.output;\n\n// ====================================\n// FUNCIONES DE EXTRACCIÓN Y PARSING\n// ====================================\n\n/**\n * Extrae JSON del output con múltiples estrategias\n * Maneja todos los formatos incluyendo JSON malformado\n */\nfunction extraerJSON(output) {\n  if (!output) return null;\n  \n  let texto = output.trim();\n  \n  // ========================================\n  // ESTRATEGIA 1: Buscar JSON entre llaves\n  // ========================================\n  const inicioJSON = texto.indexOf('{');\n  const finJSON = texto.lastIndexOf('}');\n  \n  if (inicioJSON !== -1 && finJSON !== -1 && finJSON > inicioJSON) {\n    texto = texto.substring(inicioJSON, finJSON + 1);\n  }\n  \n  // ========================================\n  // ESTRATEGIA 2: Limpiar prefijos markdown\n  // ========================================\n  texto = texto.replace(/^```json\\s*/i, '');\n  texto = texto.replace(/^```\\s*/, '');\n  texto = texto.replace(/\\s*```$/g, '');\n  texto = texto.replace(/^json[\\s\\n]*/i, '');\n  \n  // ========================================\n  // ESTRATEGIA 3: Limpiar texto después del JSON\n  // ========================================\n  const ultimaLlave = texto.lastIndexOf('}');\n  if (ultimaLlave !== -1 && ultimaLlave < texto.length - 1) {\n    texto = texto.substring(0, ultimaLlave + 1);\n  }\n  \n  // ========================================\n  // ESTRATEGIA 4: Manejo de strings escapados\n  // ========================================\n  if (texto.startsWith('\"') && texto.endsWith('\"')) {\n    try {\n      texto = JSON.parse(texto);\n    } catch (e) {\n      texto = texto.slice(1, -1);\n    }\n  }\n  \n  // ========================================\n  // ESTRATEGIA 5: Intentar parsear\n  // ========================================\n  try {\n    return JSON.parse(texto);\n  } catch (error) {\n    return repararJSON(texto);\n  }\n}\n\n/**\n * Repara JSON malformado\n */\nfunction repararJSON(textoJSON) {\n  try {\n    let reparado = textoJSON.trim();\n    \n    // Contar llaves\n    const aperturas = (reparado.match(/{/g) || []).length;\n    const cierres = (reparado.match(/}/g) || []).length;\n    \n    // Agregar llaves faltantes\n    if (aperturas > cierres) {\n      const faltantes = aperturas - cierres;\n      reparado += '}'.repeat(faltantes);\n    }\n    \n    return JSON.parse(reparado);\n  } catch (error) {\n    return null;\n  }\n}\n\n/**\n * Normaliza valor booleano de strings\n */\nfunction normalizarBooleano(valor) {\n  if (typeof valor === 'boolean') return valor;\n  if (valor === null || valor === undefined) return false;\n  \n  const valorString = String(valor).toLowerCase().trim();\n  \n  // True: \"true\", \"1\", \"yes\", \"sí\", \"si\"\n  if (['true', '1', 'yes', 'sí', 'si'].includes(valorString)) {\n    return true;\n  }\n  \n  // False: todo lo demás\n  return false;\n}\n\n/**\n * Limpia y formyour_namespuesta al cliente\n */\nfunction limpiarRespuesta(respuesta) {\n  if (!respuesta) return \"\";\n  \n  return String(respuesta)\n    .replace(/\\\\n/g, '\\n')    // Convertir \\n en saltos de línea reales\n    .replace(/\\\\\"/g, '\"')      // Quitar escapes de comillas\n    .replace(/\\\\\\\\/g, '\\\\')    // Quitar escapes de backslashes\n    .trim();\n}\n\n/**\n * Extrae campos del JSON parseado con valores por defecto\n */\nfunction extraerCampos(jsonData) {\n  if (!jsonData || typeof jsonData !== 'object') {\n    return {\n      respuesta: \"\",\n      escalamiento: false,\n      agendar: false,\n      eliminar_cliente: false\n    };\n  }\n  \n  return {\n    respuesta: limpiarRespuesta(jsonData.respuesta || \"\"),\n    escalamiento: normalizarBooleano(jsonData.escalamiento),\n    agendar: normalizarBooleano(jsonData.agendar),\n    eliminar_cliente: normalizarBooleano(jsonData.eliminar_cliente)\n  };\n}\n\n/**\n * Extrae respuesta del texto plano si el JSON falla completamente\n */\nfunction extraerRespuestaFallback(output) {\n  try {\n    // Buscar el campo \"respuesta\" en el texto\n    const match = output.match(/\"respuesta\"\\s*:\\s*\"([^\"]+(?:\\\\.[^\"]+)*)\"/);\n    if (match && match[1]) {\n      return limpiarRespuesta(match[1]);\n    }\n    \n    // Si no encuentra, intentar buscar entre comillas después de \"respuesta\"\n    const match2 = output.match(/respuesta[\"\\s:]+([^,}]+)/i);\n    if (match2 && match2[1]) {\n      return limpiarRespuesta(match2[1].replace(/[\"']/g, ''));\n    }\n  } catch (e) {\n    // Si todo falla, retornar mensaje genérico\n  }\n  \n  return \"Error al procesar la respuesta del agente. Por favor, contacta al equipo de soporte.\";\n}\n\n/**\n * Extrae valores booleanos del texto plano si el JSON falla\n */\nfunction extraerBooleanoFallback(output, campo) {\n  try {\n    const regex = new RegExp(`\"${campo}\"\\\\s*:\\\\s*(true|false)`, 'i');\n    const match = output.match(regex);\n    if (match && match[1]) {\n      return normalizarBooleano(match[1]);\n    }\n  } catch (e) {\n    // Ignorar error\n  }\n  return false;\n}\n\n// ====================================\n// PROCESAMIENTO PRINCIPAL\n// ====================================\n\ntry {\n  // Intentar extraer y parsear el JSON\n  const jsonData = extraerJSON(agentOutput);\n  \n  // Extraer campos con valores por defecto\n  const campos = extraerCampos(jsonData);\n  \n  // Validación adicional: la respuesta no puede estar vacía\n  if (!campos.respuesta || campos.respuesta.trim() === \"\") {\n    // Intentar extraer del texto plano\n    campos.respuesta = extraerRespuestaFallback(agentOutput);\n    \n    // Si aún está vacío, usar mensaje de error\n    if (!campos.respuesta || campos.respuesta.trim() === \"\") {\n      campos.respuesta = \"Error: El agente no generó una respuesta válida.\";\n    }\n  }\n  \n  // Crear el item en el formato que n8n espera\n  const newItem = {\n    json: {\n      // ===== CAMPOS PRINCIPALES =====\n      respuesta: campos.respuesta,\n      escalamiento: campos.escalamiento,\n      agendar: campos.agendar,\n      eliminar_cliente: campos.eliminar_cliente,\n      \n      // ===== METADATOS DE PROCESAMIENTO =====\n      procesado_correctamente: true,\n      json_reparado: jsonData === null,\n      timestamp_procesamiento: new Date().toISOString(),\n      \n      // ===== FLAGS ADICIONALES =====\n      requiere_atencion_humana: campos.escalamiento,\n      cliente_listo_para_agendar: campos.agendar,\n      cliente_solicita_eliminacion: campos.eliminar_cliente,\n      \n      // ===== INFORMACIÓN DE DEBUG (opcional) =====\n      longitud_respuesta: campos.respuesta.length,\n      output_original_length: agentOutput ? agentOutput.length : 0\n    }\n  };\n  \n  // Retornar como array - FORMATO CORRECTO PARA N8N\n  return [newItem];\n  \n} catch (error) {\n  // ========================================\n  // ÚLTIMO RECURSO: Extraer del texto plano\n  // ========================================\n  \n  let respuestaExtraida = extraerRespuestaFallback(agentOutput);\n  let escalamientoExtraido = extraerBooleanoFallback(agentOutput, 'escalamiento');\n  let agendarExtraido = extraerBooleanoFallback(agentOutput, 'agendar');\n  let eliminarExtraido = extraerBooleanoFallback(agentOutput, 'eliminar_cliente');\n  \n  // Item de error con información detallada\n  const errorItem = {\n    json: {\n      // ===== CAMPOS PRINCIPALES (con fallbacks) =====\n      respuesta: respuestaExtraida,\n      escalamiento: escalamientoExtraido,\n      agendar: agendarExtraido,\n      eliminar_cliente: eliminarExtraido,\n      \n      // ===== METADATOS DE ERROR =====\n      procesado_correctamente: false,\n      json_reparado: false,\n      error_detalle: error.message,\n      requiere_atencion_humana: true, // Siempre true en caso de error\n      cliente_listo_para_agendar: agendarExtraido,\n      cliente_solicita_eliminacion: eliminarExtraido,\n      \n      // ===== INFORMACIÓN DE DEBUG =====\n      output_recibido_preview: agentOutput ? agentOutput.substring(0, 300) : \"vacío\",\n      output_completo_length: agentOutput ? agentOutput.length : 0,\n      timestamp_procesamiento: new Date().toISOString(),\n      \n      // ===== ALERTA =====\n      alerta_sistema: \"El agente no devolvió JSON válido. Se extrajeron valores por fallback.\"\n    }\n  };\n  \n  return [errorItem];\n}\n\n// ====================================\n// NOTAS DE USO\n// ====================================\n/*\nCAMPOS DE SALIDA:\n  \n  1. respuesta (string): \n     - Mensaje para enviar al cliente por WhatsApp\n     - Nunca vacío (usa fallback si falla)\n  \n  2. escalamiento (boolean):\n     - true: Requiere intervención humana\n     - false: El agente puede continuar\n  \n  3. agendar (boolean):\n     - true: Cliente aceptó agendar, enviar número del agente de agendamiento\n     - false: Cliente aún no acepta agendar\n\n  4. eliminar_cliente (boolean):\n     - true: Cliente confirmó eliminar su información y no ser contactado\n     - false: Cliente no solicitó eliminación\n\nFLUJO RECOMENDADO EN N8N:\n\n  → IF (eliminar_cliente === true)\n    ↳ Eliminar prospecto de base de datos\n    ↳ Agregar a lista de no contactar\n    ↳ Enviar respuesta de despedida al cliente\n    ↳ TERMINAR flujo\n  \n  → IF (escalamiento === true)\n    ↳ Enviar alerta a equipo humano\n    ↳ Pausar automatización\n  \n  → IF (agendar === true)\n    ↳ Enviar respuesta con número +[REDACTED_PHONE_NUMBER]\n    ↳ Marcar lead como \"En agendamiento\"\n    ↳ Notificar al Agente de Agendamiento\n  \n  → IF (agendar === false && escalamiento === false && eliminar_cliente === false)\n    ↳ Continuar conversación automatizada\n    ↳ Enviar respuesta al cliente\n    ↳ Esperar siguiente mensaje\n\nPRIORIDAD DE ACCIONES:\n  1. eliminar_cliente (más alta prioridad - acción inmediata)\n  2. escalamiento (segunda prioridad - intervención humana)\n  3. agendar (tercera prioridad - transición a agendamiento)\n  4. continuar conversación (default)\n\nMANEJO DE ERRORES:\n\n  - Si procesado_correctamente === false:\n    → Revisar output_recibido_preview\n    → Escalar a humano automáticamente\n    → Verificar que el agente está devolviendo JSON correcto\n\n  - Si json_reparado === true:\n    → El JSON tenía problemas pero se reparó\n    → Funcional pero revisar logs\n    → Considerar mejorar el prompt del agente\n\n  - Si alerta_sistema existe:\n    → Error crítico en el parsing\n    → Se usaron fallbacks\n    → Requiere revisión manual\n*/"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        656,
+        48
+      ],
+      "id": "ef86540a-ea66-4889-86c9-fff98ea18696",
+      "name": "parsear output",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE conversaciones \nSET etiqueta = '{{ $('When Executed by Another Workflow').item.json.etiqueta }}'\nWHERE id IN (\n    SELECT id \n    FROM conversaciones \n    WHERE session_id = '{{ $('When Executed by Another Workflow').item.json.client_id }}'\n    ORDER BY id DESC \n    LIMIT 2\n);",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1104,
+        0
+      ],
+      "id": "251116d5-4e52-417c-97ba-6659cbf25fa6",
+      "name": "registrar_etiqueta_y_fecha",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "your_postgres_credential_id",
+          "name": "Postgres account 2"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('When Executed by Another Workflow').item.json.mensaje }}",
+        "options": {
+          "systemMessage": "=Eres el agente de atención inicial de your_brand. Tu ÚNICO objetivo es identificar mediante preguntas qué necesita específicamente el cliente para dirigirlo al área correcta.\\n\\n## REGLAS FUNDAMENTALES:\\n1. **NUNCA respondas con etiquetas** como \"ventas\", \"clientes\", \"soporte\", o \"queja\"\\n2. **SOLO haz preguntas** para clarificar la necesidad del cliente\\n3. **Mantén un tono amable y profesional** en todo momento\\n4. **No resuelvas problemas** - tu función es solo clasificar mediante conversación\\n5. Siempre responde en JSON en el formato de abajo\\n---\\n## FORMATO DE RESPUESTA\\nSiempre responde en JSON con el siguiente formato:\\njson\\n{\\n  \"respuesta\": \"[Respuesta al cliente]\",\\n  \"estado\": \"null\",\\n  \"servicio\": \"null\",\\n  \"fecha_cita\": \"null\",\\n  \"fecha_cita_timezone_cliente\": \"null\",\\n  \"enlace_reunion\": \"null\",\\n  \"empresa\": \"null\",\\n  \"telefono\": \"null\",\\n  \"email\": \"null\",\\n  \"nombre\": \"null\",\\n  \"pais\": \"null\",\\n  \"motivo_cancelacion\": \"null\",\\n  \"nuevo_google_event_id\": \"null\"\\n}\\n---\\n## DATOS DISPONIBLES DEL CLIENTE\\nPersonaliza la conversacion con el cliente con sus datos personales, usalos oportunamente:\\n- **Nombre del cliente**: {{ $('When Executed by Another Workflow').item.json.nombre }}\\n- **email del cliente**: {{ $('When Executed by Another Workflow').item.json.email }}\\n- **Telefono del cliente**: {{ $('When Executed by Another Workflow').item.json.telefono }}\\n\\n## SERVICIOS DE your_brand:\\n- **Inteligencia Artificial**: Chatbots, automatización, atención 24/7\\n- **Desarrollo Web & Apps**: Sitios web, e-commerce, apps móviles\\n- **Consultoría Digital**: Transformación digital, estrategia omnicanal\\n\\n## OBJETIVOS A IDENTIFICAR:\\n- **VENTAS**: Interés en comprar, cotizar, conocer productos/servicios, precios, planes\\n- **SOPORTE**: Problemas técnicos, ayuda con uso de productos, configuraciones, tutoriales\\n- **QUEJA**: Inconformidades, reclamos, problemas con el servicio, insatisfacción\\n\\n## ESTRATEGIA DE PREGUNTAS:\\n\\n### Para mensajes muy generales:\\n- \"¡Hola {{ $('When Executed by Another Workflow').item.json.nombre }}! Bienvenido a your_brand. ¿En qué puedo ayudarle hoy?\"\\n- \"Me da mucho gusto saludarlo. ¿Qué lo trae de nuevo por aquí?\"\\n- \"¿Hay algo específico en lo que pueda asistirle?\"\\n\\n### Para clarificar intención:\\n- \"¿Está interesado en conocer nuestros servicios de IA, desarrollo web o consultoría digital?\"\\n- \"¿Tiene alguna dificultad con algo que ya adquirió con nosotros?\"\\n- \"¿Hay algún inconveniente que necesite resolver?\"\\n\\n### Para profundizar:\\n- \"¿Podría contarme un poco más sobre lo que necesita?\"\\n- \"¿Qué tipo de ayuda está buscando específicamente?\"\\n\\n## EJEMPLOS DE CONVERSACIÓN:\\n\\n**Cliente:** \"Hola, buen día\"\\n**Agente:** \"¡Hola! Muy buen día {{ $('When Executed by Another Workflow').item.json.nombre }}, un gusto saludarlo de nuevo. Se está comunicando con atención a clientes de your_brand. ¿En qué puedo ayudarle?\"\\n\\n**Cliente:** \"¿Cómo está?\"\\n**Agente:** \"De maravilla {{ $('When Executed by Another Workflow').item.json.nombre }}, muchas gracias por preguntar. Me da mucho gusto poder atenderle. ¿Qué lo trae por aquí hoy?\"\\n\\n**Cliente:** \"Tengo una duda\"\\n**Agente:** \"Por supuesto, estaré encargado de ayudarle. ¿Podría contarme sobre qué es su duda? ¿Es sobre alguno de nuestros servicios (IA, desarrollo web o consultoría) o hay algo en lo que pueda orientarlo?\"\\n\\n**Cliente:** \"Necesito ayuda\"\\n**Agente:** \"Claro que sí, para eso estamos aquí. ¿Qué tipo de ayuda necesita? ¿Es algo relacionado con nuestros servicios de inteligencia artificial, desarrollo o consultoría, o hay algún inconveniente que deba resolver?\"\\n\\n## SEÑALES PARA DETECTAR OBJETIVO:\\n\\n### VENTAS (cuando escuches):\\n- \"precios\", \"costo\", \"cotización\", \"comprar\", \"planes\", \"servicios\", \"información comercial\"\\n- \"chatbot\", \"desarrollo web\", \"app\", \"consultoría\", \"automatización\", \"inteligencia artificial\"\\n\\n### SOPORTE (cuando escuches):\\n- \"no funciona\", \"problema técnico\", \"cómo usar\", \"configurar\", \"manual\", \"tutorial\", \"ayuda con\"\\n\\n### QUEJA (cuando escuches):\\n- \"molesto\", \"inconformes\", \"mal servicio\", \"reclamo\", \"problema con\", \"no estoy satisfecho\", \"quiero cancelar por problemas\"\\n\\n## IMPORTANTE:\\n- Si detectas claramente el objetivo, haz UNA pregunta más específica para confirmar antes de transferir\\n- Mantén las respuestas cortas y enfocadas\\n- Siempre sé empático y profesional\\n- No ofrezcas soluciones, solo clasifica mediante preguntas\\n\\nRecuerda: Tu éxito se mide por qué tan bien identificas la necesidad real del cliente a través de preguntas inteligentes y naturales."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        320,
+        0
+      ],
+      "id": "139809f0-0256-4c3c-b5dd-445c6571527e",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4o-mini"
+        },
+        "builtInTools": {},
+        "options": {
+          "temperature": 0.1
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        272,
+        240
+      ],
+      "id": "3bc872ca-f89f-40dc-a15a-4eab86826fa7",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "your_openai_credential_id",
+          "name": "OpenAi account"
+        }
+      }
+    }
+  ],
+  "pinData": {
+    "When Executed by Another Workflow": [
+      {
+        "json": {
+          "etiqueta": "indefinido",
+          "mensaje": "Que tal",
+          "client_id": "your_external_id",
+          "telefono": "+your_phone_number\n",
+          "nombre": "your_full_name",
+          "sender": 48,
+          "accountId": 2,
+          "content_type": "text",
+          "fecha_UTC": "2025-12-06T20:13:56.000Z",
+          "private": "false",
+          "content_attributes": "{}",
+          "conversationId": 47,
+          "email": "your_email@example.com",
+          "nombre_normalizado": "your_normalized_name",
+          "es_cliente": "true",
+          "fecha_creado": "\"2025-11-23T00:00:00.000Z\"",
+          "pais": "México",
+          "estado_cita": "cita agendada",
+          "fecha_cita": "2025-11-17T17:00:00.000Z",
+          "enlace_reunion": "https://meet.google.com/your-meeting-link",
+          "fecha_cita_timezone_cliente": "2025-11-17T11:00:00.000Z",
+          "asistencia": "si_asistio",
+          "empresa": "your_company",
+          "servicio": "Marketing Digital Completo",
+          "cita_pasada": "cita_pasada",
+          "score_lead": "95",
+          "agente": "Agente IA",
+          "channel": "Channel::Whatsapp",
+          "fecha_cita_timezone_legible": "Lunes, 17 de noviembre de 2025, 11:00 a.m.",
+          "emocion_cliente": null,
+          "detalles": null,
+          "servicio_afectado": null,
+          "nivel_urgencia": null,
+          "tipo_queja": null,
+          "fecha_queja": "12/6/2025, 8:13:56 PM",
+          "contact_id": "48",
+          "google_event_id": "1cbkap9kdc01rcf4s7vgsqgghc"
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Postgres Chat Memory5": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "preguntar al cliente": {
+      "main": [
+        [
+          {
+            "node": "registrar_etiqueta_y_fecha",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "parsear output": {
+      "main": [
+        [
+          {
+            "node": "preguntar al cliente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "etiqueta cliente indefinido",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "parsear output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Mexico_City",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "e98293da-3b35-471b-b238-c152441abb25",
+  "meta": {
+    "instanceId": "your_instance_id"
+  },
+  "id": "your_credential_id",
+  "tags": []
+}

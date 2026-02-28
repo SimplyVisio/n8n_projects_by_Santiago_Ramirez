@@ -1,0 +1,496 @@
+{
+  "name": "creador de IMAGENES redes sociales",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "Generative AI Image Engine (Nano Banana)\n\nThis utility workflow specializes in high-fidelity image generation and editing using the Nano Banana models. It handles the asynchronous job lifecycle from creation to storage.\n\nKey Process Steps:\n1. Dynamic Payload Construction: Translates user prompts and optional reference images into API-compatible bodies.\n2. Job Orchestration: Manages the 'create' and 'polling' phases of the generation lifecycle.\n3. Multi-Cloud Persistence: Simultaneously uploads the generated assets to Google Drive for archiving and Supabase for database mapping.\n4. Quality Assurance: Routes the final asset back to Telegram for immediate human review and feedback.",
+        "height": 450,
+        "width": 320,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -2100,
+        200
+      ],
+      "typeVersion": 1,
+      "id": "doc-image-engine",
+      "name": "Image Generation Layer"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Obtener input del nodo Set\nconst data = items[0].json;\n\n// Preparar body base\nlet body = {\n  model: data.model\n};\n\n// Agregar callBackUrl si existe y no está vacío\nif (data.callBackUrl && data.callBackUrl.trim() !== \"\") {\n  body.callBackUrl = data.callBackUrl.trim();\n}\n\n// Preparar input\nlet input = {};\n\n// prompt obligatorio\nif (data.prompt && data.prompt.trim() !== \"\") {\n  input.prompt = data.prompt.trim();\n}\n\n// output_format opcional\nif (data.output_format && data.output_format.trim() !== \"\") {\n  input.output_format = data.output_format.trim();\n}\n\n// image_size opcional\nif (data.image_size && data.image_size.trim() !== \"\") {\n  input.image_size = data.image_size.trim();\n}\n\n// image_urls solo si es modelo de edición\nif (data.model === \"google/nano-banana-edit\") {\n  // Construir array de URLs desde url_imagen_1, url_imagen_2, etc.\n  let imageUrls = [];\n  \n  for (let i = 1; i <= 5; i++) {\n    const urlKey = `url_imagen_${i}`;\n    if (data[urlKey] && data[urlKey].trim() !== \"\") {\n      imageUrls.push(data[urlKey].trim());\n    }\n  }\n  \n  // Solo agregar si hay al menos una URL\n  if (imageUrls.length > 0) {\n    input.image_urls = imageUrls;\n  }\n}\n\n// Asignar input solo si tiene campos\nif (Object.keys(input).length > 0) {\n  body.input = input;\n} else {\n  throw new Error(\"No hay campos válidos para 'input'.\");\n}\n\n// Construir salida para n8n\nreturn [{\n  json: {\n    bodyObject: body,\n    bodyJsonString: JSON.stringify(body, null, 2)\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1344,
+        320
+      ],
+      "id": "a7b5fa77-bbb2-4380-956e-9a9416b2a171",
+      "name": "prompt"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "d4a9065d-1e39-4815-9abe-485b3b768bb2",
+              "name": "model",
+              "value": "={{ $json.datos_imagen.modelo }}",
+              "type": "string"
+            },
+            {
+              "id": "9e7703ce-5930-40e0-90ed-b8d6238c4079",
+              "name": "prompt",
+              "value": "={{ $json.datos_imagen.prompt }}",
+              "type": "string"
+            },
+            {
+              "id": "2636e777-2808-4314-8ef6-1347c180a2e5",
+              "name": "output_format",
+              "value": "png",
+              "type": "string"
+            },
+            {
+              "id": "e473359e-f78e-400a-837a-2463cc5d7d4e",
+              "name": "image_size",
+              "value": "={{ $json.datos_imagen.image_size }}",
+              "type": "string"
+            },
+            {
+              "id": "c4400d21-719f-4b70-ab64-c7026b18024c",
+              "name": "callBackUrl",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "4d9ab41a-be2d-4ef0-b8ae-7d2f1a8779cd",
+              "name": "url_imagen_1",
+              "value": "={{ $json.datos_imagen.url_1 }}",
+              "type": "string"
+            },
+            {
+              "id": "af38e8d0-a6ad-481d-ab79-e57e43ffd5ca",
+              "name": "url_imagen_2",
+              "value": "={{ $json.datos_imagen.url_2 }}",
+              "type": "string"
+            },
+            {
+              "id": "8af6faf3-8f40-43a2-8e97-1e1990537915",
+              "name": "url_imagen_3",
+              "value": "={{ $json.datos_imagen.url_3 }}",
+              "type": "string"
+            },
+            {
+              "id": "c7cbc43b-f281-40c5-b11d-2364ad54dcd8",
+              "name": "url_imagen_4",
+              "value": "={{ $json.datos_imagen.url_4 }}",
+              "type": "string"
+            },
+            {
+              "id": "0b72c2fa-557f-4ea2-9889-6998a42cfd6d",
+              "name": "url_imagen_5",
+              "value": "={{ $json.datos_imagen.url_5 }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1568,
+        320
+      ],
+      "id": "ff8d7939-4acc-4452-b203-c9f2e5b7d827",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -1792,
+        320
+      ],
+      "id": "cfe05519-e7d5-4bd6-8603-8198a9d1abb1",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "f7cf0fa5-3835-4f1a-8faf-23f0c9e9383f",
+              "leftValue": "={{ $json.data.state }}",
+              "rightValue": "success",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -672,
+        240
+      ],
+      "id": "7bb4465b-f048-4bdd-84a3-2467292032c4",
+      "name": "SUCCESS"
+    },
+    {
+      "parameters": {
+        "amount": 10
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        -448,
+        416
+      ],
+      "id": "c3d68cad-6b2e-43d2-95c7-b02287591746",
+      "name": "ESPERAR",
+      "webhookId": "da4087e0-1b69-4216-a791-3043488a35e7"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Obtener el JSON completo\nconst response = items[0].json;\n\n// Parsear el resultJson donde viene la imagen generada\nconst resultJson = JSON.parse(response.data.resultJson);\n\n// URL generada final (la que necesitas)\nconst generatedUrl = resultJson.resultUrls?.[0] || null;\n\n// \"param\" viene como string → debemos convertirlo a JSON\nconst param = JSON.parse(response.data.param);\n\n// Extraer la URL original enviada al modelo\nconst originalUrl = param.input.image_urls?.[0] || null;\n\n// Retornar datos limpios\nreturn [{\n  json: {\n    taskId: response.data.taskId,\n    originalUrl: originalUrl,\n    generatedUrl: generatedUrl,\n    state: response.data.state,\n    costTime: response.data.costTime,\n    timestamp: new Date().toISOString()\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -448,
+        176
+      ],
+      "id": "82424ef0-b250-496f-a5aa-962b2df4b517",
+      "name": "EXTRAER URL VIDEO"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.generatedUrl }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -224,
+        176
+      ],
+      "id": "c822c917-4005-49ab-ad60-1e3ac2a8146c",
+      "name": "DESCARGAR"
+    },
+    {
+      "parameters": {
+        "tableId": "videos_SORA_&_imagenes_nanobanana",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "type",
+              "fieldValue": "imagen"
+            },
+            {
+              "fieldId": "url",
+              "fieldValue": "={{ $json.generatedUrl }}"
+            },
+            {
+              "fieldId": "descripcion_para_copy",
+              "fieldValue": "={{ $('When Executed by Another Workflow').item.json.datos_imagen.prompt }}"
+            },
+            {
+              "fieldId": "nombre",
+              "fieldValue": "={{ $json.taskId }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "b71617db-b6c8-49a9-97fd-8134ccf3016c",
+      "name": "guardar en supabase"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.kie.ai/api/v1/jobs/createTask",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer {{your_api_key}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.bodyJsonString }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -1120,
+        320
+      ],
+      "id": "1031897d-f345-4762-be60-6ca5aa5adec7",
+      "name": "NANOBANANA"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.kie.ai/api/v1/jobs/recordInfo?taskId={{ $json.data.taskId }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{your_api_key}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -896,
+        320
+      ],
+      "id": "b7079c26-6aca-46b7-9ec9-7a354950dfc7",
+      "name": "GET IMAGEN"
+    },
+    {
+      "parameters": {
+        "name": "={{ $json.taskId }}",
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "your_google_drive_folder_id",
+          "mode": "list",
+          "cachedResultName": "AI Assets",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/your_google_drive_folder_id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        0,
+        384
+      ],
+      "id": "1cadc4ab-4a95-4f8e-9564-e1aa99a8db90",
+      "name": "Upload file"
+    },
+    {
+      "parameters": {
+        "operation": "sendPhoto",
+        "chatId": "={{ $('When Executed by Another Workflow').item.json.chat_id }}",
+        "binaryData": true,
+        "replyMarkup": "inlineKeyboard",
+        "inlineKeyboard": {
+          "rows": [
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "Sí",
+                    "additionalFields": {
+                      "callback_data": "=resultado_de_imagen_bueno,{{ $json.taskId }}"
+                    }
+                  },
+                  {
+                    "text": "No",
+                    "additionalFields": {
+                      "callback_data": "=resultado_de_imagen_malo,{{ $json.taskId }}"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "additionalFields": {
+          "caption": "Esta bien el resultado?"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        192
+      ],
+      "id": "a0936672-66e0-457e-9b39-e90bb0510792",
+      "name": "Send a photo message",
+      "webhookId": "db25e37a-dbe9-4d65-a13d-c3816dce66d7",
+      "credentials": {
+        "telegramApi": {
+          "id": "your_credential_id",
+          "name": "test"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "prompt": {
+      "main": [
+        [
+          {
+            "node": "NANOBANANA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SUCCESS": {
+      "main": [
+        [
+          {
+            "node": "EXTRAER URL VIDEO",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "ESPERAR",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ESPERAR": {
+      "main": [
+        [
+          {
+            "node": "GET IMAGEN",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "EXTRAER URL VIDEO": {
+      "main": [
+        [
+          {
+            "node": "DESCARGAR",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DESCARGAR": {
+      "main": [
+        [
+          {
+            "node": "guardar en supabase",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Upload file",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send a photo message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "NANOBANANA": {
+      "main": [
+        [
+          {
+            "node": "GET IMAGEN",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GET IMAGEN": {
+      "main": [
+        [
+          {
+            "node": "SUCCESS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "da0b87b4-8007-45bf-a122-a92fc29a01bb",
+  "meta": {
+    "instanceId": "your_instance_id"
+  },
+  "id": "your_credential_id",
+  "tags": []
+}

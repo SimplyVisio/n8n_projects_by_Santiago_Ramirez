@@ -1,0 +1,2277 @@
+{
+  "name": "enviar_data",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "Inbound Call Data Router (Retell AI Bridge)\n\nThis workflow acts as the intelligent bridge between Retell AI and our core CRM/ERP systems. it processes incoming webhook payloads from voice agents, parses the conversation analysis, and prepares synchronized data packets for downstream processing.\n\nOperational Pillars:\n1. Webhook Ingestion: Receives real-time call events and transcripts from Retell AI.\n2. Context Retrieval: Merges live call data with existing lead/client information from Postgres.\n3. Intelligent Parsing: Normalizes client names, extracts intent scores, and formats conversation summaries.\n4. Dynamic Response: Constructs the 'override' configuration for the AI agent to ensure person-level continuity in voice interactions.",
+        "height": 450,
+        "width": 320,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -1300,
+        300
+      ],
+      "typeVersion": 1,
+      "id": "doc-inbound-router",
+      "name": "Data Routing Layer"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "your_inbound_webhook_path",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1024,
+        384
+      ],
+      "id": "78b8956f-43ca-491d-83e6-232db8895002",
+      "name": "llamada_entrante",
+      "webhookId": "your_inbound_webhook_id"
+    },
+    {
+      "parameters": {
+        "enableResponseOutput": true,
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($input.first().json.data.call_inbound) }}",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        896,
+        96
+      ],
+      "id": "de4be49b-38b9-4ea2-9ee7-a61cfc97761c",
+      "name": "Respond to Webhook1",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Toma el primer elemento del array de entrada\nconst item = Array.isArray($input.item.json) ? $input.item.json[0] : $input.item.json;\n\n// Accede a los datos de la llamada desde body.call\nconst call = item.body?.call || {};\n\n// Accede al array de data si existe\nconst dataArray = item.data || [];\n\n// Concatenar todos los resúmenes previos en uno solo\nlet resumenesPrevios = \"\";\nif (dataArray.length > 0) {\n  resumenesPrevios = dataArray\n    .map((data, index) => {\n      const fecha = data.fecha_llamada\n        ? new Date(data.fecha_llamada).toLocaleDateString(\"es-MX\")\n        : \"Fecha no disponible\";\n      return `[Llamada ${index + 1} - ${fecha}]: ${data.resumen || \"Sin resumen\"}`;\n    })\n    .join(\"\\n\\n\");\n}\n\n// Construir instrucciones breves para el agente\nconst instruccionesBrevesAgente = `\nCliente: ${item.nombre || \"Sin nombre\"}\nEmpresa: ${item.empresa || \"No especificada\"}\nServicio de interés: ${item.servicio || \"No especificado\"}\nPaís: ${item.pais || \"No especificado\"}\nEstado Lead: ${item.estado_lead || \"Desconocido\"}\nScore: ${item.score_lead || \"N/A\"}/100\nFuente: ${item.fuente || \"Desconocida\"}\n${item.fecha_cita ? `Cita agendada: ${item.fecha_cita_legible || item.fecha_cita}` : \"Sin cita agendada\"}\n${resumenesPrevios ? `\\n📋 Historial de llamadas previas:\\n${resumenesPrevios}` : \"\"}\n${call.call_analysis?.call_summary ? `\\n📞 Resumen de llamada actual: ${call.call_analysis.call_summary}` : \"\"}\n`.trim();\n\n// Construye metadata combinando todos los datos disponibles\nconst metadata = {\n  webhookUrl: item.webhookUrl || \"\",\n  id: item.id || \"\",\n  lead_id: item.lead_id || \"\",\n  fb_click_id: item.fb_click_id || \"\",\n  nombre: item.nombre || \"\",\n  email: item.email || \"\",\n  telefono: item.telefono || \"\",\n  servicio: item.servicio || \"\",\n  fuente: item.fuente || \"\",\n  empresa: item.empresa || \"\",\n  estado: item.estado || \"\",\n  pais: item.pais || \"\",\n  codigo_postal: item.codigo_postal || \"\",\n  direccion_ip: item.direccion_ip || \"\",\n  identificador_externo: item.identificador_externo || \"\",\n  url_origen: item.url_origen || \"\",\n  user_agent: item.user_agent || \"\",\n  nombre_formulario: item.nombre_formulario || \"\",\n  nombre_campana: item.nombre_campana || \"\",\n  nombre_conjunto_anuncios: item.nombre_conjunto_anuncios || \"\",\n  nombre_anuncio: item.nombre_anuncio || \"\",\n  nombre_pagina: item.nombre_pagina || \"\",\n  estado_lead: item.estado_lead || \"\",\n  fecha_creado: item.fecha_creado || \"\",\n  fecha_creado_timestamp: item.fecha_creado_timestamp || \"\",\n  created_at: item.created_at || \"\",\n  updated_at: item.updated_at || \"\",\n  fecha_conversion: item.fecha_conversion || \"\",\n  enviado_meta: item.enviado_meta || \"\",\n  score_lead: item.score_lead || \"\",\n  mes_creacion: item.mes_creacion || \"\",\n  ano_creacion: item.ano_creacion || \"\",\n  utm_source: item.utm_source || \"\",\n  utm_medium: item.utm_medium || \"\",\n  utm_campaign: item.utm_campaign || \"\",\n  utm_content: item.utm_content || \"\",\n  utm_term: item.utm_term || \"\",\n  fbclid: item.fbclid || \"\",\n  fuente_completa: item.fuente_completa || \"\",\n  campana_nombre: item.campana_nombre || \"\",\n  anuncio_nombre: item.anuncio_nombre || \"\",\n  error_meta: item.error_meta || \"\",\n  client_id: item.client_id || \"\",\n  messenger: item.messenger || \"\",\n  instagram: item.instagram || \"\",\n  whatsapp: item.whatsapp || \"\",\n  telegram: item.telegram || \"\",\n  messenger_normalizado: item.messenger_normalizado || \"\",\n  instagram_normalizado: item.instagram_normalizado || \"\",\n  telegram_normalizado: item.telegram_normalizado || \"\",\n  identificado: item.identificado || \"\",\n  nombre_normalizado: item.nombre_normalizado || \"\",\n  es_cliente: item.es_cliente || \"\",\n  fbp: item.fbp || \"\",\n  conversationid: item.conversationid || \"\",\n  accountid: item.accountid || \"\",\n  content_type: item.content_type || \"\",\n  private: item.private || \"\",\n  content_attributes: item.content_attributes || \"\",\n  contact_id: item.contact_id || \"\",\n  sessionid: item.sessionid || \"\",\n  agente: item.agente || \"\",\n  message_type: item.message_type || \"\",\n  sender: item.sender || \"\",\n  chatwoot_contact_id: item.chatwoot_contact_id || \"\",\n  instrucciones: instruccionesBrevesAgente,\n  fecha_cita: item.fecha_cita || \"\",\n  resumen: item.resumen || \"\",\n  estado_cita: item.estado_cita || \"\",\n  enlace_reunion: item.enlace_reunion || \"\",\n  notas_internas: item.notas_internas || \"\",\n  duracion_minutos: item.duracion_minutos || \"\",\n  recordatorio_enviado: item.recordatorio_enviado || \"\",\n  cancelado_por: item.cancelado_por || \"\",\n  motivo_cancelacion: item.motivo_cancelacion || \"\",\n  creado: item.creado || \"\",\n  actualizado: item.actualizado || \"\",\n  fecha_cita_timezone_cliente: item.fecha_cita_timezone_cliente || \"\",\n  asistencia: item.asistencia || \"\",\n  cita_pasada: item.cita_pasada || \"\",\n  fecha_cita_timezone_legible: item.fecha_cita_timezone_legible || \"\",\n  fecha_cita_legible: item.fecha_cita_legible || \"\",\n  google_event_id: item.google_event_id || \"\",\n  call_id: call.call_id || \"\",\n  call_type: call.call_type || \"\",\n  call_status: call.call_status || \"\",\n  from_number: call.from_number || \"\",\n  to_number: call.to_number || \"\",\n  agent_id: call.agent_id || \"\",\n  agent_name: call.agent_name || \"\",\n  agent_version: call.agent_version || \"\",\n  transcript: call.transcript || \"\",\n  direction: call.direction || \"\",\n  start_timestamp: call.start_timestamp || \"\",\n  end_timestamp: call.end_timestamp || \"\",\n  duration_ms: call.duration_ms || \"\",\n  recording_url: call.recording_url || \"\",\n  recording_multi_channel_url: call.recording_multi_channel_url || \"\",\n  public_log_url: call.public_log_url || \"\",\n  disconnection_reason: call.disconnection_reason || \"\",\n  call_summary: call.call_analysis?.call_summary || \"\",\n  resumenes_previos_concatenados: resumenesPrevios,\n  event: item.body?.event || \"\"\n};\n\n// Dynamic variables (todas en string)\nconst dynamic_variables = {\n  nombre: String(\n  (() => {\n    const partes = (item.nombre || \"sin_dato\")\n      .trim()\n      .split(/\\s+/)\n      .filter(Boolean); // limpia espacios vacíos\n\n    if (partes.length === 0) return \"sin_dato\";\n\n    // Primer nombre siempre\n    const primerNombre = partes[0];\n\n    // Primer apellido si existe (segunda palabra o penúltima si hay más de dos)\n    let primerApellido = \"\";\n    if (partes.length >= 2) {\n      primerApellido = partes.length === 2 ? partes[1] : partes[partes.length - 2];\n    }\n\n    // Formatear con mayúsculas iniciales\n    const format = (str) =>\n      str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();\n\n    return primerApellido\n      ? `${format(primerNombre)} ${format(primerApellido)}`\n      : format(primerNombre);\n  })()\n),\n  nombre_completo: String(item.nombre || \"sin_dato\"),\n  email: String(item.email || \"sin_dato\"),\n  telefono: String(item.telefono || call.from_number || \"sin_dato\"),\n  servicio: String(item.servicio || \"sin_dato\"),\n  empresa: String(item.empresa || \"sin_dato\"),\n  estado: String(item.estado || \"sin_dato\"),\n  pais: String(item.pais || \"sin_dato\"),\n  estado_lead: String(item.estado_lead || \"sin_dato\"),\n  client_id: String(item.client_id || \"sin_dato\"),\n  whatsapp: String(item.whatsapp || \"sin_dato\"),\n  es_cliente: String(item.es_cliente || \"sin_dato\"),\n  fecha_cita: String(item.fecha_cita || \"sin_dato\"),\n  enlace_reunion: String(item.enlace_reunion || \"sin_dato\"),\n  motivo_cancelacion: String(item.motivo_cancelacion || \"sin_dato\"),\n  fecha_cita_timezone_cliente: String(item.fecha_cita_timezone_cliente || \"sin_dato\"),\n  asistencia: String(item.asistencia || \"sin_dato\"),\n  cita_pasada: String(item.cita_pasada || \"sin_dato\"),\n  fecha_cita_timezone_legible: String(item.fecha_cita_timezone_legible || \"sin_dato\"),\n  fecha_cita_legible: String(item.fecha_cita_legible || \"sin_dato\"),\n  google_event_id: String(item.google_event_id || \"sin_dato\"),\n  call_id: String(call.call_id || \"sin_dato\"),\n  call_type: String(call.call_type || \"sin_dato\"),\n  call_status: String(call.call_status || \"sin_dato\"),\n  from_number: String(call.from_number || \"sin_dato\"),\n  to_number: String(call.to_number || \"sin_dato\"),\n  agent_id: String(call.agent_id || \"sin_dato\"),\n  agent_name: String(call.agent_name || \"sin_dato\"),\n  agent_version: String(call.agent_version || \"sin_dato\"),\n  direction: String(call.direction || \"sin_dato\"),\n  resumenes_previos: String(resumenesPrevios || \"sin_dato\"),\n  estado_cita: String(item.estado_cita || \"sin_dato\"),\n  event: String(item.body?.event || \"sin_dato\")\n};\n\n// Construcción final en el formato que espera Retell\nconst response = {\n  call_inbound: {\n    override_agent_id: call.agent_id || undefined,\n    override_agent_version: call.agent_version || undefined,\n    dynamic_variables,\n    metadata\n  }\n};\n\n// Retornar como JSON STRING\nreturn [\n  {\n    json: {\n      jsonString: JSON.stringify(response, null, 2),\n      data: response\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        96
+      ],
+      "id": "ed020274-120a-4224-95a9-010c5bdebdb9",
+      "name": "parsear",
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "numberInputs": 4,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        448,
+        64
+      ],
+      "id": "bd820fc4-2563-4ea5-a069-f967bda88ab1",
+      "name": "Merge",
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT *\nFROM citas\nWHERE client_id = '{{ $json.client_id }}'\nORDER BY creado DESC\nLIMIT 1;\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -288,
+        -192
+      ],
+      "id": "21bd4928-f2d9-40f3-9b58-a8c1d0cfb792",
+      "name": "obtener_citas",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "your_credential_id",
+          "name": "Postgres account 2"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT *\nFROM leads_formularios_optimizada\nWHERE \n  telefono = '{{ $json.body.call_inbound.from_number }}' \nOR telefono = '{{ $json.body.call.from_number }}'\nORDER BY created_at DESC\nLIMIT 1;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -800,
+        -32
+      ],
+      "id": "2bfec095-fe0c-4d06-9234-6c0d4b3497e8",
+      "name": "Get many rows1",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "your_credential_id",
+          "name": "Postgres account 2"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT *\nFROM llamadas\nWHERE client_id = '{{ $('Get many rows1').item.json.client_id }}'\nORDER BY created_at DESC\nLIMIT 5;\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        0,
+        -288
+      ],
+      "id": "b28d48bf-8d25-4e12-8399-156c911b8617",
+      "name": "obtener_memoria_llamadas",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "your_credential_id",
+          "name": "Postgres account 2"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "version": 2,
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "b21020be-a710-458a-9d3e-41605f6c8375",
+              "leftValue": "={{ $json.body.event }}",
+              "rightValue": "call_analyzed",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "id": "988b49ad-bb04-4b6d-a9d8-3cd997c08a21",
+      "name": "Filter",
+      "type": "n8n-nodes-base.filter",
+      "position": [
+        -800,
+        704
+      ],
+      "typeVersion": 2.2
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4o-mini"
+        },
+        "options": {
+          "temperature": 0.1
+        }
+      },
+      "id": "1819d2a1-c8b9-4db4-ae80-2c49df8025e9",
+      "name": "OpenAI Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "position": [
+        -352,
+        928
+      ],
+      "typeVersion": 1.2,
+      "credentials": {
+        "openAiApi": {
+          "id": "your_credential_id",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n\t\"type\": \"object\",\n\t\"properties\": {\n\t\t\"nombre\": {\n\t\t\t\"type\": \"string\",\n            \"description\":\"\"\n\t\t},\n\t\t\"empresa\": {\n\t\t\t\"type\": \"string\",\n            \"description\":\"\"\n\t\t},\n        \"email\": {\n\t\t\t\"type\": \"string\",\n            \"description\":\"\"\n\t\t},\n        \"telefono\": {\n\t\t\t\"type\": \"string\",\n            \"description\":\"\"\n\t\t},\n        \"summary\": {\n\t\t\t\"type\": \"string\",\n            \"description\":\"\"\n\t\t},\n        \"servicio\": {\n\t\t\t\"type\": \"string\",\n            \"description\":\"\"\n\t\t},\n        \"resumen_extenso\": {\n\t\t\t\"type\": \"date\",\n            \"description\":\"\"\n        }\n\t}\n}"
+      },
+      "id": "3e25aa70-6b75-453d-85a0-d8068a9ea09a",
+      "name": "Structured Output Parser",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "position": [
+        -224,
+        928
+      ],
+      "typeVersion": 1.2
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "15b079b9-e36d-4c9b-8ca4-30bf858ce75b",
+              "name": "Transcript",
+              "type": "string",
+              "value": "={{ $('llamada_entrante').item.json.body.call.transcript }}"
+            },
+            {
+              "id": "f1cbced3-bd9c-4d8f-bd81-060406ff27b0",
+              "name": "Duration (sec)",
+              "type": "string",
+              "value": "={{ $('llamada_entrante').item.json.body.call.call_cost.total_duration_seconds }}"
+            },
+            {
+              "id": "829ee367-1f5e-4d66-9818-8a27344d7e79",
+              "name": "From",
+              "type": "string",
+              "value": "={{ $('llamada_entrante').item.json.body.call.from_number }}"
+            },
+            {
+              "id": "38e9e856-d87d-4c23-8486-4ebbac2da595",
+              "name": "To",
+              "type": "string",
+              "value": "={{ $('llamada_entrante').item.json.body.call.to_number }}"
+            },
+            {
+              "id": "4209d6d3-4881-4296-a1db-fff0c14addda",
+              "name": "Cost ",
+              "type": "string",
+              "value": "={{ $('llamada_entrante').item.json.body.call.call_cost.combined_cost }}"
+            },
+            {
+              "id": "3c871d3b-95b5-493a-b3fe-3c9bf06a0d62",
+              "name": "Telephony Identifier",
+              "type": "string",
+              "value": "={{ $('llamada_entrante').item.json.body.call.telephony_identifier.twilio_call_sid }}"
+            },
+            {
+              "id": "0a926748-8aff-4dd7-a252-516f3339210a",
+              "name": "Disconnection reason",
+              "type": "string",
+              "value": "={{ $('llamada_entrante').item.json.body.call.disconnection_reason }}"
+            },
+            {
+              "id": "9c88eafc-4370-47ad-ad98-d14767c137d0",
+              "name": "Recording url",
+              "type": "string",
+              "value": "={{ $('llamada_entrante').item.json.body.call.recording_url }}"
+            },
+            {
+              "id": "a737a3bd-c871-4273-85b8-8e423bf7c443",
+              "name": "Public log url",
+              "type": "string",
+              "value": "={{ $('llamada_entrante').item.json.body.call.public_log_url }}"
+            },
+            {
+              "id": "c42b9cd5-2811-4623-92d5-e3777a56acb6",
+              "name": "hora_inicio_mexico",
+              "value": "={{ $('llamada_entrante').item.json.body.call.start_timestamp.toDateTime('ms').toLocal() }}",
+              "type": "string"
+            },
+            {
+              "id": "26f2691c-8c12-4014-a0fd-909c567c496a",
+              "name": "hora_final_mexico",
+              "value": "={{ $('llamada_entrante').item.json.body.call.end_timestamp.toDateTime('ms').toLocal() }}",
+              "type": "string"
+            },
+            {
+              "id": "315d7fd2-0c3d-416c-9021-01c7fd5d471e",
+              "name": "hora_inicio_UTC",
+              "value": "={{ $('llamada_entrante').item.json.body.call.start_timestamp.toDateTime('ms').toUTC() }}",
+              "type": "string"
+            },
+            {
+              "id": "54111336-a4c1-47cb-a880-32e623b4cda1",
+              "name": "hora_final_UTC",
+              "value": "={{ $('llamada_entrante').item.json.body.call.end_timestamp.toDateTime('ms').toUTC() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "40395f2a-7a81-4a97-b6d0-dc9bbd4697fd",
+      "name": "Set call fields",
+      "type": "n8n-nodes-base.set",
+      "position": [
+        -576,
+        704
+      ],
+      "typeVersion": 3.4
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Complete transcript:\n{{ $json.Transcript }} ",
+        "hasOutputParser": true,
+        "messages": {
+          "messageValues": [
+            {
+              "message": "=Aquí está el prompt modificado para capturar la estructura JSON solicitada:\n\njson{\n\t\"type\": \"object\",\n\t\"properties\": {\n\t\t\"nombre\": {\n\t\t\t\"type\": \"string\",\n            \"description\": \"Nombre completo del cliente extraído de la conversación\"\n\t\t},\n\t\t\"empresa\": {\n\t\t\t\"type\": \"string\",\n            \"description\": \"Nombre de la empresa o proyecto del cliente mencionado en la conversación\"\n\t\t},\n        \"email\": {\n\t\t\t\"type\": \"string\",\n            \"description\": \"Correo electrónico del cliente proporcionado durante la conversación\"\n\t\t},\n        \"telefono\": {\n\t\t\t\"type\": \"string\",\n            \"description\": \"Número de teléfono del cliente con código de país proporcionado durante la conversación\"\n\t\t},\n        \"summary\": {\n\t\t\t\"type\": \"string\",\n            \"description\": \"Resumen breve de la conversación en máximo 2-3 oraciones que capture el objetivo principal y resultado\"\n\t\t},\n        \"servicio\": {\n\t\t\t\"type\": \"string\",\n            \"description\": \"Servicio específico de interés o recomendado durante la conversación (ej: Marketing Digital, Inteligencia Artificial, Desarrollo Web, etc.)\"\n\t\t},\n        \"resumen_extenso\": {\n\t\t\t\"type\": \"string\",\n            \"description\": \"Resumen detallado de la llamada en 5 oraciones que incluya: contexto, puntos clave discutidos, decisiones tomadas, acciones acordadas y próximos pasos\"\n        }\n\t}\n}\n\nPrompt del Sistema:\nEres un asistente de IA especializado en analizar transcripciones completas de conversaciones de voz comerciales. Tu tarea consiste en extraer información estructurada y crear resúmenes concisos que capturen los datos esenciales del cliente y de la conversación.\nEntrada:\nRecibirás la transcripción completa de una conversación de voz entre un agente de ventas/asesor y un cliente potencial.\nTarea:\n\nExtrae los datos del cliente mencionados explícitamente durante la conversación:\n\nNombre completo del cliente\nNombre de su empresa o proyecto\nCorreo electrónico\nNúmero de teléfono (con código de país)\nServicio de interés o recomendado\n\n\nAnaliza la conversación para identificar:\n\nPuntos clave discutidos\nNecesidades o problemas del cliente\nSoluciones propuestas\nDecisiones tomadas\nAcciones acordadas o próximos pasos\n\n\nCrea dos tipos de resúmenes:\n\nSummary (breve): 2-3 oraciones que capturen el objetivo principal y resultado de la conversación\nResumen extenso: 5 oraciones detalladas que incluyan:\n\nContexto inicial de la llamada\nNecesidades específicas del cliente\nServicios discutidos o recomendados\nObjeciones manejadas (si aplica)\nDecisiones o acuerdos alcanzados\nAcciones a realizar (citas agendadas, seguimientos, etc.)\nEstado final de la conversación\n\n\n\n\n\nReglas importantes:\n\nPrecisión absoluta: Extrae solo información mencionada EXPLÍCITAMENTE en la transcripción\nSi un dato NO fue mencionado, devuelve \"sin_dato\" para ese campo\nNO inventes, asumas o infiera información que no esté clara\nSi el cliente mencionó múltiples servicios, lista el principal o más relevante\nMantén objetividad, evitando interpretaciones personales\nSi algo no está claro en la transcripción, anótalo como \"no especificado\" en lugar de adivinar\n\nFormato de salida JSON:\nDevuelve ÚNICAMENTE un objeto JSON válido con la siguiente estructura:\njson{\n  \"nombre\": \"string o sin_dato\",\n  \"empresa\": \"string o sin_dato\",\n  \"email\": \"string o sin_dato\",\n  \"telefono\": \"string con código de país o sin_dato\",\n  \"summary\": \"resumen breve de 2-3 oraciones\",\n  \"servicio\": \"nombre del servicio específico o sin_dato\",\n  \"resumen_extenso\": \"resumen detallado de 5 oraciones\"\n}\nEjemplo de salida esperada:\njson{\n  \"nombre\": \"María González\",\n  \"empresa\": \"Tienda de Ropa MG\",\n  \"email\": \"maria@tiendaropa.com\",\n  \"telefono\": \"+573001234567\",\n  \"summary\": \"Cliente interesada en mejorar conversiones de su tienda online. Se agendó cita para el martes 12 de noviembre a las 3 PM para revisar estrategia de marketing digital.\",\n  \"servicio\": \"Marketing Digital\",\n  \"resumen_extenso\": \"La llamada inició con María González, propietaria de Tienda de Ropa MG en Colombia. María expresó que su principal desafío es que recibe visitas en su sitio web pero las conversiones son muy bajas. Actualmente no tiene estrategia de marketing digital implementada. Se le recomendó el servicio de Marketing Digital enfocado en optimización de conversión y retargeting. María mostró interés inmediato y mencionó que es urgente resolver esto. Se validó disponibilidad para el martes 12 de noviembre a las 3 PM hora de Colombia. María confirmó sus datos: correo maria@tiendaropa.com y teléfono +573001234567. Se creó el evento en Google Calendar y se envió invitación con enlace de Google Meet. María agradeció la atención y confirmó asistencia a la reunión. La llamada finalizó exitosamente con cita agendada y cliente satisfecho.\"\n}"
+            }
+          ]
+        }
+      },
+      "id": "c65717ae-2b75-4ff6-b500-ea2bf5855926",
+      "name": "Extract key points",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "position": [
+        -352,
+        704
+      ],
+      "typeVersion": 1.6
+    },
+    {
+      "parameters": {
+        "tableId": "llamadas",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "resumen",
+              "fieldValue": "={{ $('Extract key points').item.json.output.resumen_extenso }}"
+            },
+            {
+              "fieldId": "client_id",
+              "fieldValue": "={{ $json.client_id }}"
+            },
+            {
+              "fieldId": "telefono",
+              "fieldValue": "={{ $('llamada_entrante').item.json.body.call.from_number }}"
+            },
+            {
+              "fieldId": "fecha_llamada",
+              "fieldValue": "={{ $('Set call fields').item.json.hora_inicio_UTC }}"
+            },
+            {
+              "fieldId": "fecha_llamada_legible",
+              "fieldValue": "={{\n(() => {\n  let fechaRaw =  $('Set call fields').item.json.hora_inicio_mexico ;\n  if (!fechaRaw) return 'Sin fecha';\n\n  // Normaliza formato básico\n  fechaRaw = fechaRaw.replace(' ', 'T').replace(/\\//g, '-');\n\n  // Solo agrega Z si no hay zona horaria ni Z\n  if (!/[+-]\\d{2}:\\d{2}$/.test(fechaRaw) && !fechaRaw.endsWith('Z')) {\n    fechaRaw += 'Z';\n  }\n\n  const fecha = new Date(fechaRaw);\n  if (isNaN(fecha.getTime())) return 'Fecha inválida';\n\n  // Devuelve fecha y hora con formato mexicano\n  return fecha.toLocaleString('es-MX', {\n    timeZone: 'America/Mexico_City',\n    weekday: 'long',\n    day: 'numeric',\n    month: 'long',\n    year: 'numeric',\n    hour: '2-digit',\n    minute: '2-digit',\n    hour12: true\n  });\n})()\n}}\n"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        224,
+        608
+      ],
+      "id": "d88c8b9b-9c43-4db8-a532-cfce6ad3ea30",
+      "name": "Create a row",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "your_credential_id",
+          "name": "Supabase account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "leads_formularios_optimizada",
+        "returnAll": true,
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "telefono",
+              "condition": "eq",
+              "keyValue": "={{ $('llamada_entrante').item.json.body.call.from_number }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        0,
+        608
+      ],
+      "id": "a1f6880c-f01a-403d-b9eb-ff202591acff",
+      "name": "Get many rows",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "your_credential_id",
+          "name": "Supabase account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "chatId": "your_telegram_chat_id",
+        "text": "=<b>Resumen de la llamada:</b>\n{{ $json.output.summary }}\n\n<b>Nombre:</b> {{ $('llamada_entrante').item.json.body.call.retell_llm_dynamic_variables.nombre_completo ?? $json.output.nombre }}\n<b>Email:</b> {{ $('llamada_entrante').item.json.body.call.retell_llm_dynamic_variables.email ?? $json.output.email }}\n<b>Teléfono:</b> {{ $('llamada_entrante').item.json.body.call.from_number }}\n<b>Fecha:</b> {{\n(() => {\n  let fechaRaw =  $('Set call fields').item.json.hora_inicio_mexico ;\n  if (!fechaRaw) return 'Sin fecha';\n\n  // Normaliza formato básico\n  fechaRaw = fechaRaw.replace(' ', 'T').replace(/\\//g, '-');\n\n  // Solo agrega Z si no hay zona horaria ni Z\n  if (!/[+-]\\d{2}:\\d{2}$/.test(fechaRaw) && !fechaRaw.endsWith('Z')) {\n    fechaRaw += 'Z';\n  }\n\n  const fecha = new Date(fechaRaw);\n  if (isNaN(fecha.getTime())) return 'Fecha inválida';\n\n  // Devuelve fecha y hora con formato mexicano\n  return fecha.toLocaleString('es-MX', {\n    timeZone: 'America/Mexico_City',\n    weekday: 'long',\n    day: 'numeric',\n    month: 'long',\n    year: 'numeric',\n    hour: '2-digit',\n    minute: '2-digit',\n    hour12: true\n  });\n})()\n}}\n",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "d0d52b81-17ef-4d9c-a117-4afad9238216",
+      "name": "resumen de llamada",
+      "type": "n8n-nodes-base.telegram",
+      "position": [
+        0,
+        800
+      ],
+      "webhookId": "44d73068-54dc-458b-a6fb-4b4d10ebed34",
+      "typeVersion": 1.2,
+      "credentials": {
+        "telegramApi": {
+          "id": "your_credential_id",
+          "name": "Llamadasyour_brand"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        224,
+        -288
+      ],
+      "id": "ac80a1bc-6ac3-42c6-8ae4-3960a171b1f2",
+      "name": "Aggregate",
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "7228019c-deb9-40e0-a67a-68d314649098",
+              "name": "body.call.from_number",
+              "value": "={{ $json.body.call.from_number }}",
+              "type": "string"
+            },
+            {
+              "id": "2e63fcd3-7cfa-4056-98b0-531c989a2c60",
+              "name": "body.event",
+              "value": "={{ $json.body.event }}",
+              "type": "string"
+            },
+            {
+              "id": "b7c3af87-a0dc-4059-9908-9d0f48bcaf6e",
+              "name": "body.call.call_analysis.call_summary",
+              "value": "={{ $json.body.call.call_analysis.call_summary }}",
+              "type": "string"
+            },
+            {
+              "id": "80b7ea12-8c98-49c2-a3ee-7fa664252bb0",
+              "name": "body.call.to_number",
+              "value": "={{ $json.body.call.to_number }}",
+              "type": "string"
+            },
+            {
+              "id": "f89fa586-fd57-4172-b9b2-bd9a320184d9",
+              "name": "body.call.agent_id",
+              "value": "={{ $json.body.call.agent_id }}",
+              "type": "string"
+            },
+            {
+              "id": "e1b2bece-162d-49ba-be61-c7cd0474ce6b",
+              "name": "body.call.agent_name",
+              "value": "={{ $json.body.call.agent_name }}",
+              "type": "string"
+            },
+            {
+              "id": "386a90b7-863a-4d1b-8c7b-d4d8f44b20f8",
+              "name": "body.call.call_id",
+              "value": "={{ $json.body.call.call_id }}",
+              "type": "string"
+            },
+            {
+              "id": "3d4fbd4c-1b03-41bf-add0-1b9b2ee11881",
+              "name": "body.call.call_type",
+              "value": "={{ $json.body.call.call_type }}",
+              "type": "string"
+            },
+            {
+              "id": "cc59daf0-09a8-4693-b5d8-92d008b04386",
+              "name": "body.call.agent_version",
+              "value": "={{ $json.body.call.agent_version }}",
+              "type": "number"
+            },
+            {
+              "id": "39fa03c1-2e67-4d47-a491-cf214ddd7a58",
+              "name": "body.call.transcript",
+              "value": "={{ $json.body.call.transcript }}",
+              "type": "string"
+            },
+            {
+              "id": "3cdd76f7-8ee7-45ea-9153-f8534a0edc73",
+              "name": "body.call.direction",
+              "value": "={{ $json.body.call.direction }}",
+              "type": "string"
+            },
+            {
+              "id": "e6ca1d83-62a0-4f87-842c-f7c66fd63a64",
+              "name": "webhookUrl",
+              "value": "={{ $json.webhookUrl }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        224,
+        384
+      ],
+      "id": "a6ce63e7-6c7a-4fe5-bf40-d5ec6b484077",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a1999e7f-ab5b-4764-bdad-6ac24a174fc8",
+              "name": "estado_cita",
+              "value": "={{ $json.estado||null }}",
+              "type": "string"
+            },
+            {
+              "id": "c4a71819-0241-4f83-b019-8cffd2a68873",
+              "name": "fecha_cita",
+              "value": "={{ $json.fecha_cita }}",
+              "type": "string"
+            },
+            {
+              "id": "3706e60a-bf44-49a1-a5bb-93f79336432b",
+              "name": "enlace_reunion",
+              "value": "={{ $json.enlace_reunion }}",
+              "type": "string"
+            },
+            {
+              "id": "c819955f-87b6-44ee-a0b2-330b9d2678e2",
+              "name": "motivo_cancelacion",
+              "value": "={{ $json.motivo_cancelacion }}",
+              "type": "string"
+            },
+            {
+              "id": "77026fda-6c0e-4b3b-9420-888ee04173a8",
+              "name": "fecha_cita_timezone_cliente",
+              "value": "={{ $json.fecha_cita_timezone_cliente }}",
+              "type": "string"
+            },
+            {
+              "id": "2a70a1d3-7815-486f-b1e5-b9df7e7e8819",
+              "name": "asistencia",
+              "value": "={{ $json.asistencia }}",
+              "type": "string"
+            },
+            {
+              "id": "95c3f597-01ca-47f3-aa36-801f102d6f1c",
+              "name": "cita_pasada",
+              "value": "={{ $json.cita_pasada }}",
+              "type": "string"
+            },
+            {
+              "id": "8619c635-c600-4a7d-8181-b97e47da5db6",
+              "name": "fecha_cita_timezone_legible",
+              "value": "={{ $json.fecha_cita_timezone_legible }}",
+              "type": "string"
+            },
+            {
+              "id": "53d6b769-93c8-4fd1-85d6-d6c935d7005d",
+              "name": "fecha_cita_legible",
+              "value": "={{ $json.fecha_cita_legible }}",
+              "type": "string"
+            },
+            {
+              "id": "0e45e723-73af-4572-9bc4-521e015484a4",
+              "name": "google_event_id",
+              "value": "={{ $json.google_event_id }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        224,
+        -96
+      ],
+      "id": "f32fb3ce-af02-4431-982f-9d1acedde25e",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "fbf25571-cd09-47b0-9b5d-c786127abe54",
+              "leftValue": "={{ $json.client_id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -576,
+        -96
+      ],
+      "id": "3b7e0224-d00c-4589-b49a-86262a51b6a5",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "tableId": "leads_formularios_optimizada",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "telefono",
+              "fieldValue": "={{ $('llamada_entrante').item.json.body.call.from_number }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        224,
+        96
+      ],
+      "id": "260de8b0-4eb2-4843-8934-f9b8da97f61b",
+      "name": "crear_registro",
+      "credentials": {
+        "supabaseApi": {
+          "id": "your_credential_id",
+          "name": "Supabase account"
+        }
+      }
+    }
+  ],
+  "pinData": {
+    "llamada_entrante": [
+      {
+        "json": {
+          "headers": {
+            "host": "your_n8n_domain_service",
+            "user-agent": "axios/1.11.0",
+            "content-length": "26035",
+            "accept": "application/json, text/plain, */*",
+            "accept-encoding": "gzip, compress, deflate, br",
+            "content-type": "application/json",
+            "x-forwarded-for": "100.20.5.228",
+            "x-forwarded-host": "your_n8n_domain_service",
+            "x-forwarded-port": "443",
+            "x-forwarded-proto": "https",
+            "x-forwarded-server": "737fb838982b",
+            "x-real-ip": "100.20.5.228",
+            "x-retell-signature": "v=1763067894219,d=ff9bba828dfe3c330ec6a2d5cc2699c646f6961d996bb8a0ceba76ad6465e756"
+          },
+          "params": {},
+          "query": {},
+          "body": {
+            "event": "call_analyzed",
+            "call": {
+              "call_id": "call_a3482e1b1c60f19bfc0340f50c5",
+              "call_type": "phone_call",
+              "agent_id": "agent_294c64b56446f4bea8fbeab653",
+              "agent_version": 10,
+              "agent_name": "Agente_llamadas_your_brand_v5_optimizado_simplificado",
+              "retell_llm_dynamic_variables": {
+                "lk-call-info": "Cg4xODUuNDUuMTUyLjIxNhDEJxgB",
+                "lk-real-ip": "185.45.152.216",
+                "lk-transport": "udp",
+                "nombre": "your_name",
+                "nombre_completo": "your_name Emiliano Ramírez Vázquez",
+                "email": "your_email@example.com",
+                "telefono": "+999999999999",
+                "servicio": "Inteligencia Artificial",
+                "empresa": "your_company",
+                "estado": "Colima",
+                "pais": "México",
+                "estado_lead": "Cita agendada",
+                "client_id": "1762459014109100",
+                "whatsapp": "+999999999999",
+                "es_cliente": "true",
+                "fecha_cita": "2025-11-18T22:00:00.000Z",
+                "enlace_reunion": "https://meet.google.com/your-meeting-link",
+                "motivo_cancelacion": "Inconveniente familiar",
+                "fecha_cita_timezone_cliente": "2025-11-18T22:00:00.000Z",
+                "asistencia": "sin_dato",
+                "cita_pasada": "No",
+                "fecha_cita_timezone_legible": "lunes 18 de noviembre de 2025 a las 4:00 PM",
+                "fecha_cita_legible": "martes, 18 de noviembre de 2025, 04:00 p.m.",
+                "call_id": "sin_dato",
+                "call_type": "sin_dato",
+                "call_status": "sin_dato",
+                "from_number": "sin_dato",
+                "to_number": "sin_dato",
+                "agent_id": "sin_dato",
+                "agent_name": "sin_dato",
+                "agent_version": "sin_dato",
+                "direction": "sin_dato",
+                "resumenes_previos": "[Llamada 1 - 13/11/2025]: La llamada comenzó con your_name saludando al agente. your_name preguntó sobre el estado de su cita, ya que quería saber si tenía alguna programada. El agente le informó que su cita había sido cancelada y que no tenía ninguna cita agendada. your_name mostró interés en reprogramar su cita. La conversación se centró en la reprogramación de la cita, pero no se concretó un nuevo horario.\n\n[Llamada 2 - 13/11/2025]: La llamada comenzó con your_name, quien deseaba cancelar su cita programada para el martes 18 de noviembre de 2025. Mencionó que tenía un inconveniente familiar que necesitaba atender. El agente confirmó la cancelación de la cita y agradeció a your_name por la información proporcionada. your_name no solicitó ningún otro servicio ni información adicional. La llamada finalizó con el agente deseándole un excelente día y your_name agradeciendo la atención.\n\n[Llamada 3 - 13/11/2025]: sin_dato\n\n[Llamada 4 - 13/11/2025]: La llamada comenzó con your_name solicitando reagendar una cita. El agente verificó la disponibilidad y propuso varias fechas y horas. Finalmente, se acordó que la cita sería el martes 18 de noviembre de 2025 a las 11:00 a.m. hora de México. your_name confirmó su preferencia por esa hora y el agente se comprometió a enviar el enlace de la reunión. La conversación finalizó con your_name agradeciendo la atención y confirmando la cita.\n\n[Llamada 5 - 13/11/2025]: La llamada comenzó con un saludo cordial entre el usuario y el agente. No se abordaron necesidades específicas ni se discutieron servicios. El agente se mostró disponible para ayudar en lo que el usuario requiriera. No se tomaron decisiones ni se acordaron acciones durante esta breve interacción. La conversación finalizó sin información adicional relevante.",
+                "estado_cita": "cita cancelada",
+                "event": "call_inbound"
+              },
+              "collected_dynamic_variables": {
+                "current_agent_state": "NODO_SOPORTE",
+                "previous_agent_state": "NODO1"
+              },
+              "custom_sip_headers": {
+                "x-lk-call-info": "Cg4xODUuNDUuMTUyLjIxNhDEJxgB",
+                "x-lk-real-ip": "185.45.152.216",
+                "x-lk-transport": "udp"
+              },
+              "call_status": "ended",
+              "start_timestamp": 1763067833459,
+              "end_timestamp": 1763067893264,
+              "duration_ms": 59805,
+              "transcript": "Agent: ¡Hola \nUser: Hola, buenas.\nAgent: your_name!\nAgent: ¡Hola! Soy \nUser: Buenas tardes. Este, soporte, disculpe.\nAgent: ¿Me escuchas bien? Repito la pregunta...\nUser: Para contactar, este, a soporte, disculpe.\nAgent: Entiendo tu situación, your_name. Te conecto con soporte por WhatsApp. ¿Estás de acuerdo?\nUser: Sí, por favor.\nAgent: Perfecto. Recibirás WhatsApp en minutos. ¿Algo más?\nUser: Sería todo. Muchas gracias.\nAgent: De nada, your_name. Que tengas un excelente día. Si necesitas algo más, aquí estaré.\nUser: Gracias.\nAgent: ¡De nada! Hasta luego y que tengas un buen día.\n",
+              "transcript_object": [
+                {
+                  "role": "agent",
+                  "content": "¡Hola ",
+                  "words": [
+                    {
+                      "word": "¡Hola ",
+                      "start": 0.528,
+                      "end": 0.928
+                    }
+                  ],
+                  "metadata": {
+                    "response_id": 0
+                  }
+                },
+                {
+                  "role": "user",
+                  "content": "Hola, buenas.",
+                  "words": [
+                    {
+                      "word": "Hola, ",
+                      "start": 0.977,
+                      "end": 1.537
+                    },
+                    {
+                      "word": "buenas.",
+                      "start": 1.537,
+                      "end": 1.6969999999999998
+                    }
+                  ]
+                },
+                {
+                  "role": "agent",
+                  "content": "your_name!",
+                  "words": [
+                    {
+                      "word": "your_name ",
+                      "start": 0.928,
+                      "end": 1.328
+                    },
+                    {
+                      "word": "Ramírez!",
+                      "start": 1.328,
+                      "end": 1.728
+                    }
+                  ],
+                  "metadata": {
+                    "response_id": 0
+                  }
+                },
+                {
+                  "role": "agent",
+                  "content": "¡Hola! Soy ",
+                  "words": [
+                    {
+                      "word": "¡Hola!",
+                      "start": 3.404,
+                      "end": 3.804
+                    },
+                    {
+                      "word": " Soy ",
+                      "start": 4.100583251953125,
+                      "end": 4.500583251953125
+                    }
+                  ],
+                  "metadata": {
+                    "response_id": 1
+                  }
+                },
+                {
+                  "role": "user",
+                  "content": "Buenas tardes. Este, soporte, disculpe.",
+                  "words": [
+                    {
+                      "word": "Buenas ",
+                      "start": 3.3969999,
+                      "end": 3.7969999999999997
+                    },
+                    {
+                      "word": "tardes. ",
+                      "start": 3.7969999999999997,
+                      "end": 4.357
+                    },
+                    {
+                      "word": "Este, ",
+                      "start": 4.357,
+                      "end": 4.917000000000001
+                    },
+                    {
+                      "word": "soporte, ",
+                      "start": 4.9969995,
+                      "end": 6.917000000000001
+                    },
+                    {
+                      "word": "disculpe.",
+                      "start": 7.1569994,
+                      "end": 7.557
+                    }
+                  ]
+                },
+                {
+                  "role": "agent",
+                  "content": "¿Me escuchas bien? Repito la pregunta...",
+                  "words": [
+                    {
+                      "word": "¿Me ",
+                      "start": 9.063,
+                      "end": 9.463
+                    },
+                    {
+                      "word": "escuchas ",
+                      "start": 9.463,
+                      "end": 9.863
+                    },
+                    {
+                      "word": "bien?",
+                      "start": 9.863,
+                      "end": 10.263
+                    },
+                    {
+                      "word": " Repito ",
+                      "start": 10.270416748046875,
+                      "end": 10.670416748046875
+                    },
+                    {
+                      "word": "la ",
+                      "start": 10.670416748046875,
+                      "end": 11.070416748046876
+                    },
+                    {
+                      "word": "pregunta...",
+                      "start": 11.070416748046876,
+                      "end": 11.470416748046874
+                    }
+                  ],
+                  "metadata": {
+                    "response_id": 3
+                  }
+                },
+                {
+                  "role": "user",
+                  "content": "Para contactar, este, a soporte, disculpe.",
+                  "words": [
+                    {
+                      "word": "Para ",
+                      "start": 12.997000499999999,
+                      "end": 13.237
+                    },
+                    {
+                      "word": "contactar, ",
+                      "start": 13.237,
+                      "end": 13.957001
+                    },
+                    {
+                      "word": "este, ",
+                      "start": 13.957001,
+                      "end": 14.197
+                    },
+                    {
+                      "word": "a ",
+                      "start": 14.197,
+                      "end": 14.277
+                    },
+                    {
+                      "word": "soporte, ",
+                      "start": 14.277,
+                      "end": 14.917000999999999
+                    },
+                    {
+                      "word": "disculpe.",
+                      "start": 14.917000999999999,
+                      "end": 15.157
+                    }
+                  ]
+                },
+                {
+                  "role": "agent",
+                  "content": "Entiendo tu situación, your_name. Te conecto con soporte por WhatsApp. ¿Estás de acuerdo?",
+                  "words": [
+                    {
+                      "word": "Entiendo ",
+                      "start": 17.487,
+                      "end": 17.887
+                    },
+                    {
+                      "word": "tu ",
+                      "start": 17.887,
+                      "end": 18.287
+                    },
+                    {
+                      "word": "situación, ",
+                      "start": 18.287,
+                      "end": 18.687
+                    },
+                    {
+                      "word": "your_name ",
+                      "start": 18.687,
+                      "end": 19.087
+                    },
+                    {
+                      "word": "Ramírez.",
+                      "start": 19.087,
+                      "end": 19.487
+                    },
+                    {
+                      "word": " Te ",
+                      "start": 19.716083251953126,
+                      "end": 20.116083251953125
+                    },
+                    {
+                      "word": "conecto ",
+                      "start": 20.116083251953125,
+                      "end": 20.516083251953123
+                    },
+                    {
+                      "word": "con ",
+                      "start": 20.516083251953123,
+                      "end": 20.916083251953125
+                    },
+                    {
+                      "word": "soporte ",
+                      "start": 20.916083251953125,
+                      "end": 21.316083251953124
+                    },
+                    {
+                      "word": "por ",
+                      "start": 21.316083251953124,
+                      "end": 21.716083251953126
+                    },
+                    {
+                      "word": "WhatsApp.",
+                      "start": 21.716083251953126,
+                      "end": 22.116083251953125
+                    },
+                    {
+                      "word": " ¿Estás ",
+                      "start": 22.363125,
+                      "end": 22.763125
+                    },
+                    {
+                      "word": "de ",
+                      "start": 22.763125,
+                      "end": 23.163125
+                    },
+                    {
+                      "word": "acuerdo?",
+                      "start": 23.163125,
+                      "end": 23.563125
+                    }
+                  ],
+                  "metadata": {
+                    "response_id": 4
+                  }
+                },
+                {
+                  "role": "user",
+                  "content": "Sí, por favor.",
+                  "words": [
+                    {
+                      "word": "Sí, ",
+                      "start": 24.987,
+                      "end": 25.466998999999998
+                    },
+                    {
+                      "word": "por ",
+                      "start": 25.466998999999998,
+                      "end": 25.626998999999998
+                    },
+                    {
+                      "word": "favor.",
+                      "start": 25.626998999999998,
+                      "end": 25.947
+                    }
+                  ]
+                },
+                {
+                  "role": "agent",
+                  "content": "Perfecto. Recibirás WhatsApp en minutos. ¿Algo más?",
+                  "words": [
+                    {
+                      "word": "Perfecto.",
+                      "start": 28.927,
+                      "end": 29.327
+                    },
+                    {
+                      "word": " Recibirás ",
+                      "start": 29.716458251953124,
+                      "end": 30.116458251953127
+                    },
+                    {
+                      "word": "WhatsApp ",
+                      "start": 30.116458251953127,
+                      "end": 30.516458251953125
+                    },
+                    {
+                      "word": "en ",
+                      "start": 30.516458251953125,
+                      "end": 30.916458251953124
+                    },
+                    {
+                      "word": "minutos.",
+                      "start": 30.916458251953124,
+                      "end": 31.316458251953126
+                    },
+                    {
+                      "word": " ¿Algo ",
+                      "start": 31.852666748046875,
+                      "end": 32.25266674804688
+                    },
+                    {
+                      "word": "más?",
+                      "start": 32.25266674804688,
+                      "end": 32.652666748046876
+                    }
+                  ],
+                  "metadata": {
+                    "response_id": 5
+                  }
+                },
+                {
+                  "role": "user",
+                  "content": "Sería todo. Muchas gracias.",
+                  "words": [
+                    {
+                      "word": "Sería ",
+                      "start": 34.797003000000004,
+                      "end": 35.11700200000001
+                    },
+                    {
+                      "word": "todo. ",
+                      "start": 35.11700200000001,
+                      "end": 35.677
+                    },
+                    {
+                      "word": "Muchas ",
+                      "start": 35.677,
+                      "end": 35.917
+                    },
+                    {
+                      "word": "gracias.",
+                      "start": 35.917,
+                      "end": 36.237
+                    }
+                  ]
+                },
+                {
+                  "role": "agent",
+                  "content": "De nada, your_name. Que tengas un excelente día. Si necesitas algo más, aquí estaré.",
+                  "words": [
+                    {
+                      "word": "De ",
+                      "start": 38.042,
+                      "end": 38.442
+                    },
+                    {
+                      "word": "nada, ",
+                      "start": 38.442,
+                      "end": 38.842
+                    },
+                    {
+                      "word": "your_name.",
+                      "start": 38.842,
+                      "end": 39.242
+                    },
+                    {
+                      "word": " Que ",
+                      "start": 39.899583251953125,
+                      "end": 40.29958325195312
+                    },
+                    {
+                      "word": "tengas ",
+                      "start": 40.29958325195312,
+                      "end": 40.69958325195312
+                    },
+                    {
+                      "word": "un ",
+                      "start": 40.69958325195312,
+                      "end": 41.09958325195313
+                    },
+                    {
+                      "word": "excelente ",
+                      "start": 41.032083251953125,
+                      "end": 41.432083251953124
+                    },
+                    {
+                      "word": "día.",
+                      "start": 41.032083251953125,
+                      "end": 41.432083251953124
+                    },
+                    {
+                      "word": " Si ",
+                      "start": 41.432083251953124,
+                      "end": 41.83208325195312
+                    },
+                    {
+                      "word": "necesitas ",
+                      "start": 41.83208325195312,
+                      "end": 42.23208325195313
+                    },
+                    {
+                      "word": "algo ",
+                      "start": 42.23208325195313,
+                      "end": 42.63208325195313
+                    },
+                    {
+                      "word": "más, ",
+                      "start": 42.63208325195313,
+                      "end": 43.032083251953125
+                    },
+                    {
+                      "word": "aquí ",
+                      "start": 43.032083251953125,
+                      "end": 43.432083251953124
+                    },
+                    {
+                      "word": "estaré.",
+                      "start": 43.354041748046875,
+                      "end": 43.75404174804687
+                    }
+                  ],
+                  "metadata": {
+                    "response_id": 6
+                  }
+                },
+                {
+                  "role": "user",
+                  "content": "Gracias.",
+                  "words": [
+                    {
+                      "word": "Gracias.",
+                      "start": 47.917,
+                      "end": 48.317
+                    }
+                  ]
+                },
+                {
+                  "role": "agent",
+                  "content": "¡De nada! Hasta luego y que tengas un buen día.",
+                  "words": [
+                    {
+                      "word": "¡De ",
+                      "start": 49.896,
+                      "end": 50.296
+                    },
+                    {
+                      "word": "nada!",
+                      "start": 50.296,
+                      "end": 50.696
+                    },
+                    {
+                      "word": " Hasta ",
+                      "start": 50.91766674804688,
+                      "end": 51.317666748046875
+                    },
+                    {
+                      "word": "luego ",
+                      "start": 51.317666748046875,
+                      "end": 51.717666748046874
+                    },
+                    {
+                      "word": "y ",
+                      "start": 51.717666748046874,
+                      "end": 52.11766674804687
+                    },
+                    {
+                      "word": "que ",
+                      "start": 52.11766674804687,
+                      "end": 52.51766674804688
+                    },
+                    {
+                      "word": "tengas ",
+                      "start": 52.51766674804688,
+                      "end": 52.91766674804688
+                    },
+                    {
+                      "word": "un ",
+                      "start": 52.91766674804688,
+                      "end": 53.317666748046875
+                    },
+                    {
+                      "word": "buen ",
+                      "start": 53.07183325195312,
+                      "end": 53.47183325195312
+                    },
+                    {
+                      "word": "día.",
+                      "start": 53.07183325195312,
+                      "end": 53.47183325195312
+                    }
+                  ],
+                  "metadata": {
+                    "response_id": 7
+                  }
+                }
+              ],
+              "transcript_with_tool_calls": [
+                {
+                  "role": "agent",
+                  "content": "¡Hola ",
+                  "words": [
+                    {
+                      "word": "¡Hola ",
+                      "start": 0.528,
+                      "end": 0.928
+                    }
+                  ],
+                  "metadata": {
+                    "response_id": 0
+                  }
+                },
+                {
+                  "role": "user",
+                  "content": "Hola, buenas.",
+                  "words": [
+                    {
+                      "word": "Hola, ",
+                      "start": 0.977,
+                      "end": 1.537
+                    },
+                    {
+                      "word": "buenas.",
+                      "start": 1.537,
+                      "end": 1.6969999999999998
+                    }
+                  ]
+                },
+                {
+                  "role": "agent",
+                  "content": "your_name!",
+                  "words": [
+                    {
+                      "word": "your_name ",
+                      "start": 0.928,
+                      "end": 1.328
+                    },
+                    {
+                      "word": "Ramírez!",
+                      "start": 1.328,
+                      "end": 1.728
+                    }
+                  ],
+                  "metadata": {
+                    "response_id": 0
+                  }
+                },
+                {
+                  "role": "agent",
+                  "content": "¡Hola! Soy ",
+                  "words": [
+                    {
+                      "word": "¡Hola!",
+                      "start": 3.404,
+                      "end": 3.804
+                    },
+                    {
+                      "word": " Soy ",
+                      "start": 4.100583251953125,
+                      "end": 4.500583251953125
+                    }
+                  ],
+                  "metadata": {
+                    "response_id": 1
+                  }
+                },
+                {
+                  "role": "user",
+                  "content": "Buenas tardes. Este, soporte, disculpe.",
+                  "words": [
+                    {
+                      "word": "Buenas ",
+                      "start": 3.3969999,
+                      "end": 3.7969999999999997
+                    },
+                    {
+                      "word": "tardes. ",
+                      "start": 3.7969999999999997,
+                      "end": 4.357
+                    },
+                    {
+                      "word": "Este, ",
+                      "start": 4.357,
+                      "end": 4.917000000000001
+                    },
+                    {
+                      "word": "soporte, ",
+                      "start": 4.9969995,
+                      "end": 6.917000000000001
+                    },
+                    {
+                      "word": "disculpe.",
+                      "start": 7.1569994,
+                      "end": 7.557
+                    }
+                  ]
+                },
+                {
+                  "role": "agent",
+                  "content": "¿Me escuchas bien? Repito la pregunta...",
+                  "words": [
+                    {
+                      "word": "¿Me ",
+                      "start": 9.063,
+                      "end": 9.463
+                    },
+                    {
+                      "word": "escuchas ",
+                      "start": 9.463,
+                      "end": 9.863
+                    },
+                    {
+                      "word": "bien?",
+                      "start": 9.863,
+                      "end": 10.263
+                    },
+                    {
+                      "word": " Repito ",
+                      "start": 10.270416748046875,
+                      "end": 10.670416748046875
+                    },
+                    {
+                      "word": "la ",
+                      "start": 10.670416748046875,
+                      "end": 11.070416748046876
+                    },
+                    {
+                      "word": "pregunta...",
+                      "start": 11.070416748046876,
+                      "end": 11.470416748046874
+                    }
+                  ],
+                  "metadata": {
+                    "response_id": 3
+                  }
+                },
+                {
+                  "role": "user",
+                  "content": "Para contactar, este, a soporte, disculpe.",
+                  "words": [
+                    {
+                      "word": "Para ",
+                      "start": 12.997000499999999,
+                      "end": 13.237
+                    },
+                    {
+                      "word": "contactar, ",
+                      "start": 13.237,
+                      "end": 13.957001
+                    },
+                    {
+                      "word": "este, ",
+                      "start": 13.957001,
+                      "end": 14.197
+                    },
+                    {
+                      "word": "a ",
+                      "start": 14.197,
+                      "end": 14.277
+                    },
+                    {
+                      "word": "soporte, ",
+                      "start": 14.277,
+                      "end": 14.917000999999999
+                    },
+                    {
+                      "word": "disculpe.",
+                      "start": 14.917000999999999,
+                      "end": 15.157
+                    }
+                  ]
+                },
+                {
+                  "role": "tool_call_invocation",
+                  "tool_call_id": "e24dfc8e4061341f",
+                  "name": "transition_to_NODO_SOPORTE",
+                  "arguments": "{}",
+                  "time_sec": 16.547
+                },
+                {
+                  "role": "agent",
+                  "content": "Entiendo tu situación, your_name. Te conecto con soporte por WhatsApp. ¿Estás de acuerdo?",
+                  "words": [
+                    {
+                      "word": "Entiendo ",
+                      "start": 17.487,
+                      "end": 17.887
+                    },
+                    {
+                      "word": "tu ",
+                      "start": 17.887,
+                      "end": 18.287
+                    },
+                    {
+                      "word": "situación, ",
+                      "start": 18.287,
+                      "end": 18.687
+                    },
+                    {
+                      "word": "your_name ",
+                      "start": 18.687,
+                      "end": 19.087
+                    },
+                    {
+                      "word": "Ramírez.",
+                      "start": 19.087,
+                      "end": 19.487
+                    },
+                    {
+                      "word": " Te ",
+                      "start": 19.716083251953126,
+                      "end": 20.116083251953125
+                    },
+                    {
+                      "word": "conecto ",
+                      "start": 20.116083251953125,
+                      "end": 20.516083251953123
+                    },
+                    {
+                      "word": "con ",
+                      "start": 20.516083251953123,
+                      "end": 20.916083251953125
+                    },
+                    {
+                      "word": "soporte ",
+                      "start": 20.916083251953125,
+                      "end": 21.316083251953124
+                    },
+                    {
+                      "word": "por ",
+                      "start": 21.316083251953124,
+                      "end": 21.716083251953126
+                    },
+                    {
+                      "word": "WhatsApp.",
+                      "start": 21.716083251953126,
+                      "end": 22.116083251953125
+                    },
+                    {
+                      "word": " ¿Estás ",
+                      "start": 22.363125,
+                      "end": 22.763125
+                    },
+                    {
+                      "word": "de ",
+                      "start": 22.763125,
+                      "end": 23.163125
+                    },
+                    {
+                      "word": "acuerdo?",
+                      "start": 23.163125,
+                      "end": 23.563125
+                    }
+                  ],
+                  "metadata": {
+                    "response_id": 4
+                  }
+                },
+                {
+                  "role": "user",
+                  "content": "Sí, por favor.",
+                  "words": [
+                    {
+                      "word": "Sí, ",
+                      "start": 24.987,
+                      "end": 25.466998999999998
+                    },
+                    {
+                      "word": "por ",
+                      "start": 25.466998999999998,
+                      "end": 25.626998999999998
+                    },
+                    {
+                      "word": "favor.",
+                      "start": 25.626998999999998,
+                      "end": 25.947
+                    }
+                  ]
+                },
+                {
+                  "role": "tool_call_invocation",
+                  "tool_call_id": "a5ab9c38a639bcbd",
+                  "name": "contactar_whatsapp",
+                  "arguments": "{\"soporte_tecnico\":\"Necesito asistencia con la cita cancelada y reprogramación.\",\"contactar\":\"+999999999999\",\"queja\":\"Quiero reprogramar mi cita para la consulta de Inteligencia Artificial.\"}",
+                  "time_sec": 27.751,
+                  "type": "custom"
+                },
+                {
+                  "role": "tool_call_result",
+                  "tool_call_id": "a5ab9c38a639bcbd",
+                  "successful": true,
+                  "content": "",
+                  "time_sec": 28.032
+                },
+                {
+                  "role": "agent",
+                  "content": "Perfecto. Recibirás WhatsApp en minutos. ¿Algo más?",
+                  "words": [
+                    {
+                      "word": "Perfecto.",
+                      "start": 28.927,
+                      "end": 29.327
+                    },
+                    {
+                      "word": " Recibirás ",
+                      "start": 29.716458251953124,
+                      "end": 30.116458251953127
+                    },
+                    {
+                      "word": "WhatsApp ",
+                      "start": 30.116458251953127,
+                      "end": 30.516458251953125
+                    },
+                    {
+                      "word": "en ",
+                      "start": 30.516458251953125,
+                      "end": 30.916458251953124
+                    },
+                    {
+                      "word": "minutos.",
+                      "start": 30.916458251953124,
+                      "end": 31.316458251953126
+                    },
+                    {
+                      "word": " ¿Algo ",
+                      "start": 31.852666748046875,
+                      "end": 32.25266674804688
+                    },
+                    {
+                      "word": "más?",
+                      "start": 32.25266674804688,
+                      "end": 32.652666748046876
+                    }
+                  ],
+                  "metadata": {
+                    "response_id": 5
+                  }
+                },
+                {
+                  "role": "user",
+                  "content": "Sería todo. Muchas gracias.",
+                  "words": [
+                    {
+                      "word": "Sería ",
+                      "start": 34.797003000000004,
+                      "end": 35.11700200000001
+                    },
+                    {
+                      "word": "todo. ",
+                      "start": 35.11700200000001,
+                      "end": 35.677
+                    },
+                    {
+                      "word": "Muchas ",
+                      "start": 35.677,
+                      "end": 35.917
+                    },
+                    {
+                      "word": "gracias.",
+                      "start": 35.917,
+                      "end": 36.237
+                    }
+                  ]
+                },
+                {
+                  "role": "agent",
+                  "content": "De nada, your_name. Que tengas un excelente día. Si necesitas algo más, aquí estaré.",
+                  "words": [
+                    {
+                      "word": "De ",
+                      "start": 38.042,
+                      "end": 38.442
+                    },
+                    {
+                      "word": "nada, ",
+                      "start": 38.442,
+                      "end": 38.842
+                    },
+                    {
+                      "word": "your_name.",
+                      "start": 38.842,
+                      "end": 39.242
+                    },
+                    {
+                      "word": " Que ",
+                      "start": 39.899583251953125,
+                      "end": 40.29958325195312
+                    },
+                    {
+                      "word": "tengas ",
+                      "start": 40.29958325195312,
+                      "end": 40.69958325195312
+                    },
+                    {
+                      "word": "un ",
+                      "start": 40.69958325195312,
+                      "end": 41.09958325195313
+                    },
+                    {
+                      "word": "excelente ",
+                      "start": 41.032083251953125,
+                      "end": 41.432083251953124
+                    },
+                    {
+                      "word": "día.",
+                      "start": 41.032083251953125,
+                      "end": 41.432083251953124
+                    },
+                    {
+                      "word": " Si ",
+                      "start": 41.432083251953124,
+                      "end": 41.83208325195312
+                    },
+                    {
+                      "word": "necesitas ",
+                      "start": 41.83208325195312,
+                      "end": 42.23208325195313
+                    },
+                    {
+                      "word": "algo ",
+                      "start": 42.23208325195313,
+                      "end": 42.63208325195313
+                    },
+                    {
+                      "word": "más, ",
+                      "start": 42.63208325195313,
+                      "end": 43.032083251953125
+                    },
+                    {
+                      "word": "aquí ",
+                      "start": 43.032083251953125,
+                      "end": 43.432083251953124
+                    },
+                    {
+                      "word": "estaré.",
+                      "start": 43.354041748046875,
+                      "end": 43.75404174804687
+                    }
+                  ],
+                  "metadata": {
+                    "response_id": 6
+                  }
+                },
+                {
+                  "role": "user",
+                  "content": "Gracias.",
+                  "words": [
+                    {
+                      "word": "Gracias.",
+                      "start": 47.917,
+                      "end": 48.317
+                    }
+                  ]
+                },
+                {
+                  "role": "agent",
+                  "content": "¡De nada! Hasta luego y que tengas un buen día.",
+                  "words": [
+                    {
+                      "word": "¡De ",
+                      "start": 49.896,
+                      "end": 50.296
+                    },
+                    {
+                      "word": "nada!",
+                      "start": 50.296,
+                      "end": 50.696
+                    },
+                    {
+                      "word": " Hasta ",
+                      "start": 50.91766674804688,
+                      "end": 51.317666748046875
+                    },
+                    {
+                      "word": "luego ",
+                      "start": 51.317666748046875,
+                      "end": 51.717666748046874
+                    },
+                    {
+                      "word": "y ",
+                      "start": 51.717666748046874,
+                      "end": 52.11766674804687
+                    },
+                    {
+                      "word": "que ",
+                      "start": 52.11766674804687,
+                      "end": 52.51766674804688
+                    },
+                    {
+                      "word": "tengas ",
+                      "start": 52.51766674804688,
+                      "end": 52.91766674804688
+                    },
+                    {
+                      "word": "un ",
+                      "start": 52.91766674804688,
+                      "end": 53.317666748046875
+                    },
+                    {
+                      "word": "buen ",
+                      "start": 53.07183325195312,
+                      "end": 53.47183325195312
+                    },
+                    {
+                      "word": "día.",
+                      "start": 53.07183325195312,
+                      "end": 53.47183325195312
+                    }
+                  ],
+                  "metadata": {
+                    "response_id": 7
+                  }
+                }
+              ],
+              "knowledge_base_retrieved_contents_url": "https://dxc03zgurdly9.cloudfront.net/e4d934d629d542a9c385b89f63630549748b1dcc31c49ae3a14f46ca0959896d/knowledge_base_retrieved_contents.json",
+              "recording_url": "https://dxc03zgurdly9.cloudfront.net/e4d934d629d542a9c385b89f63630549748b1dcc31c49ae3a14f46ca0959896d/recording.wav",
+              "recording_multi_channel_url": "https://dxc03zgurdly9.cloudfront.net/e4d934d629d542a9c385b89f63630549748b1dcc31c49ae3a14f46ca0959896d/recording_multichannel.wav",
+              "public_log_url": "https://dxc03zgurdly9.cloudfront.net/e4d934d629d542a9c385b89f63630549748b1dcc31c49ae3a14f46ca0959896d/public.log",
+              "disconnection_reason": "user_hangup",
+              "latency": {
+                "llm": {
+                  "p50": 661,
+                  "p90": 1613.3999999999999,
+                  "p95": 1689.6999999999998,
+                  "p99": 1750.74,
+                  "min": 314,
+                  "max": 1766,
+                  "num": 8,
+                  "values": [
+                    317,
+                    729,
+                    398,
+                    593,
+                    1548,
+                    1766,
+                    761,
+                    314
+                  ]
+                },
+                "e2e": {
+                  "p50": 1756,
+                  "p90": 2655,
+                  "p95": 2817.5,
+                  "p99": 2947.5,
+                  "min": 1506,
+                  "max": 2980,
+                  "num": 6,
+                  "values": [
+                    1707,
+                    1506,
+                    2330,
+                    2980,
+                    1805,
+                    1579
+                  ]
+                },
+                "tts": {
+                  "p50": 231,
+                  "p90": 282.4,
+                  "p95": 295.7,
+                  "p99": 306.34,
+                  "min": 189,
+                  "max": 309,
+                  "num": 8,
+                  "values": [
+                    189,
+                    212,
+                    227,
+                    271,
+                    257,
+                    235,
+                    196,
+                    309
+                  ]
+                },
+                "knowledge_base": {
+                  "p50": 200,
+                  "p90": 213,
+                  "p95": 219,
+                  "p99": 223.79999999999998,
+                  "min": 121,
+                  "max": 225,
+                  "num": 7,
+                  "values": [
+                    179,
+                    123,
+                    200,
+                    121,
+                    225,
+                    203,
+                    205
+                  ]
+                }
+              },
+              "metadata": {
+                "codigo_postal": "28970",
+                "recording_url": "",
+                "fecha_cita_legible": "martes, 18 de noviembre de 2025, 04:00 p.m.",
+                "agent_id": "",
+                "agent_name": "",
+                "ano_creacion": 2025,
+                "motivo_cancelacion": "Inconveniente familiar",
+                "instagram": "",
+                "sessionid": "",
+                "nombre_normalizado": "your_normalized_name",
+                "accountid": "",
+                "fecha_cita_timezone_legible": "lunes 18 de noviembre de 2025 a las 4:00 PM",
+                "id": "82",
+                "fecha_cita": "2025-11-18T22:00:00.000Z",
+                "telefono": "+999999999999",
+                "enlace_reunion": "https://meet.google.com/your-meeting-link",
+                "url_origen": "https://your_brand.com.mx/landing-page/",
+                "nombre_anuncio": "",
+                "cita_pasada": "No",
+                "message_type": "",
+                "instagram_normalizado": "",
+                "call_id": "",
+                "fbp": "",
+                "sender": "",
+                "instrucciones": "Cliente: your_name Emiliano Ramírez Vázquez\nEmpresa: your_company\nServicio de interés: Inteligencia Artificial\nPaís: México\nEstado Lead: Cita agendada\nScore: 93/100\nFuente: WordPress\nCita agendada: martes, 18 de noviembre de 2025, 04:00 p.m.\n\n📋 Historial de llamadas previas:\n[Llamada 1 - 13/11/2025]: La llamada comenzó con your_name saludando al agente. your_name preguntó sobre el estado de su cita, ya que quería saber si tenía alguna programada. El agente le informó que su cita había sido cancelada y que no tenía ninguna cita agendada. your_name mostró interés en reprogramar su cita. La conversación se centró en la reprogramación de la cita, pero no se concretó un nuevo horario.\n\n[Llamada 2 - 13/11/2025]: La llamada comenzó con your_name, quien deseaba cancelar su cita programada para el martes 18 de noviembre de 2025. Mencionó que tenía un inconveniente familiar que necesitaba atender. El agente confirmó la cancelación de la cita y agradeció a your_name por la información proporcionada. your_name no solicitó ningún otro servicio ni información adicional. La llamada finalizó con el agente deseándole un excelente día y your_name agradeciendo la atención.\n\n[Llamada 3 - 13/11/2025]: sin_dato\n\n[Llamada 4 - 13/11/2025]: La llamada comenzó con your_name solicitando reagendar una cita. El agente verificó la disponibilidad y propuso varias fechas y horas. Finalmente, se acordó que la cita sería el martes 18 de noviembre de 2025 a las 11:00 a.m. hora de México. your_name confirmó su preferencia por esa hora y el agente se comprometió a enviar el enlace de la reunión. La conversación finalizó con your_name agradeciendo la atención y confirmando la cita.\n\n[Llamada 5 - 13/11/2025]: La llamada comenzó con un saludo cordial entre el usuario y el agente. No se abordaron necesidades específicas ni se discutieron servicios. El agente se mostró disponible para ayudar en lo que el usuario requiriera. No se tomaron decisiones ni se acordaron acciones durante esta breve interacción. La conversación finalizó sin información adicional relevante.",
+                "fecha_creado": "2025-11-06T00:00:00.000Z",
+                "created_at": "2025-11-06T19:56:52.346Z",
+                "cancelado_por": "",
+                "chatwoot_contact_id": "",
+                "identificador_externo": "wp_1762458996_PeFGsOi8",
+                "transcript": "",
+                "updated_at": "2025-11-13T14:46:18.384Z",
+                "asistencia": "",
+                "end_timestamp": "",
+                "from_number": "",
+                "telegram_normalizado": "your_normalized_name",
+                "event": "call_inbound",
+                "email": "your_email@example.com",
+                "content_attributes": "",
+                "anuncio_nombre": "",
+                "error_meta": "",
+                "nombre_conjunto_anuncios": "",
+                "agente": "",
+                "identificado": "TRUE",
+                "nombre_campana": "WordPress_Form",
+                "duracion_minutos": "",
+                "creado": "",
+                "messenger": "your_name Ramirez",
+                "resumenes_previos_concatenados": "[Llamada 1 - 13/11/2025]: La llamada comenzó con your_name saludando al agente. your_name preguntó sobre el estado de su cita, ya que quería saber si tenía alguna programada. El agente le informó que su cita había sido cancelada y que no tenía ninguna cita agendada. your_name mostró interés en reprogramar su cita. La conversación se centró en la reprogramación de la cita, pero no se concretó un nuevo horario.\n\n[Llamada 2 - 13/11/2025]: La llamada comenzó con your_name, quien deseaba cancelar su cita programada para el martes 18 de noviembre de 2025. Mencionó que tenía un inconveniente familiar que necesitaba atender. El agente confirmó la cancelación de la cita y agradeció a your_name por la información proporcionada. your_name no solicitó ningún otro servicio ni información adicional. La llamada finalizó con el agente deseándole un excelente día y your_name agradeciendo la atención.\n\n[Llamada 3 - 13/11/2025]: sin_dato\n\n[Llamada 4 - 13/11/2025]: La llamada comenzó con your_name solicitando reagendar una cita. El agente verificó la disponibilidad y propuso varias fechas y horas. Finalmente, se acordó que la cita sería el martes 18 de noviembre de 2025 a las 11:00 a.m. hora de México. your_name confirmó su preferencia por esa hora y el agente se comprometió a enviar el enlace de la reunión. La conversación finalizó con your_name agradeciendo la atención y confirmando la cita.\n\n[Llamada 5 - 13/11/2025]: La llamada comenzó con un saludo cordial entre el usuario y el agente. No se abordaron necesidades específicas ni se discutieron servicios. El agente se mostró disponible para ayudar en lo que el usuario requiriera. No se tomaron decisiones ni se acordaron acciones durante esta breve interacción. La conversación finalizó sin información adicional relevante.",
+                "estado": "Colima",
+                "start_timestamp": "",
+                "fuente": "WordPress",
+                "utm_medium": "",
+                "resumen": "",
+                "nombre_pagina": "www.your_brand.com.mx",
+                "enviado_meta": "",
+                "score_lead": 93,
+                "client_id": "1762459014109100",
+                "actualizado": "",
+                "call_status": "",
+                "disconnection_reason": "",
+                "fecha_cita_timezone_cliente": "2025-11-18T22:00:00.000Z",
+                "fuente_completa": "direct",
+                "fbclid": "",
+                "utm_campaign": "",
+                "duration_ms": "",
+                "fecha_creado_timestamp": "2025-11-06T19:56:51.834Z",
+                "empresa": "your_company",
+                "recordatorio_enviado": "",
+                "fecha_conversion": "2025-11-13T11:06:30.928Z",
+                "utm_source": "",
+                "whatsapp": "+999999999999",
+                "private": "",
+                "estado_cita": "cita cancelada",
+                "estado_lead": "Cita agendada",
+                "conversationid": "",
+                "nombre_formulario": "WordPress_Form_contact_form_landing",
+                "campana_nombre": "",
+                "contact_id": "",
+                "nombre": "your_name Emiliano Ramírez Vázquez",
+                "mes_creacion": 11,
+                "call_summary": "",
+                "recording_multi_channel_url": "",
+                "content_type": "",
+                "notas_internas": "",
+                "call_type": "",
+                "lead_id": "wp_1762458996_PeFGsOi8",
+                "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36",
+                "utm_content": "",
+                "direction": "",
+                "to_number": "",
+                "messenger_normalizado": "your_normalized_name",
+                "servicio": "Inteligencia Artificial",
+                "direccion_ip": "",
+                "telegram": "your_nameramirez99\n",
+                "webhookUrl": "",
+                "public_log_url": "",
+                "pais": "México",
+                "utm_term": "",
+                "agent_version": "",
+                "es_cliente": "true",
+                "fb_click_id": ""
+              },
+              "call_cost": {
+                "product_costs": [
+                  {
+                    "product": "cartesia_tts",
+                    "unit_price": 0.1166667,
+                    "cost": 7
+                  },
+                  {
+                    "product": "gpt_4_1_mini_high_priority",
+                    "unit_price": 0.01,
+                    "cost": 0.6
+                  },
+                  {
+                    "product": "knowledge_base_usage",
+                    "unit_price": 0.0083333,
+                    "cost": 0.5
+                  },
+                  {
+                    "product": "gpt_5_nano_text_testing",
+                    "cost": 0.1
+                  }
+                ],
+                "total_duration_seconds": 60,
+                "total_duration_unit_price": 0.135,
+                "combined_cost": 8.2
+              },
+              "call_analysis": {
+                "call_summary": "The agent acknowledged the user and connected them to WhatsApp support to address a cancelled appointment and reschedule the AI consultation. The user confirmed and requested nothing more; the agent informed the user they would receive WhatsApp within minutes and closed politely.",
+                "in_voicemail": false,
+                "user_sentiment": "Neutral",
+                "call_successful": true,
+                "custom_analysis_data": {
+                  "call_summary": "The agent acknowledged the user and connected them to WhatsApp support to address a cancelled appointment and reschedule the AI consultation. The user confirmed and requested nothing more; the agent informed the user they would receive WhatsApp within minutes and closed politely."
+                }
+              },
+              "data_storage_setting": "everything",
+              "opt_in_signed_url": false,
+              "llm_token_usage": {
+                "values": [
+                  2013,
+                  2014,
+                  2030,
+                  2401,
+                  2499,
+                  1863,
+                  1870,
+                  1950,
+                  1986,
+                  2068
+                ],
+                "average": 2069.4,
+                "num_requests": 10
+              },
+              "from_number": "+999999999999",
+              "to_number": "+523385261245",
+              "direction": "inbound"
+            }
+          },
+          "webhookUrl": "https://your_n8n_domain_service/webhook/cbd2e2b3-ef04-4596-b74a-85c764a4cbee",
+          "executionMode": "production"
+        }
+      }
+    ]
+  },
+  "connections": {
+    "llamada_entrante": {
+      "main": [
+        [
+          {
+            "node": "Get many rows1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Filter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "parsear": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "parsear",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "obtener_citas": {
+      "main": [
+        [
+          {
+            "node": "obtener_memoria_llamadas",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many rows1": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          },
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "obtener_memoria_llamadas": {
+      "main": [
+        [
+          {
+            "node": "Aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter": {
+      "main": [
+        [
+          {
+            "node": "Set call fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Extract key points",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Extract key points",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set call fields": {
+      "main": [
+        [
+          {
+            "node": "Extract key points",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract key points": {
+      "main": [
+        [
+          {
+            "node": "resumen de llamada",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get many rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many rows": {
+      "main": [
+        [
+          {
+            "node": "Create a row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 3
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "obtener_citas",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "crear_registro",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "crear_registro": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 3
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Mexico_City",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "versionId": "e987176f-0218-432c-bf1d-a0c554f3cdfd",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "91804ac88f3e614710bd209f4912348bcfd34422920efe3afbd72c167901168f"
+  },
+  "id": "your_credential_id",
+  "tags": []
+}

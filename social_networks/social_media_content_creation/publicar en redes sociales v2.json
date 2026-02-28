@@ -1,0 +1,1775 @@
+{
+  "name": "publicar en redes sociales v2",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "Multichannel Social Media Publisher (V2)\n\nThis mission-critical workflow serves as the unified dispatcher for all social media platforms. It handles complex API handshakes, content formatting, and platform-specific media constraints.\n\nCore Capabilities:\n1. Dynamic Copy Adaptation: Uses GPT-4o-mini to tailor generated copy for Instagram, Facebook, TikTok, LinkedIn, Twitter/X, Threads, and YouTube.\n2. Multi-Format Support: Orchestrates single posts, carousels (IG/FB), reels, and community posts.\n3. Intelligent Media Routing: Automatically handles binary uploads vs. URL-based ingestion depending on platform requirements.\n4. Batch Processing: Implements loop logic and wait states to ensure high-reliability delivery across rate-limited APIs.",
+        "height": 450,
+        "width": 320,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -2600,
+        1800
+      ],
+      "typeVersion": 1,
+      "id": "doc-social-publisher",
+      "name": "Publishing Infrastructure"
+    },
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -2368,
+        1856
+      ],
+      "id": "1306b6e9-7bf1-4c48-9402-0cd30dbbe645",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4O-MINI"
+        },
+        "responses": {
+          "values": [
+            {
+              "role": "system",
+              "content": "=Eres un experto copywriter y estratega de contenido digital especializado en your_brand, una agencia líder de marketing digital e inteligencia artificial en Colima, México.\nTU MISIÓN\nGenerar copys altamente optimizados y personalizados para cada red social, basándote en el análisis profundo del creativo visual y los parámetros de publicación proporcionados.\nINFORMACIÓN DE your_brand\nIdentidad de Marca\n\nNombre: your_brand\nUbicación: Colima, México\nEspecialización: Marketing Digital + Inteligencia Artificial\nPropuesta de Valor: Transformación digital con IA que genera resultados medibles\n\nCatálogo de Servicios\n\nMarketing Digital 360°\n\nSEO técnico y de contenidos\nSEM/META Ads (Facebook, Instagram, Google)\nSocial Media Management\nEmail Marketing automatizado\nCRM y automatización de ventas\n\n\nInteligencia Artificial\n\nChatbots multicanal (WhatsApp, Telegram, Web, Instagram)\nAutomatización del 70-90% de consultas\nIA conversacional especializada 24/7\nAnálisis predictivo y Business Intelligence\n\n\nDesarrollo Web & Apps\n\nSitios web corporativos y landing pages\nE-commerce avanzado\nAplicaciones móviles iOS/Android\nSistemas y plataformas personalizadas\n\n\nConsultoría Digital\n\nEstrategia de transformación digital\nArquitectura omnicanal\nOptimización de procesos con IA\nAuditorías digitales\n\n\nCapacitación Empresarial\n\nCursos de marketing digital\nTraining en IA para equipos\nWorkshops de transformación digital\n\n\n\nDatos de Impacto Real\n\n✅ Automatización del 70-90% de consultas con IA\n📈 Aumento de tráfico web del 200-500%\n💰 Reducción de costos operativos hasta 60%\n🏆 +50 empresas transformadas en México\n⚡ Respuesta en menos de 1 minuto 24/7\n🎯 ROI promedio de 3x en campañas publicitarias\n\nContacto y Redes\n\n📲 WhatsApp: +your_phone_number\n☎️ Teléfono: +your_phone_number\n📧 Email: your_brand@outlook.com\n🌐 Web: https://your_brand.com.mx\n⌯⌲ Telegram: @your_brand_bot\n📸 Instagram: @your_brandmarketing\n🎵 TikTok: @your_brandmarketing\n👥 Facebook: your_brand\n𝕏 Twitter: @your_brandmarketing\n🧵 Threads: @your_brandmarketing\n\nPROCESO DE ANÁLISIS\n1. Análisis del Contexto\nEvalúa cuidadosamente estos campos del input:\n\ntipo_contenido: \"imagen\" o \"video\" - CRÍTICO para adaptar el copy y formato\n\nSi es \"imagen\": Enfoque en descripción visual, storytelling estático, slides informativos\nSi es \"video\" (25 segundos): Enfoque en hooks rápidos, scripts dinámicos, momentum visual\n\n\nredes_sociales: Plataformas donde se publicará (prioriza estas)\n[red_social]_formato: Formato específico por red (ej: instagram_formato: \"Reels\" vs \"Carrusel\")\n\nCada formato tiene reglas específicas de copy (ver sección de estrategias)\n\n\nobjetivo_publicacion: Alinea el mensaje con el objetivo (Ventas, Engagement, Educación, Branding, Viralizar)\ntono_comunicacion: Adapta el estilo\n\nImagen: Profesional, Casual, Inspiracional, Educativo, Humorístico, Urgente\nVideo: + Energético (exclusivo para video)\n\n\npalabras_clave: Integra naturalmente en el copy\ncall_to_action: Personaliza el CTA según la indicación\n\nImagen: \"Visita el link\", \"Comenta tu opinión\", \"Comparte\", \"Guárdalo\", \"Compra ahora\", \"Regístrate\", \"Aprende más\"\nVideo: + \"Mira el video completo\", \"Síguenos para más\", \"Link en bio\"\n\n\ncantidad_archivos:\n\nSi es 1: Post único o video único\nSi es múltiple (2-10): Carrusel, álbum, thread, o galería\n\n\nprogramar_publicacion: Si es \"Programar para Después\" con fecha/hora, considera urgencia temporal\nnotas_adicionales: Instrucciones especiales, menciones, emojis, hashtags, música (video), requisitos específicos\n\n2. Estrategia por Red Social y Tipo de Contenido\nFORMATOS DISPONIBLES POR TIPO DE CONTENIDO:\nCONTENIDO TIPO: IMAGEN\n\nInstagram: Feed Post, Carrusel, Stories\nFacebook: Photo Post, Album, Story\nTikTok: Photo Post Carrusel\nLinkedIn: Image Post, Document Post, Carrusel\nTwitter/X: Tweet con Imagen, Thread con Imágenes\nThreads: Image Post\nYouTube: Community Post, Thumbnail personalizado\n\nCONTENIDO TIPO: VIDEO (25 segundos)\n\nInstagram: Reels, Feed Video Post, Stories\nFacebook: Reel, Video Post, Story\nTikTok: Video Post\nLinkedIn: Video Post\nTwitter/X: Tweet con Video, Thread con Video\nThreads: Video Post\nYouTube: Short, Community Post con Video\n\n\nESTRATEGIAS POR PLATAFORMA:\nInstagram:\n\nSi es IMAGEN + Carrusel: Storytelling visual slide a slide (3-10 slides)\nSi es IMAGEN + Feed Post: Copy largo en caption con storytelling\nSi es VIDEO + Reels: Hook en 2 segundos, valor en 15-25 segundos, CTA final\nSi es VIDEO + Stories: Texto sobreimpreso minimalista, stickers interactivos\nCaption: 2000 caracteres, emojis estratégicos, 5-10 hashtags\n\nFacebook:\n\nSi es IMAGEN + Photo Post: Copy largo con contexto, links clickeables\nSi es IMAGEN + Album: Descripción general + contexto para cada foto\nSi es VIDEO + Reel: Similar a Instagram pero audiencia más amplia en edad\nSi es VIDEO + Video Post: Descripción detallada, subtítulos en copy\nFormato amigable con saltos de línea, llamados a comentar y compartir\n\nTikTok:\n\nSi es IMAGEN + Photo Post Carrusel: Hooks visuales fuertes, transiciones narrativas\nSi es VIDEO + Video Post: Hook 0-3 seg, storytelling 4-25 seg, CTA final\nCaption corto pero impactante, lenguaje Gen Z/Millennial\nTrending sounds y hashtags cuando sea video\n\nLinkedIn:\n\nSi es IMAGEN + Image Post: Infografía profesional con insights\nSi es IMAGEN + Document Post: PDF con valor educativo descargable\nSi es IMAGEN + Carrusel: Storytelling B2B con datos y casos\nSi es VIDEO + Video Post: Contenido educativo o behind-the-scenes profesional\nTono profesional pero humano, datos y resultados concretos\n\nTwitter/X:\n\nSi es IMAGEN + Tweet: Copy conciso + imagen de soporte\nSi es IMAGEN + Thread: 5-8 tweets con imágenes explicativas\nSi es VIDEO + Tweet: Hook en texto + video de 25 seg\nSi es VIDEO + Thread: Clips cortos explicando puntos del thread\nUn insight por tweet, formato escaneable\n\nThreads:\n\nSi es IMAGEN + Image Post: Visual llamativo + copy conversacional\nSi es VIDEO + Video Post: Video loopeable + caption casual\nEstilo conversacional, posts cortos y directos, emojis como bullets, CTA suave\n\nYouTube:\n\nSi es IMAGEN + Community Post: Encuestas, anuncios, behind-the-scenes\nSi es IMAGEN + Thumbnail: Diseño para miniatura de video optimizado CTR\nSi es VIDEO + Short: Hook 0-3 seg, valor 4-25 seg, tease final\nSi es VIDEO + Community: Teaser del video con link\nTítulos SEO optimizados, descripciones completas con timestamps\n\n3. Reglas de Copywriting\n✅ HACER:\n\nAdaptar al tipo de contenido:\n\nIMAGEN: Enfoque descriptivo, storytelling visual, llamados a \"deslizar\" o \"ver más\"\nVIDEO: Scripts con timing, hooks de 2-3 seg, llamados a \"ver hasta el final\"\n\n\nAdaptar al formato específico:\n\nCarrusel/Album (múltiples imágenes): Narrativa progresiva slide a slide\nReel/Short (video corto): Hook inmediato + valor rápido + CTA\nStories: Contenido efímero, interactivo, menos formal\nFeed Post: Contenido permanente, más contexto en caption\n\n\nMencionar AL MENOS UN servicio específico del catálogo\nUsar datos reales de impacto cuando sea relevante\nPersonalizar para audiencia mexicana/LATAM\nIncluir CTAs específicos y medibles según el CTA proporcionado\nAdaptar emojis según la plataforma (muchos en IG/TikTok, pocos en LinkedIn)\nUsar saltos de línea estratégicos con \\n\nIncluir proof points (testimonios, números, casos)\nLocalizar horarios, fechas, referencias culturales\nSi hay notas_adicionales, SIEMPRE integrarlas en el copy\n\n❌ NO HACER:\n\nCopiar el mismo texto para todas las redes\nIgnorar el formato específico (ej: escribir copy de video para imagen)\nUsar lenguaje genérico o clichés\nPrometer sin datos que respalden\nIgnorar el objetivo de publicación proporcionado\nUsar más de 10 hashtags en Instagram\nOlvidar el contexto del creativo visual\nEscribir scripts de 60 segundos para videos de 25 segundos\nIgnorar si es contenido único o múltiple (carrusel/álbum)\n\n4. Fórmulas de Copy Validadas\nPara Ventas:\n\nProblema específico → Solución con IA → Dato de impacto → CTA urgente\n\"¿Sabías que [problema]? En your_brand [solución] logrando [dato]. [CTA]\"\n\nPara Educación:\n\nMito/creencia común → Realidad con datos → Cómo aplicarlo → CTA aprendizaje\n\"Muchos creen que [mito], pero la realidad es [dato]. Así funciona: [pasos]\"\n\nPara Engagement:\n\nPregunta provocadora → Historia relatable → Insight valioso → Pregunta final\n\"¿Alguna vez te pasó que [situación]? A nosotros también, hasta que [solución]\"\n\nPara Branding:\n\nBehind the scenes → Valores de marca → Impacto generado → Invitación comunidad\n\"Así trabajamos en your_brand: [proceso] porque creemos en [valor]. Únete a [comunidad]\"\n\nFORMATO DE SALIDA\nResponde ÚNICAMENTE con un objeto JSON válido, sin markdown (```json), sin texto adicional.\nEstructura JSON:\njson{\n  \"instagram_reel\": {\n    \"hook_visual\": \"Texto impactante para segundos 0-2 que detenga el scroll (SOLO si formato es Reels o Feed Video Post)\",\n    \"texto_pantalla\": \"Texto sobreimpreso en el video, frases cortas y potentes distribuidas en los 25 segundos (SOLO para video)\",\n    \"caption\": \"Caption completo con:\\n- Gancho inicial\\n- Desarrollo con valor\\n- CTA claro\\n- Emojis estratégicos\\n- 5-10 hashtags relevantes\\n\\nNOTA: Si es Carrusel de imágenes, el caption debe invitar a deslizar. Si es Stories, usar lenguaje más casual y efímero.\"\n  },\n  \"instagram_carrusel\": {\n    \"slide_1_gancho\": \"Título que prometa valor específico (SOLO si formato es Carrusel de imagen o video)\",\n    \"slides_desarrollo\": [\n      \"Slide 2: Primer punto con dato\",\n      \"Slide 3: Segundo punto con ejemplo\",\n      \"Slide 4: Tercer punto con beneficio\"\n    ],\n    \"slide_final_cta\": \"Slide final con CTA fuerte y contacto\",\n    \"caption\": \"Caption que complemente los slides con contexto adicional, emojis y hashtags\"\n  },\n  \"tiktok\": {\n    \"hook_0_3_segundos\": \"Pattern interrupt visual o pregunta impactante (VIDEO: timing exacto 0-3 seg / IMAGEN: texto de apertura del carrusel)\",\n    \"contenido_principal\": \"VIDEO: Storytelling de 4-25 segundos con valor educativo o entretenimiento / IMAGEN: Narrativa visual slide a slide\",\n    \"cierre_cta\": \"VIDEO: Payoff en segundo 25 con CTA / IMAGEN: Último slide con llamado a acción\",\n    \"caption\": \"Caption corto pero con gancho para descripción. Si es video, considerar trending sounds\"\n  },\n  \"facebook_organico\": {\n    \"copy_completo\": \"Copy estructurado con:\\n\\n🎯 Gancho inicial\\n\\n[Desarrollo con párrafos, saltos de línea, emojis]\\n\\n💡 Beneficios claros\\n\\n✅ Prueba social o datos\\n\\n🚀 CTA con urgencia\\n\\n#Hashtags #Relevantes\\n\\nNOTA: Si es Album de imágenes, mencionar 'Ver todas las fotos'. Si es Reel/Video, mencionar 'Ver video completo'.\"\n  },\n  \"meta_ads\": {\n    \"titulo_principal\": \"Título con beneficio claro (máx 40 caracteres) - Funciona igual para imagen o video\",\n    \"texto_principal\": \"Texto persuasivo que destaque problema-solución-resultado (125 caracteres ideal para máxima visibilidad)\",\n    \"descripcion\": \"Descripción adicional con detalles y beneficios secundarios. Si es video, mencionar duración (25 seg)\",\n    \"cta_button\": \"Más información / Contactar / Cotizar / Agendar llamada / Ver video (si aplica)\"\n  },\n  \"linkedin\": {\n    \"hook_linea_1\": \"Primera línea poderosa que invite a expandir (imagen o video)\",\n    \"cuerpo_historia\": \"Desarrollo profesional con:\\n\\n- Contexto o historia\\n- Desafío identificable\\n- Solución implementada\\n- Resultados medibles\\n- Aprendizaje valioso\\n\\nNOTA: Si es Document Post, mencionar el PDF descargable. Si es Carrusel, invitar a 'deslizar para ver más'. Si es Video Post, contextualizar el contenido del video.\",\n    \"valor_accionable\": \"3 insights concretos que el lector pueda aplicar hoy\",\n    \"cierre_pregunta\": \"Pregunta que invite a comentar desde la experiencia\",\n    \"hashtags\": \"#MarketingDigital #InteligenciaArtificial #TransformaciónDigital\"\n  },\n  \"x_twitter_thread\": {\n    \"tweet_1_gancho\": \"Tweet inicial con promesa clara y thread indicator 🧵 (Thread con Imágenes o Thread con Video según tipo de contenido)\",\n    \"tweets_desarrollo\": [\n      \"2/ Primer punto con dato o insight (+ imagen/video si aplica)\",\n      \"3/ Segundo punto con ejemplo práctico\",\n      \"4/ Tercer punto con beneficio específico\",\n      \"5/ Cuarto punto con caso de uso\"\n    ],\n    \"tweet_solucion\": \"6/ Cómo your_brand resuelve esto con [servicio] logrando [resultado]\",\n    \"tweet_cta\": \"7/ CTA claro: contáctanos, agenda llamada, visita web, etc.\\n\\nNOTA: Si es Tweet simple (no thread), condensar en 280 caracteres + imagen/video.\"\n  },\n  \"threads\": {\n    \"post_gancho\": \"🎯 Post inicial con afirmación fuerte o pregunta provocadora (Image Post o Video Post según tipo de contenido)\",\n    \"posts_desarrollo\": [\n      \"💡 Post 2: Primer insight o dato\",\n      \"📊 Post 3: Segundo punto con ejemplo\",\n      \"✨ Post 4: Tercer beneficio o aprendizaje\"\n    ],\n    \"post_cierre\": \"🚀 Resumen del valor + CTA suave y conversacional\\n\\nNOTA: Máximo 500 caracteres por post. Si es video, mencionar brevemente el contenido.\"\n  },\n  \"youtube_short\": {\n    \"hook_0_3_seg\": \"Hook visual + texto: ¿Sabías que [dato sorprendente]? (SOLO si formato es Short - video de 25 segundos)\",\n    \"enseñanza_4_25_seg\": \"Enseñanza o valor específico con pasos claros (ajustado a 25 segundos)\",\n    \"tease_25_seg\": \"Tease final para engagement o CTA de suscripción en el último segundo\"\n  },\n  \"youtube_video_largo\": {\n    \"titulo\": \"Título optimizado SEO con números y beneficio claro (ej: Cómo Aumentar Ventas 300% con IA | 5 Estrategias Probadas)\",\n    \"descripcion\": \"Descripción completa con:\\n\\n🎯 Resumen del video\\n\\n⏱️ TIMESTAMPS:\\n0:00 - Introducción\\n2:30 - Estrategia 1\\n5:15 - Estrategia 2\\n[etc]\\n\\n📲 CONTACTO:\\n[Todos los links de your_brand]\\n\\n#Hashtags #Relevantes\\n\\nNOTA: Si es Community Post (imagen o video), adaptar para anuncio o teaser.\",\n    \"intro_script\": \"Script de intro (0-30 seg): Gancho + promesa de valor + overview de contenido (SOLO para videos largos, no Community Posts)\",\n    \"puntos_clave\": [\n      \"Punto 1: [Título] - Explicación con ejemplo\",\n      \"Punto 2: [Título] - Paso a paso aplicable\",\n      \"Punto 3: [Título] - Resultado esperado\"\n    ]\n  }\n}\nINSTRUCCIONES FINALES\n\nAnaliza TODOS los campos proporcionados en el input\nIdentifica qué servicio(s) de your_brand se relaciona con el contexto\nAdapta el tono según el campo tono_comunicacion\nIntegra las palabras_clave naturalmente\nPersonaliza el call_to_action según lo solicitado\nPrioriza las redes en el campo redes_sociales pero genera para todas\nSi cantidad_archivos > 1, el copy debe mencionar que es contenido múltiple (carrusel, galería)\nUsa los datos de impacto de your_brand cuando sean relevantes al objetivo\nIncluye información de contacto relevante según el CTA\nResponde SOLO con el JSON, sin markdown, sin explicaciones adicionales"
+            },
+            {
+              "content": "=PROMPT DEL USUARIO (User Prompt)\nGenera copys optimizados para todas las redes sociales basándote en los siguientes datos de la publicación:\nCONTEXTO DE LA PUBLICACIÓN:\n\nTipo de contenido: {{ $json.tipo_contenido }}\nRedes sociales objetivo: {{ $json.redes_sociales }}\nCantidad de redes: {{ $json.redes_sociales_cantidad }}\nCantidad de archivos: {{ $json.cantidad_archivos }}\n\nFORMATOS POR RED:\n\nInstagram: {{ $json.instagram_formato }}\nFacebook: {{ $json.facebook_formato }}\nTikTok: {{ $json.tiktok_formato }}\nLinkedIn: {{ $json.linkedin_formato }}\nTwitter/X: {{ $json.twitter_formato }}\nThreads: {{ $json.threads_formato }}\nYouTube: {{ $json.youtube_formato }}\n\nESTRATEGIA DE CONTENIDO:\n\nObjetivo: {{ $json.objetivo_publicacion }}\nTono de comunicación: {{ $json.tono_comunicacion }}\nPalabras clave: {{ $json.palabras_clave }}\nCall to Action: {{ $json.call_to_action }}\n\nPROGRAMACIÓN:\n\nTipo de publicación: {{ $json.programar_publicacion }}\nFecha: {{ $json.fecha_publicacion }}\nHora: {{ $json.hora_publicacion }}\n\nNOTAS ADICIONALES:\n{{ $json.notas_adicionales }}\nANÁLISIS DEL CREATIVO VISUAL:\nBasándote en los campos concatenados que describen el creativo:\n{{ $json.campos_concatenados }}\nINSTRUCCIONES:\n\nIdentifica el contexto completo:\n\n¿Es contenido tipo IMAGEN o VIDEO?\n¿Qué formato específico se usará en cada red? (Reel vs Carrusel, Album vs Photo Post, etc.)\n¿Cuántos archivos hay? (1 = post único, 2-10 = carrusel/álbum/galería)\n¿Qué servicio de your_brand se está promocionando?\n¿Qué problema resuelve?\n¿Qué beneficio comunica el creativo?\n\n\nAdapta por tipo de contenido:\n\nSi es IMAGEN: Enfoque descriptivo, storytelling visual, llamados a \"deslizar\" o \"ver más fotos\"\nSi es VIDEO (25 segundos): Scripts con timing exacto, hooks de 2-3 seg, llamados a \"ver hasta el final\", \"activa el sonido\"\n\n\nAdapta por formato específico:\n\nRevisa el campo [red]_formato para cada red social\nSi es \"No publicar en [Red]\", omite esa sección pero genera el JSON completo\nCarrusel/Album: Narrativa progresiva, mencionar cantidad de slides/fotos\nReel/Short: Hook inmediato, valor en 10-20 seg, CTA en los últimos 3-5 seg\nStories: Contenido casual, interactivo, menos formal, efímero\nFeed Post: Contenido permanente, más contexto en caption\n\n\nIntegra los parámetros estratégicos:\n\nUsa el objetivo, tono, palabras clave y CTA proporcionados\nSi hay notas_adicionales, SIEMPRE intégralas (menciones, emojis específicos, hashtags, música para video, requisitos especiales)\n\n\nAgrega valor específico de your_brand:\n\nMenciona datos reales, casos de éxito, información de contacto cuando sea relevante\nUsa los números de impacto del catálogo\n\n\nOptimiza para engagement según objetivo:\n\nVentas: Conversión y urgencia, CTAs directos, ofertas claras\nEngagement: Preguntas, contenido compartible, invitaciones a comentar\nEducación: Valor accionable e insights aplicables, paso a paso\nBranding: Valores y diferenciadores, behind-the-scenes, cultura de marca\nViralizar (video): Hooks impactantes, contenido sorprendente, música trending\n\n\n\nIMPORTANTE:\n\nSi el objetivo es \"Ventas\", enfócate en conversión y urgencia\nSi es \"Engagement\", prioriza preguntas y contenido compartible\nSi es \"Educación\", entrega valor accionable e insights\nSi es \"Branding\", resalta valores y diferenciadores de your_brand\n\nGenera el JSON ahora con copys únicos y optimizados para cada plataforma."
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {
+          "temperature": 0.7
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2,
+      "position": [
+        -1920,
+        1856
+      ],
+      "id": "b8929148-f08a-4cbc-bdbb-5a9b62b65bbb",
+      "name": "GENERAR COPY"
+    },
+    {
+      "parameters": {
+        "resource": "fileFolder",
+        "queryString": "={{ $('generar items por cada imagen o video').item.json.campo2 ?? $('generar items por cada imagen o video').item.json.nombre_imagen  }}",
+        "limit": 1,
+        "filter": {
+          "folderId": {
+            "__rl": true,
+            "value": "your_google_drive_folder_id",
+            "mode": "list",
+            "cachedResultName": "AI Assets",
+            "cachedResultUrl": "https://drive.google.com/drive/folders/your_google_drive_folder_id"
+          }
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -896,
+        1952
+      ],
+      "id": "12c82003-db9c-4eb9-a80f-2d3318edb33f",
+      "name": "Buscar archivos por nombre"
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $json.id }}",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -656,
+        2016
+      ],
+      "id": "b64a64d9-26d1-4da6-a4da-9d31685a5af7",
+      "name": "Descargar archivos"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Función para limpiar el texto JSON de posibles caracteres problemáticos\nfunction limpiarJSON(texto) {\n  // Remover bloques de código markdown si existen\n  texto = texto.replace(/```json\\n?/g, '').replace(/```\\n?/g, '');\n  \n  // Remover espacios en blanco al inicio y final\n  texto = texto.trim();\n  \n  return texto;\n}\n\n// Función para extraer el JSON del output del agente\nfunction extraerJSONDeOutput(item) {\n  try {\n    // Navegar por la estructura del output\n    const output = item.output;\n    \n    if (!output || !Array.isArray(output) || output.length === 0) {\n      throw new Error('Output vacío o inválido');\n    }\n    \n    // Obtener el primer elemento del array output\n    const mensaje = output[0];\n    \n    // Verificar que tenga la estructura esperada\n    if (!mensaje.content || !Array.isArray(mensaje.content) || mensaje.content.length === 0) {\n      throw new Error('Contenido del mensaje vacío o inválido');\n    }\n    \n    // Obtener el texto del contenido\n    const contenido = mensaje.content[0];\n    \n    if (!contenido.text) {\n      throw new Error('No se encontró texto en el contenido');\n    }\n    \n    // Limpiar y parsear el JSON\n    const textoLimpio = limpiarJSON(contenido.text);\n    const copysJSON = JSON.parse(textoLimpio);\n    \n    return {\n      success: true,\n      copys: copysJSON,\n      metadata: {\n        message_id: mensaje.id,\n        status: mensaje.status,\n        role: mensaje.role\n      }\n    };\n    \n  } catch (error) {\n    return {\n      success: false,\n      error: error.message,\n      raw_text: item.output?.[0]?.content?.[0]?.text || 'No se pudo extraer el texto'\n    };\n  }\n}\n\n// Obtener los datos del nodo \"entrada\" (nodo antes del agente OpenAI)\n// Usa $('entrada') para referenciar el nodo específico llamado \"entrada\"\nconst datosEntrada = $('entrada').item.json;\n\n// Procesar cada item del input (output del agente)\nconst outputItems = items.map(item => {\n  const data = item.json;\n  \n  // Extraer el JSON de copys del output del agente\n  const resultado = extraerJSONDeOutput(data);\n  \n  if (!resultado.success) {\n    // Si hay error, devolver información del error + datos de entrada\n    return {\n      json: {\n        // Campos de entrada\n        ...datosEntrada,\n        \n        // Información del error\n        error: true,\n        error_message: resultado.error,\n        raw_output: resultado.raw_text\n      }\n    };\n  }\n  \n  // Si fue exitoso, estructurar la salida con todos los copys parseados + datos de entrada\n  const copys = resultado.copys;\n  \n  return {\n    json: {\n      // ============================================\n      // DATOS DE ENTRADA (del nodo anterior)\n      // ============================================\n      \n      // Identificadores\n      chat_id: datosEntrada.chat_id || null,\n      campo2: datosEntrada.campo2 || null,\n      accion: datosEntrada.accion || null,\n      \n      // Tipo de contenido\n      tipo_contenido: datosEntrada.tipo_contenido || null,\n      \n      // URLs y archivos\n      urls: datosEntrada.urls || [],\n      nombres_imagenes: datosEntrada.nombres_imagenes || [],\n      cantidad_archivos: datosEntrada.cantidad_archivos || 0,\n      \n      // URLs individuales\n      url_1: datosEntrada.url_1 || null,\n      url_2: datosEntrada.url_2 || null,\n      url_3: datosEntrada.url_3 || null,\n      url_4: datosEntrada.url_4 || null,\n      url_5: datosEntrada.url_5 || null,\n      url_6: datosEntrada.url_6 || null,\n      url_7: datosEntrada.url_7 || null,\n      url_8: datosEntrada.url_8 || null,\n      url_9: datosEntrada.url_9 || null,\n      url_10: datosEntrada.url_10 || null,\n      \n      // Nombres individuales\n      nombre_imagen_1: datosEntrada.nombre_imagen_1 || null,\n      nombre_imagen_2: datosEntrada.nombre_imagen_2 || null,\n      nombre_imagen_3: datosEntrada.nombre_imagen_3 || null,\n      nombre_imagen_4: datosEntrada.nombre_imagen_4 || null,\n      nombre_imagen_5: datosEntrada.nombre_imagen_5 || null,\n      nombre_imagen_6: datosEntrada.nombre_imagen_6 || null,\n      nombre_imagen_7: datosEntrada.nombre_imagen_7 || null,\n      nombre_imagen_8: datosEntrada.nombre_imagen_8 || null,\n      nombre_imagen_9: datosEntrada.nombre_imagen_9 || null,\n      nombre_imagen_10: datosEntrada.nombre_imagen_10 || null,\n      \n      // Redes sociales\n      redes_sociales: datosEntrada.redes_sociales || [],\n      redes_sociales_cantidad: datosEntrada.redes_sociales_cantidad || 0,\n      \n      // Formatos por red social\n      instagram_formato: datosEntrada.instagram_formato || null,\n      facebook_formato: datosEntrada.facebook_formato || null,\n      tiktok_formato: datosEntrada.tiktok_formato || null,\n      linkedin_formato: datosEntrada.linkedin_formato || null,\n      twitter_formato: datosEntrada.twitter_formato || null,\n      threads_formato: datosEntrada.threads_formato || null,\n      youtube_formato: datosEntrada.youtube_formato || null,\n      \n      // Flags de publicación\n      publicar_instagram: datosEntrada.publicar_instagram || false,\n      publicar_facebook: datosEntrada.publicar_facebook || false,\n      publicar_tiktok: datosEntrada.publicar_tiktok || false,\n      publicar_linkedin: datosEntrada.publicar_linkedin || false,\n      publicar_twitter: datosEntrada.publicar_twitter || false,\n      publicar_threads: datosEntrada.publicar_threads || false,\n      publicar_youtube: datosEntrada.publicar_youtube || false,\n      \n      // Configuración de publicación\n      objetivo_publicacion: datosEntrada.objetivo_publicacion || null,\n      tono_comunicacion: datosEntrada.tono_comunicacion || null,\n      palabras_clave: datosEntrada.palabras_clave || null,\n      call_to_action: datosEntrada.call_to_action || null,\n      \n      // Programación\n      programar_publicacion: datosEntrada.programar_publicacion || null,\n      fecha_publicacion: datosEntrada.fecha_publicacion || null,\n      hora_publicacion: datosEntrada.hora_publicacion || null,\n      es_programado: datosEntrada.es_programado || false,\n      \n      // Adicionales\n      notas_adicionales: datosEntrada.notas_adicionales || null,\n      campos_concatenados: datosEntrada.campos_concatenados || null,\n      \n      // ============================================\n      // COPYS GENERADOS POR EL AGENTE\n      // ============================================\n      \n      // Metadata del agente\n      message_id: resultado.metadata.message_id,\n      agent_status: resultado.metadata.status,\n      \n      // Instagram\n      instagram_reel: copys.instagram_reel || null,\n      instagram_carrusel: copys.instagram_carrusel || null,\n      instagram_feed_post: copys.instagram_feed_post || null,\n      instagram_stories: copys.instagram_stories || null,\n      \n      // Facebook\n      facebook_organico: copys.facebook_organico || null,\n      facebook_reel: copys.facebook_reel || null,\n      facebook_album: copys.facebook_album || null,\n      facebook_story: copys.facebook_story || null,\n      \n      // TikTok\n      tiktok: copys.tiktok || null,\n      tiktok_photo_carrusel: copys.tiktok_photo_carrusel || null,\n      \n      // LinkedIn\n      linkedin: copys.linkedin || null,\n      linkedin_document: copys.linkedin_document || null,\n      linkedin_carrusel: copys.linkedin_carrusel || null,\n      linkedin_video: copys.linkedin_video || null,\n      \n      // Twitter/X\n      x_twitter_thread: copys.x_twitter_thread || null,\n      x_twitter_tweet: copys.x_twitter_tweet || null,\n      \n      // Threads\n      threads: copys.threads || null,\n      \n      // YouTube\n      youtube_short: copys.youtube_short || null,\n      youtube_video_largo: copys.youtube_video_largo || null,\n      youtube_community: copys.youtube_community || null,\n      \n      // Meta Ads (común para todas las plataformas Meta)\n      meta_ads: copys.meta_ads || null,\n      \n      // JSON completo de copys por si se necesita acceder a algo específico\n      copys_completos: copys,\n      \n      // Flag de éxito\n      parsed_successfully: true\n    }\n  };\n});\n\nreturn outputItems;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1568,
+        1856
+      ],
+      "id": "46b0f3d8-e025-40f9-bc77-0e7d512b825c",
+      "name": "parsear salida"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Función para extraer URLs del objeto datos_publicacion o directamente del item\nfunction extraerUrls(item) {\n  const urls = [];\n  const datos = item.datos_publicacion || item;\n  \n  for (let i = 1; i <= 10; i++) {\n    const urlKey = `url_${i}`;\n    if (datos[urlKey]) {\n      urls.push(datos[urlKey]);\n    }\n  }\n  \n  return urls;\n}\n\n// Función para extraer nombres de imágenes\nfunction extraerNombresImagenes(item) {\n  const nombres = [];\n  const datos = item.datos_publicacion || item;\n  \n  for (let i = 1; i <= 10; i++) {\n    const nombreKey = `nombre_imagen_${i}`;\n    if (datos[nombreKey]) {\n      nombres.push(datos[nombreKey]);\n    }\n  }\n  \n  return nombres;\n}\n\n// Procesar cada item del input\nconst outputItems = items.map(item => {\n  // Manejar diferentes estructuras posibles\n  const data = item.json || item;\n  const datosPublicacion = data.datos_publicacion || {};\n  \n  // Extraer URLs y nombres\n  const urls = extraerUrls(data);\n  const nombresImagenes = extraerNombresImagenes(data);\n  \n  // Crear objeto unificado\n  const formatoUnificado = {\n    // Identificadores\n    chat_id: data.chat_id || null,\n    campo2: data.campo2 || null,\n    accion: data.accion || null,\n    \n    // Tipo de contenido (unificado)\n    tipo_contenido: datosPublicacion.tipo_contenido || data.tipo_contenido || data.tipo_creativo || null,\n    \n    // URLs y nombres de archivos (arrays)\n    urls: urls,\n    nombres_imagenes: nombresImagenes,\n    cantidad_archivos: urls.length,\n    \n    // URLs individuales (mantener compatibilidad si lo necesitas)\n    url_1: urls[0] || null,\n    url_2: urls[1] || null,\n    url_3: urls[2] || null,\n    url_4: urls[3] || null,\n    url_5: urls[4] || null,\n    url_6: urls[5] || null,\n    url_7: urls[6] || null,\n    url_8: urls[7] || null,\n    url_9: urls[8] || null,\n    url_10: urls[9] || null,\n    \n    // Nombres individuales (mantener compatibilidad)\n    nombre_imagen_1: nombresImagenes[0] || null,\n    nombre_imagen_2: nombresImagenes[1] || null,\n    nombre_imagen_3: nombresImagenes[2] || null,\n    nombre_imagen_4: nombresImagenes[3] || null,\n    nombre_imagen_5: nombresImagenes[4] || null,\n    nombre_imagen_6: nombresImagenes[5] || null,\n    nombre_imagen_7: nombresImagenes[6] || null,\n    nombre_imagen_8: nombresImagenes[7] || null,\n    nombre_imagen_9: nombresImagenes[8] || null,\n    nombre_imagen_10: nombresImagenes[9] || null,\n    \n    // Redes sociales\n    redes_sociales: data.redes_sociales || [],\n    redes_sociales_cantidad: data.redes_sociales_cantidad || 0,\n    \n    // Formatos por red social\n    instagram_formato: data.instagram_formato || null,\n    facebook_formato: data.facebook_formato || null,\n    tiktok_formato: data.tiktok_formato || null,\n    linkedin_formato: data.linkedin_formato || null,\n    twitter_formato: data.twitter_formato || null,\n    threads_formato: data.threads_formato || null,\n    youtube_formato: data.youtube_formato || null,\n    \n    // Flags de publicación\n    publicar_instagram: data.publicar_instagram || false,\n    publicar_facebook: data.publicar_facebook || false,\n    publicar_tiktok: data.publicar_tiktok || false,\n    publicar_linkedin: data.publicar_linkedin || false,\n    publicar_twitter: data.publicar_twitter || false,\n    publicar_threads: data.publicar_threads || false,\n    publicar_youtube: data.publicar_youtube || false,\n    \n    // Configuración de publicación\n    objetivo_publicacion: data.objetivo_publicacion || null,\n    tono_comunicacion: data.tono_comunicacion || null,\n    palabras_clave: data.palabras_clave || null,\n    call_to_action: data.call_to_action || null,\n    \n    // Programación\n    programar_publicacion: data.programar_publicacion || null,\n    fecha_publicacion: data.fecha_publicacion || null,\n    hora_publicacion: data.hora_publicacion || null,\n    es_programado: data.es_programado || false,\n    \n    // Adicionales\n    notas_adicionales: data.notas_adicionales || null,\n    campos_concatenados: data.campos_concatenados || null,\n    archivos_cantidad: data.archivos_cantidad || urls.length\n  };\n  \n  return {\n    json: formatoUnificado\n  };\n});\n\nreturn outputItems;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2144,
+        1856
+      ],
+      "id": "80a28efa-ebdd-4000-ba4a-c5e1811ff8c0",
+      "name": "entrada"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -1120,
+        1952
+      ],
+      "id": "ba0c9f83-9e57-414a-83e1-b2a1f4e07539",
+      "name": "Loop Over Items1"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Obtener el item de entrada\nconst data = items[0].json;\n\n// Array para almacenar los items individuales\nconst itemsIndividuales = [];\n\n// Verificar si hay campo2 (identificador de Google Drive)\nconst tieneCampo2 = data.campo2 && data.campo2 !== null && data.campo2 !== '';\n\n// Si existe campo2, crear un item con ese identificador\nif (tieneCampo2) {\n  itemsIndividuales.push({\n    json: {\n      // Identificadores\n      chat_id: data.chat_id,\n      campo2: data.campo2,\n      tipo_fuente: 'campo2',\n      \n      // URLs y metadatos necesarios para el loop\n      tipo_contenido: data.tipo_contenido,\n      redes_sociales: data.redes_sociales,\n      \n      // Copys generados (pasar todo por si se necesita)\n      instagram_carrusel: data.instagram_carrusel,\n      facebook_organico: data.facebook_organico,\n      instagram_reel: data.instagram_reel,\n      tiktok: data.tiktok,\n      linkedin: data.linkedin,\n      x_twitter_thread: data.x_twitter_thread,\n      threads: data.threads,\n      youtube_short: data.youtube_short,\n      meta_ads: data.meta_ads,\n      \n      // Configuración de publicación\n      publicar_instagram: data.publicar_instagram,\n      publicar_facebook: data.publicar_facebook,\n      publicar_tiktok: data.publicar_tiktok,\n      publicar_linkedin: data.publicar_linkedin,\n      publicar_twitter: data.publicar_twitter,\n      publicar_threads: data.publicar_threads,\n      publicar_youtube: data.publicar_youtube,\n      \n      // Formatos\n      instagram_formato: data.instagram_formato,\n      facebook_formato: data.facebook_formato,\n      \n      // Info adicional\n      objetivo_publicacion: data.objetivo_publicacion,\n      programar_publicacion: data.programar_publicacion,\n      fecha_publicacion: data.fecha_publicacion,\n      hora_publicacion: data.hora_publicacion\n    }\n  });\n}\n\n// Iterar sobre nombres_imagenes y crear un item por cada imagen que exista\nif (data.nombres_imagenes && Array.isArray(data.nombres_imagenes)) {\n  data.nombres_imagenes.forEach((nombreImagen, index) => {\n    // Solo procesar si el nombre de imagen existe y no es null\n    if (nombreImagen && nombreImagen !== null && nombreImagen !== '') {\n      const urlIndex = index + 1;\n      const urlKey = `url_${urlIndex}`;\n      const url = data[urlKey];\n      \n      // Solo agregar si también existe la URL correspondiente\n      if (url && url !== null && url !== '') {\n        itemsIndividuales.push({\n          json: {\n            // Identificadores\n            chat_id: data.chat_id,\n            nombre_imagen: nombreImagen,\n            url: url,\n            posicion: urlIndex,\n            tipo_fuente: 'nombres_imagenes',\n            \n            // URLs y metadatos necesarios para el loop\n            tipo_contenido: data.tipo_contenido,\n            redes_sociales: data.redes_sociales,\n            \n            // Copys generados (pasar todo por si se necesita)\n            instagram_carrusel: data.instagram_carrusel,\n            facebook_organico: data.facebook_organico,\n            instagram_reel: data.instagram_reel,\n            tiktok: data.tiktok,\n            linkedin: data.linkedin,\n            x_twitter_thread: data.x_twitter_thread,\n            threads: data.threads,\n            youtube_short: data.youtube_short,\n            meta_ads: data.meta_ads,\n            \n            // Configuración de publicación\n            publicar_instagram: data.publicar_instagram,\n            publicar_facebook: data.publicar_facebook,\n            publicar_tiktok: data.publicar_tiktok,\n            publicar_linkedin: data.publicar_linkedin,\n            publicar_twitter: data.publicar_twitter,\n            publicar_threads: data.publicar_threads,\n            publicar_youtube: data.publicar_youtube,\n            \n            // Formatos\n            instagram_formato: data.instagram_formato,\n            facebook_formato: data.facebook_formato,\n            \n            // Info adicional\n            objetivo_publicacion: data.objetivo_publicacion,\n            programar_publicacion: data.programar_publicacion,\n            fecha_publicacion: data.fecha_publicacion,\n            hora_publicacion: data.hora_publicacion\n          }\n        });\n      }\n    }\n  });\n}\n\n// Si no hay items individuales, devolver un item vacío con flag de error\nif (itemsIndividuales.length === 0) {\n  return [{\n    json: {\n      error: true,\n      mensaje: 'No se encontraron imágenes para procesar (ni campo2 ni nombres_imagenes)',\n      chat_id: data.chat_id\n    }\n  }];\n}\n\nreturn itemsIndividuales;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1344,
+        1952
+      ],
+      "id": "cdf2d72c-dcb0-4c56-b28f-b35047c9e14b",
+      "name": "generar items por cada imagen o video"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================================================\n// NODO CODE: GENERAR ENDPOINTS PARA PUBLICACIÓN EN REDES SOCIALES (V3 - BINARY AWARE)\n// ============================================================================\n\nconst items = $input.all();\nif (items.length < 1) throw new Error('Se requiere al menos 1 input');\n\n// El primer item tiene la configuración completa (JSON)\nconst configItem = items[0];\nconst jsonData = configItem.json;\n\n// Los items siguientes (1..N) suelen ser los archivos descargados con sus binarios\n// OJO: A veces n8n agrupa todo en el primer item si se usa Merge. \n// Asumimos que si hay más items, son los archivos.\nconst fileItems = items.length > 1 ? items.slice(1) : [];\n// Si solo hay 1 item, revisamos si tiene múltiples claves binarias o si es un solo archivo\nconst hasBinariesInFirstItem = configItem.binary && Object.keys(configItem.binary).length > 0;\n\nconst redes = Array.isArray(jsonData.redes_sociales) ? jsonData.redes_sociales : [];\nconst tipoContenido = jsonData.tipo_contenido; \nconst cantidadArchivos = jsonData.cantidad_archivos || 1;\nconst output = [];\n\n// ===== MAPEO DE FORMATOS FORMULARIO -> KEYS DE IA =====\nconst formatoMap = {\n    'instagram': { 'Feed Post': 'instagram_feed_post', 'Carrusel': 'instagram_carrusel', 'Stories': 'instagram_stories', 'Reels': 'instagram_reel', 'Feed Video Post': 'instagram_feed_post' },\n    'facebook': { 'Photo Post': 'facebook_organico', 'Album': 'facebook_album', 'Story': 'facebook_story', 'Reel': 'facebook_reel', 'Video Post': 'facebook_organico' },\n    'tiktok': { 'Photo Post Carrusel': 'tiktok_photo_carrusel', 'Video Post': 'tiktok' },\n    'linkedin': { 'Image Post': 'linkedin', 'Document Post': 'linkedin_document', 'Carrusel': 'linkedin_carrusel', 'Video Post': 'linkedin_video' },\n    'twitter': { 'Tweet con Imagen': 'x_twitter_tweet', 'Thread con Imagenes': 'x_twitter_thread', 'Tweet con Video': 'x_twitter_tweet', 'Thread con Video': 'x_twitter_thread' },\n    'x': { 'Tweet con Imagen': 'x_twitter_tweet', 'Thread con Imagenes': 'x_twitter_thread', 'Tweet con Video': 'x_twitter_tweet', 'Thread con Video': 'x_twitter_thread' },\n    'threads': { 'Image Post': 'threads', 'Video Post': 'threads' },\n    'youtube': { 'Short': 'youtube_short', 'Community Post': 'youtube_community', 'Community Post con Video': 'youtube_community', 'Thumbnail personalizado': 'youtube_thumbnail' }\n};\n\n// Función para obtener el binario correcto para un índice dado\nfunction getBinaryForIndex(index) {\n    // Caso 1: Los archivos son items separados (items[1], items[2]...)\n    if (fileItems.length > 0) {\n        if (index < fileItems.length) {\n            // Retorna el objeto binary completo del item correspondiente\n            // Normalmente la key es 'data' o el nombre del archivo\n            const binKeys = Object.keys(fileItems[index].binary || {});\n            if (binKeys.length > 0) return fileItems[index].binary;\n        }\n    }\n    // Caso 2: Todo está en el primer item (configItem) con keys diferentes?\n    // Esto es menos común en loops de descarga, pero posible.\n    if (hasBinariesInFirstItem) {\n        // Si solo hay un binario y index es 0\n        const binKeys = Object.keys(configItem.binary);\n        if (index === 0 && binKeys.length > 0) return configItem.binary;\n    }\n    return null;\n}\n\n// ===== GENERAR ITEMS POR RED =====\nredes.forEach(red => {\n    const redKey = red.toLowerCase();\n    const formatoKey = `${redKey}_formato`;\n    const formato = jsonData[formatoKey];\n    const publicarKey = `publicar_${redKey}`;\n\n    // Validar si se debe publicar\n    if (jsonData[publicarKey] === false || formato?.includes('No publicar')) return;\n\n    // Obtener Copy\n    let aiKey = formatoMap[redKey]?.[formato] || `${redKey}_${formato?.toLowerCase().replace(/ /g, '_')}`;\n    const copyData = jsonData[aiKey] || jsonData[redKey] || {};\n\n    // Estructura Base\n    const baseJson = {\n        red_social: redKey,\n        formato: formato,\n        tipo_contenido: tipoContenido,\n        chat_id: jsonData.chat_id,\n        caption_generado: copyData,\n        media_urls: jsonData.urls || []\n    };\n\n    // =============================================================================================\n    // LÓGICA ESPECÍFICA POR RED\n    // =============================================================================================\n\n    // --- INSTAGRAM (Usa URLs, no binarios para la API Graph) ---\n    if (redKey === 'instagram') {\n        const igUserId = jsonData.facebook_instagram?.ig_user_id;\n        const igToken = jsonData.facebook_instagram?.token;\n        const baseUrl = `https://graph.facebook.com/v24.0/${igUserId}`;\n        \n        const item = { json: { ...baseJson, headers: { 'Content-Type': 'application/json' }, qs: { access_token: igToken } } };\n        \n        if (formato === 'Carrusel') {\n            // Para carrusel, NO generamos N items aquí. Generamos 1 item configurado para que el siguiente nodo (HTTP)\n            // se encargue, O si el siguiente nodo es un Split, aquí mandamos la lista.\n            // Según tu flujo anterior, usabas un loop interno.\n            // Vamos a mantener la lógica de \"loop_config\" para que un nodo posterior itere si es necesario,\n            // OJO: La API de IG requiere: 1. Crear Container por cada imagen (URL) -> 2. Crear Container Carrusel -> 3. Publicar.\n            \n            item.json.url = `${baseUrl}/media`;\n            item.json.es_carrusel = true;\n            item.json.formato_detallado = 'instagram_carousel';\n            // Pasamos las URLs para que el nodo HTTP pueda iterar o usar Batch\n            item.json.media_items = jsonData.urls.map(u => ({ image_url: u, is_carousel_item: true }));\n            \n            output.push(item);\n        } \n        else {\n            // Single Post / Reel / Story\n            item.json.url = `${baseUrl}/media`;\n            item.json.formato_detallado = formato === 'Reels' ? 'instagram_reel' : 'instagram_feed_image';\n            \n            if (formato === 'Reels') {\n                item.json.body = { media_type: 'REELS', video_url: jsonData.urls[0], caption: copyData.caption, share_to_feed: true };\n            } else {\n                item.json.body = { media_type: 'IMAGE', image_url: jsonData.urls[0], caption: copyData.caption };\n            }\n            item.json.publish_config = { endpoint: `${baseUrl}/media_publish` };\n            output.push(item);\n        }\n    }\n\n    // --- FACEBOOK (Usa URLs) ---\n    else if (redKey === 'facebook') {\n        const pageId = jsonData.facebook_instagram?.ig_page_id;\n        const fbToken = jsonData.facebook_instagram?.token;\n        const baseUrl = `https://graph.facebook.com/v24.0/${pageId}`;\n        \n        const item = { json: { ...baseJson, headers: { 'Content-Type': 'application/json' }, qs: { access_token: fbToken } } };\n        \n        if (formato === 'Photo Post' && cantidadArchivos > 1) {\n             item.json.es_carrusel = true;\n             item.json.formato_detallado = 'facebook_photos_multiple';\n             item.json.media_items = jsonData.urls.map(u => ({ url: u, published: false }));\n             output.push(item);\n        } else {\n            // Single\n            item.json.url = `${baseUrl}/photos`; // o /videos\n            item.json.formato_detallado = 'facebook_photo_single';\n            item.json.body = { url: jsonData.urls[0], message: copyData.copy_completo, published: true };\n            output.push(item);\n        }\n    }\n\n    // --- X / TWITTER (REQUIERE BINARIOS) ---\n    else if (redKey === 'x' || redKey === 'twitter') {\n        // Aquí SI necesitamos separar en items individuales si hay múltiples archivos\n        // Porque la API v1.1 media/upload se llama una vez por archivo.\n        \n        const uploadEndpoint = 'https://upload.twitter.com/1.1/media/upload.json';\n        \n        // Iteramos sobre la cantidad de archivos para generar N items\n        for (let i = 0; i < cantidadArchivos; i++) {\n            const binary = getBinaryForIndex(i);\n            \n            if (binary) {\n                output.push({\n                    json: {\n                        ...baseJson,\n                        red_social: 'twitter', // Normalizar key\n                        formato_detallado: 'twitter_upload',\n                        url: uploadEndpoint,\n                        method: 'POST',\n                        requiere_binario: true,\n                        // Metadata para agrupar después\n                        group_id: jsonData.chat_id, \n                        file_index: i,\n                        total_files: cantidadArchivos,\n                        // Texto solo necesario en el último paso, pero lo pasamos\n                        tweet_text: copyData.text || copyData.tweet_1_gancho\n                    },\n                    binary: binary\n                });\n            }\n        }\n    }\n\n    // --- YOUTUBE (REQUIERE BINARIOS) ---\n    else if (redKey === 'youtube') {\n        // YouTube Shorts / Videos = 1 archivo usualmente\n        const binary = getBinaryForIndex(0);\n        if (binary) {\n             output.push({\n                json: {\n                    ...baseJson,\n                    formato_detallado: 'youtube_upload',\n                    requiere_binario: true,\n                    video_metadata: {\n                        snippet: {\n                            title: copyData.titulo || 'Video your_brand',\n                            description: copyData.descripcion || ''\n                        },\n                        status: { privacyStatus: 'public' }\n                    }\n                },\n                binary: binary\n            });\n        }\n    }\n    \n    // --- LINKEDIN & TIKTOK (Placeholder Logic) ---\n    else if (redKey === 'linkedin' || redKey === 'tiktok') {\n        // Similar a Twitter, si soportan binarios, generar items con binarios\n        // Por ahora placeholder simple\n        output.push({ json: { ...baseJson, not_implemented: true } });\n    }\n\n    // --- THREADS (URLs) ---\n    else if (redKey === 'threads') {\n         const threadsId = jsonData.facebook_instagram?.ig_user_id;\n         const token = jsonData.facebook_instagram?.token;\n         const baseUrl = `https://graph.threads.net/v1.0/${threadsId}`;\n         \n         output.push({\n             json: {\n                 ...baseJson,\n                 url: `${baseUrl}/threads`,\n                 formato_detallado: 'threads_post',\n                 body: {\n                     media_type: tipoContenido === 'video' ? 'VIDEO' : 'IMAGE',\n                     [tipoContenido === 'video' ? 'video_url' : 'image_url']: jsonData.urls[0],\n                     text: copyData.post_gancho\n                 },\n                 qs: { access_token: token }\n             }\n         });\n    }\n\n});\n\nreturn output;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -672,
+        1760
+      ],
+      "id": "9f22602c-cf01-4dab-9c84-4a8c91a0f85f",
+      "name": "generar url para cada endpoint"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -896,
+        1760
+      ],
+      "id": "3b25cc20-9f0c-4c63-a5f2-95bf81ee6379",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "{\n  \"youtube\": {\n    \"canal_id\": \"\",\n    \"usuario_id\": \"\",\n    \"client_secret\": \"\"\n  },\n  \"x_twitter\": {\n    \"name\": \"\",\n    \"app_id\": \"\",\n    \"api_key\": \"\",\n    \"api_key_secret\": \"\",\n    \"bearer_token\": \"\",\n    \"access_token\": \"\",\n    \"access_token_secret\": \"\"\n  },\n  \"facebook_instagram\": {\n    \"token\": \"\",\n    \"ig_user_id\": \"\",\n    \"ig_page_id\": \"\",\n    \"app_id\": \"\",\n    \"app_secret\": \"\"\n  },\n  \"linkedin\": {\n    \"access_token\": \"\",\n    \"person_urn\": \"\"\n  },\n  \"tiktok\": {\n    \"access_token\": \"\",\n    \"open_id\": \"\"\n  }\n}",
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1120,
+        1712
+      ],
+      "id": "e51342d4-4d09-499c-9e3e-b79953aa7121",
+      "name": "credenciales"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -224,
+        96
+      ],
+      "id": "66c71bea-988b-4309-9489-95b32d35790f",
+      "name": "Loop IG Carousel Items"
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.item(0);\nconst loopIndex = $('Loop IG Carousel Items').context.currentRunIndex;\nconst mediaUrl = item.json.media_urls[loopIndex];\n\nreturn {\n  json: {\n    method: 'POST',\n    url: item.json.loop_config.endpoint,\n    body: {\n      is_carousel_item: true,\n      image_url: mediaUrl,\n      access_token: item.json.qs.access_token\n    }\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "fd9d9c28-6f5d-40c2-aee8-334a05009926",
+      "name": "Prep IG Carousel Item"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.url }}",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "is_carousel_item",
+              "value": "={{ $json.body.is_carousel_item }}"
+            },
+            {
+              "name": "image_url",
+              "value": "={{ $json.body.image_url }}"
+            },
+            {
+              "name": "access_token",
+              "value": "={{ $json.body.access_token }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        224,
+        160
+      ],
+      "id": "2b77164a-1041-4a5d-831d-38e0611769d7",
+      "name": "Create IG Carousel Item"
+    },
+    {
+      "parameters": {
+        "jsCode": "const allItems = $input.all();\nconst containerIds = allItems.map(item => item.json.id);\nconst originalItem = $('Switch por Formato').item;\n\nreturn {\n  json: {\n    container_ids: containerIds,\n    carrusel_config: originalItem.json.carrusel_config,\n    qs: originalItem.json.qs\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        0,
+        192
+      ],
+      "id": "a5b2427a-40a7-43e7-abfb-381edcdd4a17",
+      "name": "Collect Carousel IDs"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.carrusel_config.endpoint_container }}",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "media_type",
+              "value": "CAROUSEL"
+            },
+            {
+              "name": "children",
+              "value": "={{ $json.container_ids.join(',') }}"
+            },
+            {
+              "name": "caption",
+              "value": "={{ $json.carrusel_config.caption }}"
+            },
+            {
+              "name": "access_token",
+              "value": "={{ $json.carrusel_config.access_token }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        224,
+        352
+      ],
+      "id": "8e0f9973-a5be-404b-aaa4-530485ac45fa",
+      "name": "Create IG Carousel Container"
+    },
+    {
+      "parameters": {
+        "amount": 30
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        448,
+        352
+      ],
+      "id": "5dc799c4-6816-476d-93b4-32c446c325a1",
+      "name": "Wait 30s IG Carousel",
+      "webhookId": "ig-carousel-wait"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Collect Carousel IDs').item.json.carrusel_config.endpoint_publish }}",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "creation_id",
+              "value": "={{ $json.id }}"
+            },
+            {
+              "name": "access_token",
+              "value": "={{ $('Collect Carousel IDs').item.json.carrusel_config.access_token }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        672,
+        352
+      ],
+      "id": "782697c4-2ff1-4f76-a8e2-001de08f32ac",
+      "name": "Publish IG Carousel"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.url }}",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "media_type",
+              "value": "={{ $json.body.media_type }}"
+            },
+            {
+              "name": "video_url",
+              "value": "={{ $json.body.video_url }}"
+            },
+            {
+              "name": "caption",
+              "value": "={{ $json.body.caption }}"
+            },
+            {
+              "name": "share_to_feed",
+              "value": "={{ $json.body.share_to_feed }}"
+            },
+            {
+              "name": "access_token",
+              "value": "={{ $json.qs.access_token }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -224,
+        592
+      ],
+      "id": "4f5906fc-3324-4849-a670-b28f3cba54e5",
+      "name": "Create IG Reel Container"
+    },
+    {
+      "parameters": {
+        "amount": 30
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        592
+      ],
+      "id": "0efe1160-7944-42b7-a4c5-bd015f6cdd9c",
+      "name": "Wait 30s IG Reel",
+      "webhookId": "ig-reel-wait"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Switch por Formato').item.json.publish_config.endpoint }}",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "creation_id",
+              "value": "={{ $json.id }}"
+            },
+            {
+              "name": "access_token",
+              "value": "={{ $('Switch por Formato').item.json.qs.access_token }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        224,
+        592
+      ],
+      "id": "06631dbe-d472-4a5c-b8f5-d9a49e4cab69",
+      "name": "Publish IG Reel"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.url }}",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "media_type",
+              "value": "={{ $json.body.media_type }}"
+            },
+            {
+              "name": "image_url",
+              "value": "={{ $json.body.image_url }}"
+            },
+            {
+              "name": "caption",
+              "value": "={{ $json.body.caption }}"
+            },
+            {
+              "name": "access_token",
+              "value": "={{ $json.qs.access_token }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -224,
+        784
+      ],
+      "id": "58fb361e-951c-4ff6-8637-efff2171cdf1",
+      "name": "Create IG Feed Container"
+    },
+    {
+      "parameters": {
+        "amount": 30
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        784
+      ],
+      "id": "765f818a-70f8-45c8-9bbf-f64ac280ff02",
+      "name": "Wait 30s IG Feed",
+      "webhookId": "ig-feed-wait"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Switch por Formato').item.json.publish_config.endpoint }}",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "creation_id",
+              "value": "={{ $json.id }}"
+            },
+            {
+              "name": "access_token",
+              "value": "={{ $('Switch por Formato').item.json.qs.access_token }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        224,
+        784
+      ],
+      "id": "b8f18bc7-4cf4-4183-b734-0c78dc0a5cd5",
+      "name": "Publish IG Feed"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.url }}",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "media_type",
+              "value": "={{ $json.body.media_type }}"
+            },
+            {
+              "name": "image_url",
+              "value": "={{ $json.body.image_url || $json.body.video_url }}"
+            },
+            {
+              "name": "access_token",
+              "value": "={{ $json.qs.access_token }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -224,
+        976
+      ],
+      "id": "3a2f03ad-43ed-4440-bac2-d991ea128f6c",
+      "name": "Create IG Story Container"
+    },
+    {
+      "parameters": {
+        "amount": 30
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        976
+      ],
+      "id": "49b298f2-bd14-4bc9-892f-c277b05e8482",
+      "name": "Wait 30s IG Story",
+      "webhookId": "ig-story-wait"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Switch por Formato').item.json.publish_config.endpoint }}",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "creation_id",
+              "value": "={{ $json.id }}"
+            },
+            {
+              "name": "access_token",
+              "value": "={{ $('Switch por Formato').item.json.qs.access_token }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        224,
+        976
+      ],
+      "id": "9c1bbe73-9835-46e5-86dd-1e45118bc5e5",
+      "name": "Publish IG Story"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -224,
+        1264
+      ],
+      "id": "183e949d-90c4-4e87-845f-e98eee24a243",
+      "name": "Loop FB Photos"
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.item(0);\nconst loopIndex = $('Loop FB Photos').context.currentRunIndex;\nconst mediaUrl = item.json.media_urls[loopIndex];\n\nreturn {\n  json: {\n    method: 'POST',\n    url: item.json.loop_config.endpoint,\n    body: {\n      url: mediaUrl,\n      published: false,\n      access_token: item.json.qs.access_token\n    }\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        0,
+        1168
+      ],
+      "id": "5f7bf113-d044-4c06-9c41-7da4824438b8",
+      "name": "Prep FB Photo"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.url }}",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "url",
+              "value": "={{ $json.body.url }}"
+            },
+            {
+              "name": "published",
+              "value": "={{ $json.body.published }}"
+            },
+            {
+              "name": "access_token",
+              "value": "={{ $json.body.access_token }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        224,
+        1264
+      ],
+      "id": "1b2a9f3b-01f4-47f0-aa38-e02ed1188572",
+      "name": "Upload FB Photo"
+    },
+    {
+      "parameters": {
+        "jsCode": "const allItems = $input.all();\nconst photoIds = allItems.map(item => item.json.id);\nconst originalItem = $('Switch por Formato').item;\n\nconst attachedMedia = photoIds.map(id => ({ media_fbid: id }));\n\nreturn {\n  json: {\n    photo_ids: photoIds,\n    attached_media: attachedMedia,\n    post_config: originalItem.json.post_config\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        0,
+        1360
+      ],
+      "id": "2c226e89-c048-4a24-8c96-2c1ed5db15ac",
+      "name": "Collect FB Photo IDs"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.post_config.endpoint }}",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "message",
+              "value": "={{ $json.post_config.message }}"
+            },
+            {
+              "name": "attached_media",
+              "value": "={{ JSON.stringify($json.attached_media) }}"
+            },
+            {
+              "name": "access_token",
+              "value": "={{ $json.post_config.access_token }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        224,
+        1520
+      ],
+      "id": "978b1003-8eeb-476c-bf7f-346ddb66ab9b",
+      "name": "Publish FB Multiple Photos"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.url }}",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "url",
+              "value": "={{ $json.body.url }}"
+            },
+            {
+              "name": "message",
+              "value": "={{ $json.body.message }} "
+            },
+            {
+              "name": "published",
+              "value": "={{ $json.body.published }}"
+            },
+            {
+              "name": "access_token",
+              "value": "={{ $json.qs.access_token }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -224,
+        1472
+      ],
+      "id": "961632cb-835e-41b6-bee0-deaa8259b51a",
+      "name": "Publish FB Single Photo"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.url }}",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "upload_phase",
+              "value": "={{ $json.body.upload_phase }}"
+            },
+            {
+              "name": "file_url",
+              "value": "={{ $json.media_urls[0] }}"
+            },
+            {
+              "name": "description",
+              "value": "={{ $json.body.description }}"
+            },
+            {
+              "name": "access_token",
+              "value": "={{ $json.qs.access_token }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -224,
+        1664
+      ],
+      "id": "c5883703-e8be-473f-aa84-e86b933a2472",
+      "name": "Publish FB Reel"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.url }}",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "part",
+              "value": "={{ $json.qs.part }}"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ $json.headers.Authorization }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "snippet",
+              "value": "={{ JSON.stringify($json.body.snippet) }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -224,
+        2240
+      ],
+      "id": "c22c3caf-9e26-4024-bba9-ce6a2affd186",
+      "name": "Publish YouTube Community"
+    },
+    {
+      "parameters": {
+        "resource": "video",
+        "operation": "upload",
+        "title": "={{ $json.video_metadata.title }}",
+        "regionCode": "MX",
+        "categoryId": "28",
+        "options": {
+          "defaultLanguage": "es",
+          "description": "={{ $json.video_metadata.description }}",
+          "notifySubscribers": true,
+          "privacyStatus": "public",
+          "publicStatsViewable": true
+        }
+      },
+      "type": "n8n-nodes-base.youTube",
+      "typeVersion": 1,
+      "position": [
+        -224,
+        2048
+      ],
+      "id": "2fe5f488-be34-4ae8-bea8-7caeb9a3b402",
+      "name": "Upload a video"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://upload.twitter.com/1.1/media/upload.json",
+        "sendBody": true,
+        "contentType": "binaryData",
+        "inputDataFieldName": "data",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -224,
+        1856
+      ],
+      "id": "aeb7ac57-563d-4d0f-bf98-e85a28926075",
+      "name": "Twitter Upload Media"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Agrupar los Media IDs subidos para crear un solo Tweet\nconst items = $input.all();\nif (items.length === 0) return [];\n\n// Obtenemos la metadata del primer item (el texto es el mismo para todos)\nconst firstItem = items[0].json;\nconst tweetText = firstItem.tweet_text;\n\n// Recolectamos todos los media_id_string\nconst mediaIds = items.map(item => item.json.media_id_string);\n\nreturn {\n  json: {\n    text: tweetText,\n    media_ids: mediaIds\n  }\n};\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        0,
+        1856
+      ],
+      "id": "95942af7-d450-4207-a5a8-55e01c1a4c83",
+      "name": "Aggregate Media IDs"
+    },
+    {
+      "parameters": {
+        "text": "={{ $json.text }}",
+        "additionalFields": {
+          "attachments": "={{ $json.media_ids }}"
+        }
+      },
+      "type": "n8n-nodes-base.twitter",
+      "typeVersion": 2,
+      "position": [
+        224,
+        1856
+      ],
+      "id": "f63585ba-42e6-4f84-bc85-b7e6a87d9cd3",
+      "name": "Publish Tweet Final"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.url }}",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "media_type",
+              "value": "={{ $json.body.media_type }}"
+            },
+            {
+              "name": "image_url",
+              "value": "={{ $json.body.image_url || $json.body.video_url }}"
+            },
+            {
+              "name": "text",
+              "value": "={{ $json.body.text }}"
+            },
+            {
+              "name": "access_token",
+              "value": "={{ $json.qs.access_token }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -224,
+        2816
+      ],
+      "id": "5cbe65b5-c2c7-47c8-94a3-a7205ff7eeab",
+      "name": "Create Threads Container"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.publish_config.endpoint }}",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "creation_id",
+              "value": "={{ $json.id }}"
+            },
+            {
+              "name": "access_token",
+              "value": "={{ $json.publish_config.access_token }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        0,
+        2816
+      ],
+      "id": "313b1cb6-3a96-426f-9d6d-a9bf019b6bf5",
+      "name": "Publish Threads"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.url }}",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify($json.body) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -224,
+        2432
+      ],
+      "id": "13a7853d-1d7a-4ab1-8b3e-30e89b2fa603",
+      "name": "LinkedIn Publish"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.url }}",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify($json.body) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -224,
+        2624
+      ],
+      "id": "312dd969-418f-4d84-badf-cb1b22fbc3e2",
+      "name": "TikTok Init Upload"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "ig-carousel",
+                    "leftValue": "={{ $json.formato_detallado }}",
+                    "rightValue": "instagram_carousel",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Instagram Carrusel"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "ig-reel",
+                    "leftValue": "={{ $json.formato_detallado }}",
+                    "rightValue": "instagram_reel",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Instagram Reel"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "ig-feed-img",
+                    "leftValue": "={{ $json.formato_detallado }}",
+                    "rightValue": "instagram_feed_image",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Instagram Feed"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "ig-story",
+                    "leftValue": "={{ $json.formato_detallado }}",
+                    "rightValue": "instagram_story",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Instagram Story"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "fb-multiple",
+                    "leftValue": "={{ $json.formato_detallado }}",
+                    "rightValue": "facebook_photos_multiple",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Facebook Multiple"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "fb-single",
+                    "leftValue": "={{ $json.formato_detallado }}",
+                    "rightValue": "facebook_photo_single",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Facebook Single"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "fb-reel",
+                    "leftValue": "={{ $json.formato_detallado }}",
+                    "rightValue": "facebook_reel",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Facebook Reel"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "twitter-upload",
+                    "leftValue": "={{ $json.formato_detallado }}",
+                    "rightValue": "twitter_upload",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Twitter Upload"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "yt-upload",
+                    "leftValue": "={{ $json.formato_detallado }}",
+                    "rightValue": "youtube_upload",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "YouTube Upload"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "yt-community",
+                    "leftValue": "={{ $json.formato_detallado }}",
+                    "rightValue": "youtube_community",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "YouTube Community"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "linkedin-post",
+                    "leftValue": "={{ $json.formato_detallado }}",
+                    "rightValue": "linkedin_post",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "LinkedIn Post"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "tiktok-post",
+                    "leftValue": "={{ $json.formato_detallado }}",
+                    "rightValue": "tiktok_post",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "TikTok Post"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "threads-post",
+                    "leftValue": "={{ $json.formato_detallado }}",
+                    "rightValue": "threads_post",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Threads Post"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.3,
+      "position": [
+        -448,
+        1584
+      ],
+      "id": "3d001679-f1f3-41d2-95c3-820fea5d7eb3",
+      "name": "Switch por Formato"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "entrada",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GENERAR COPY": {
+      "main": [
+        [
+          {
+            "node": "parsear salida",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar archivos por nombre": {
+      "main": [
+        [
+          {
+            "node": "Descargar archivos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Descargar archivos": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "parsear salida": {
+      "main": [
+        [
+          {
+            "node": "generar items por cada imagen o video",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "credenciales",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "entrada": {
+      "main": [
+        [
+          {
+            "node": "GENERAR COPY",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items1": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ],
+        [
+          {
+            "node": "Buscar archivos por nombre",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "generar items por cada imagen o video": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "generar url para cada endpoint": {
+      "main": [
+        [
+          {
+            "node": "Switch por Formato",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "generar url para cada endpoint",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "credenciales": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop IG Carousel Items": {
+      "main": [
+        [
+          {
+            "node": "Collect Carousel IDs",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prep IG Carousel Item",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prep IG Carousel Item": {
+      "main": [
+        [
+          {
+            "node": "Create IG Carousel Item",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create IG Carousel Item": {
+      "main": [
+        [
+          {
+            "node": "Loop IG Carousel Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Collect Carousel IDs": {
+      "main": [
+        [
+          {
+            "node": "Create IG Carousel Container",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create IG Carousel Container": {
+      "main": [
+        [
+          {
+            "node": "Wait 30s IG Carousel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 30s IG Carousel": {
+      "main": [
+        [
+          {
+            "node": "Publish IG Carousel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create IG Reel Container": {
+      "main": [
+        [
+          {
+            "node": "Wait 30s IG Reel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 30s IG Reel": {
+      "main": [
+        [
+          {
+            "node": "Publish IG Reel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create IG Feed Container": {
+      "main": [
+        [
+          {
+            "node": "Wait 30s IG Feed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 30s IG Feed": {
+      "main": [
+        [
+          {
+            "node": "Publish IG Feed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create IG Story Container": {
+      "main": [
+        [
+          {
+            "node": "Wait 30s IG Story",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 30s IG Story": {
+      "main": [
+        [
+          {
+            "node": "Publish IG Story",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop FB Photos": {
+      "main": [
+        [
+          {
+            "node": "Collect FB Photo IDs",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prep FB Photo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prep FB Photo": {
+      "main": [
+        [
+          {
+            "node": "Upload FB Photo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload FB Photo": {
+      "main": [
+        [
+          {
+            "node": "Loop FB Photos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Collect FB Photo IDs": {
+      "main": [
+        [
+          {
+            "node": "Publish FB Multiple Photos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Threads Container": {
+      "main": [
+        [
+          {
+            "node": "Publish Threads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Twitter Upload Media": {
+      "main": [
+        [
+          {
+            "node": "Aggregate Media IDs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate Media IDs": {
+      "main": [
+        [
+          {
+            "node": "Publish Tweet Final",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch por Formato": {
+      "main": [
+        [
+          {
+            "node": "Loop IG Carousel Items",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create IG Reel Container",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create IG Feed Container",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create IG Story Container",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Loop FB Photos",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Publish FB Single Photo",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Publish FB Reel",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Twitter Upload Media",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Upload a video",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Publish YouTube Community",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "LinkedIn Publish",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "TikTok Init Upload",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create Threads Container",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "8426ae02-ebd2-4f49-b56d-819fbf19356a",
+  "meta": {
+    "instanceId": "your_instance_id"
+  },
+  "id": "your_credential_id",
+  "tags": []
+}

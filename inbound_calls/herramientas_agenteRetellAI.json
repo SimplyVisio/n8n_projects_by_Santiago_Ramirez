@@ -1,0 +1,2697 @@
+{
+  "name": "herramientas_agenteRetellAI",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "Retell AI Voice Capabilities Toolset\n\nThis workflow exposes high-level 'tools' to the Retell AI voice agent via webhooks. It allows the voice bot to perform real-world actions like managing appointments and sending WhatsApp follow-ups in real-time during a call.\n\nCore Tools Exposed:\n1. Google Calendar Integration: dynamic fetching of availability, event creation, and automated cancellation.\n2. Instant Messaging: Triggers WhatsApp templates for technical support escalations or meeting confirmations.\n3. Business Intelligence: Queries the central database to provide contextually relevant answers based on customer history.\n\nNote: Uses a robust parsing layer to handle asynchronous response structures and timezone normalization for international callers.",
+        "height": 450,
+        "width": 320,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -600,
+        500
+      ],
+      "typeVersion": 1,
+      "id": "doc-retell-tools",
+      "name": "Retell AI Toolset Layer"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "your_calendar_create_path",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -176,
+        720
+      ],
+      "id": "b1947c44-0a82-43ea-acda-8e3e61191f1e",
+      "name": "google_calendar_create_event",
+      "webhookId": "your_calendar_create_id"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "your_calendar_delete_path",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -176,
+        912
+      ],
+      "id": "b724f0ff-2617-4bc2-a6f8-6b8bb62f060e",
+      "name": "google_calendar_delete_event",
+      "webhookId": "your_calendar_delete_id"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "your_whatsapp_tool_path",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -176,
+        1136
+      ],
+      "id": "87ec7dd6-578d-4bc2-b5a4-ef8b1326c074",
+      "name": "contactar_whatsapp",
+      "webhookId": "your_whatsapp_tool_id"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "your_calendar_get_all_path",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -176,
+        528
+      ],
+      "id": "297bccf2-f0b5-406e-a177-165059453577",
+      "name": "getall_event1",
+      "webhookId": "your_calendar_get_all_id"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================\n// PARSER ULTRA ROBUSTO PARA RESPOND TO WEBHOOK\n// ============================================\n// Genera la respuesta que Retell AI recibirá\n// de cada herramienta de Google Calendar\n// Maneja TODOS los formatos posibles del agente\n// ============================================\n\n// ============================================\n// 1. OBTENER OUTPUT DEL AGENTE (ULTRA ROBUSTO)\n// ============================================\n\nlet rawOutput = $input.all()[0].json;\n\n// CASO 1: Si viene en { output: \"...\" }\nif (rawOutput.output) {\n  rawOutput = rawOutput.output;\n}\n\n// CASO 2: Si viene en { body: { output: \"...\" } }\nelse if (rawOutput.body && rawOutput.body.output) {\n  rawOutput = rawOutput.body.output;\n}\n\n// CASO 3: Si es un array [{ output: \"...\" }]\nelse if (Array.isArray(rawOutput)) {\n  rawOutput = rawOutput[0];\n  if (rawOutput && rawOutput.output) {\n    rawOutput = rawOutput.output;\n  }\n}\n\n// CASO 4: Si viene en { data: { output: \"...\" } }\nelse if (rawOutput.data && rawOutput.data.output) {\n  rawOutput = rawOutput.data.output;\n}\n\n// CASO 5: Si viene en { json: { output: \"...\" } }\nelse if (rawOutput.json && rawOutput.json.output) {\n  rawOutput = rawOutput.json.output;\n}\n\n// ============================================\n// 2. LIMPIAR Y PARSEAR (ULTRA ROBUSTO)\n// ============================================\n\nfunction limpiarYParsear(output) {\n  if (!output) return null;\n  \n  let limpio = output;\n  \n  // Si es un array, tomar el primer elemento\n  if (Array.isArray(limpio)) {\n    limpio = limpio[0] || \"\";\n  }\n  \n  // Si es un objeto con propiedad 'output'\n  if (typeof limpio === 'object' && limpio !== null && limpio.output) {\n    limpio = limpio.output;\n  }\n  \n  // Si es un objeto con propiedad 'body'\n  if (typeof limpio === 'object' && limpio !== null && limpio.body) {\n    limpio = limpio.body;\n  }\n  \n  // Si ya es un objeto con la estructura esperada, devolverlo directamente\n  if (typeof limpio === 'object' && limpio !== null && \n      limpio.campos_originales && \n      limpio.herramienta_ejecutada && \n      limpio.estado_ejecucion !== undefined) {\n    return limpio;\n  }\n  \n  // Convertir objeto a string si es necesario\n  if (typeof limpio === 'object' && limpio !== null) {\n    limpio = JSON.stringify(limpio);\n  }\n  \n  // Asegurar que es string\n  limpio = String(limpio).trim();\n  \n  // Limpiar markdown\n  limpio = limpio\n    .replace(/```json\\s*/gi, '')\n    .replace(/```\\s*/g, '')\n    .replace(/^json\\s*/i, '')\n    .trim();\n  \n  // Si está escapado como string \"{\\n  \\\"key\\\": ...}\"\n  if (limpio.startsWith('\"') && limpio.endsWith('\"')) {\n    try {\n      limpio = JSON.parse(limpio);\n      // Si después de parsear sigue siendo string, limpiar caracteres de escape\n      if (typeof limpio === 'string') {\n        limpio = limpio.replace(/\\\\n/g, '\\n').replace(/\\\\\"/g, '\"');\n      }\n    } catch (e) {\n      // Si falla, solo remover las comillas externas\n      limpio = limpio.slice(1, -1).replace(/\\\\n/g, '\\n').replace(/\\\\\"/g, '\"');\n    }\n  }\n  \n  // Parsear a JSON si es string\n  if (typeof limpio === 'string') {\n    try {\n      return JSON.parse(limpio);\n    } catch (e) {\n      throw new Error(`No se pudo parsear el JSON: ${e.message}`);\n    }\n  }\n  \n  return limpio;\n}\n\nlet agentData;\n\ntry {\n  agentData = limpiarYParsear(rawOutput);\n  \n  if (!agentData) {\n    throw new Error('No se pudo obtener datos del agente');\n  }\n} catch (parseError) {\n  // Si falla todo, devolver error\n  return {\n    success: false,\n    action: 'error_parsing',\n    error: parseError.message,\n    mensaje: 'Error al procesar la respuesta del agente',\n    debug_info: {\n      tipo_input: typeof rawOutput,\n      es_array: Array.isArray(rawOutput),\n      preview: typeof rawOutput === 'string' \n        ? rawOutput.substring(0, 200) \n        : JSON.stringify(rawOutput).substring(0, 200)\n    }\n  };\n}\n\n// ============================================\n// 3. EXTRAER DATOS BÁSICOS\n// ============================================\n\nconst accion = agentData.campos_originales?.accion || agentData.herramienta_ejecutada || 'unknown';\nconst exitoso = agentData.estado_ejecucion === 'exitoso';\nconst respuestaHerramienta = agentData.respuesta_herramienta || {};\n\n// ============================================\n// 4. TABLA DE ZONAS HORARIAS\n// ============================================\n\nconst ZONAS_HORARIAS = {\n  // GMT-6 (mismo horario que México)\n  'México': 0,\n  'Mexico': 0,\n  'Costa Rica': 0,\n  'Guatemala': 0,\n  'Panamá': 0,\n  'Panama': 0,\n  'El Salvador': 0,\n  'Honduras': 0,\n  'Nicaragua': 0,\n  \n  // GMT-5 (1 hora adelante de México)\n  'Colombia': -1,\n  'Perú': -1,\n  'Peru': -1,\n  'Ecuador': -1,\n  'USA Este': -1,\n  'Estados Unidos Este': -1,\n  \n  // GMT-4 (2 horas adelante de México)\n  'Venezuela': -2,\n  \n  // GMT-3 (3 horas adelante de México)\n  'Argentina': -3,\n  'Chile': -3,\n  'Brasil': -3,\n  'Brazil': -3,\n  \n  // GMT+1 (7 horas adelante de México)\n  'España': -7,\n  'Espana': -7,\n  \n  // GMT-8 (2 horas atrás de México)\n  'USA Pacífico': 2,\n  'USA Pacifico': 2,\n  'Estados Unidos Pacífico': 2,\n  'Estados Unidos Pacifico': 2\n};\n\n// ============================================\n// 5. FUNCIÓN: Obtener diferencia horaria\n// ============================================\n\nfunction obtenerDiferenciaHoraria(pais) {\n  if (!pais || pais === 'sin_dato') return 0;\n  \n  // Normalizar el país (eliminar tildes, mayúsculas)\n  const paisNormalizado = pais.trim();\n  \n  // Buscar coincidencia exacta primero\n  if (ZONAS_HORARIAS.hasOwnProperty(paisNormalizado)) {\n    return ZONAS_HORARIAS[paisNormalizado];\n  }\n  \n  // Buscar coincidencia parcial (case insensitive)\n  const paisLower = paisNormalizado.toLowerCase();\n  for (const [key, value] of Object.entries(ZONAS_HORARIAS)) {\n    if (key.toLowerCase() === paisLower) {\n      return value;\n    }\n  }\n  \n  // Si no se encuentra, asumir mismo horario que México\n  return 0;\n}\n\n// ============================================\n// 6. FUNCIÓN: Formatear fecha legible\n// ============================================\n\nfunction formatearFecha(isoDate, ajusteHoras = 0) {\n  if (!isoDate || isoDate === 'null' || isoDate === 'sin_dato') return 'sin_dato';\n  \n  try {\n    const date = new Date(isoDate);\n    \n    if (isNaN(date.getTime())) return 'sin_dato';\n    \n    // Validar que esté en horario laboral (9 AM - 5 PM México)\n    const horasMexico = date.getHours();\n    if (horasMexico < 9 || horasMexico >= 17) {\n      return 'fuera_de_horario';\n    }\n    \n    // Aplicar ajuste de zona horaria\n    const dateAjustada = new Date(date);\n    dateAjustada.setHours(dateAjustada.getHours() + ajusteHoras);\n    \n    const dias = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];\n    const meses = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', \n                   'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];\n    \n    const dia = dateAjustada.getDate();\n    const mes = meses[dateAjustada.getMonth()];\n    const año = dateAjustada.getFullYear();\n    const horas = dateAjustada.getHours();\n    const minutos = dateAjustada.getMinutes().toString().padStart(2, '0');\n    const ampm = horas >= 12 ? 'PM' : 'AM';\n    const horas12 = horas % 12 || 12;\n    \n    return `${dias[dateAjustada.getDay()]} ${dia} de ${mes} de ${año} a las ${horas12}:${minutos} ${ampm}`;\n  } catch {\n    return 'sin_dato';\n  }\n}\n\n// ============================================\n// 7. GENERAR RESPUESTA SEGÚN ACCIÓN\n// ============================================\n\nlet response = {};\n\ntry {\n\n  if (accion === 'agendar_cita' || accion === 'create_event') {\n    \n    // ============================================\n    // RESPUESTA: AGENDAR CITA\n    // ============================================\n    \n    if (exitoso && respuestaHerramienta.id) {\n      \n      const meetLink = respuestaHerramienta.hangoutLink || \n                       respuestaHerramienta.conferenceData?.entryPoints?.find(ep => ep.entryPointType === 'video')?.uri || \n                       'sin_dato';\n      \n      response = {\n        success: true,\n        action: 'cita_agendada',\n        event_id: respuestaHerramienta.id,\n        meet_link: meetLink,\n        calendar_link: respuestaHerramienta.htmlLink || 'sin_dato',\n        \n        // CAMPOS DE FECHA\n        fecha_cita_original: agentData.campos_originales?.start_datetime || 'sin_dato',\n        fecha_cita_mx: agentData.campos_normalizados?.fecha_cita_mx || 'sin_dato',\n        fecha_cita_cliente: agentData.campos_normalizados?.fecha_cita_zonahoraria_cliente || 'sin_dato',\n        fecha_cita_legible_cliente: agentData.campos_normalizados?.fecha_cita_zonahoraria_cliente_legible || 'sin_dato',\n        \n        // DATOS DEL CLIENTE (NUEVO)\n        nombre_cliente: agentData.campos_originales?.nombre_cliente || 'sin_dato',\n        email_cliente: agentData.campos_originales?.attendee_email || 'sin_dato',\n        telefono_cliente: agentData.campos_originales?.telefono_cliente || agentData.campos_normalizados?.telefono_normalizado || 'sin_dato',\n        pais_cliente: agentData.campos_originales?.pais_cliente || 'sin_dato',\n        empresa_cliente: agentData.campos_originales?.empresa_cliente || 'sin_dato',\n        servicio_interes: agentData.campos_originales?.servicio_interes || 'sin_dato',\n        \n        duracion_minutos: 30,\n        mensaje: `Cita agendada exitosamente para el ${agentData.campos_normalizados?.fecha_cita_zonahoraria_cliente_legible || formatearFecha(agentData.campos_normalizados?.fecha_cita_zonahoraria_cliente)}`\n      };\n      \n    } else {\n      \n      response = {\n        success: false,\n        action: 'cita_agendada',\n        error: agentData.mensaje || 'No se pudo agendar la cita',\n        mensaje: agentData.mensaje || 'Error al crear el evento en Google Calendar'\n      };\n      \n    }\n\n  } else if (accion === 'cancelar_cita' || accion === 'delete_event') {\n    \n    // ============================================\n    // RESPUESTA: CANCELAR CITA\n    // ============================================\n    \n    if (exitoso) {\n      \n      response = {\n        success: true,\n        action: 'cita_cancelada',\n        event_id: agentData.campos_originales?.event_id || 'sin_dato',\n        motivo: agentData.campos_originales?.motivo || 'Sin motivo especificado',\n        mensaje: 'Cita cancelada exitosamente'\n      };\n      \n    } else {\n      \n      response = {\n        success: false,\n        action: 'cita_cancelada',\n        error: agentData.mensaje || 'No se pudo cancelar la cita',\n        mensaje: agentData.mensaje || 'Error al eliminar el evento del calendario'\n      };\n      \n    }\n\n  } else if (accion === 'disponibilidad' || accion === 'buscar_cita' || accion === 'getall_events'|| accion === 'getall_event1') {\n    \n    // ============================================\n    // RESPUESTA: CONSULTAR DISPONIBILIDAD\n    // ============================================\n    \n    if (exitoso && respuestaHerramienta.items) {\n      \n      // Obtener país del cliente desde campos_originales\n      const paisCliente = agentData.campos_originales?.pais_cliente || \n                          agentData.campos_originales?.pais || \n                          'México';\n      \n      const diferenciaHoraria = obtenerDiferenciaHoraria(paisCliente);\n      \n      // Procesar eventos ocupados\n      const eventosOcupados = respuestaHerramienta.items\n        .filter(item => item.start && item.start.dateTime) // Solo eventos con hora específica\n        .map(item => ({\n          start: item.start.dateTime,\n          end: item.end.dateTime,\n          start_legible_mx: formatearFecha(item.start.dateTime, 0),\n          start_legible_cliente: formatearFecha(item.start.dateTime, diferenciaHoraria),\n          summary: item.summary || 'Evento sin título'\n        }));\n      \n      // Generar slots disponibles (9 AM - 4:30 PM, cada 30 min)\n      const after = new Date(agentData.campos_originales?.After);\n      const before = new Date(agentData.campos_originales?.Before);\n      const slotsDisponibles = [];\n      \n      // Validar fechas\n      if (!isNaN(after.getTime()) && !isNaN(before.getTime())) {\n        \n        // Iterar por cada día en el rango\n        let currentDate = new Date(after);\n        while (currentDate <= before) {\n          \n          // Solo días laborales (lunes a viernes)\n          const diaSemana = currentDate.getDay();\n          if (diaSemana >= 1 && diaSemana <= 5) {\n            \n            // Generar slots de 9 AM a 4:30 PM (último slot termina a las 5 PM)\n            for (let hora = 9; hora <= 16; hora++) {\n              const minutosMaximos = (hora === 16) ? 30 : 60;\n              for (let minuto = 0; minuto < minutosMaximos; minuto += 30) {\n                \n                const slotStart = new Date(currentDate);\n                slotStart.setHours(hora, minuto, 0, 0);\n                \n                const slotEnd = new Date(slotStart);\n                slotEnd.setMinutes(slotEnd.getMinutes() + 30);\n                \n                // Verificar si el slot está dentro del rango solicitado\n                if (slotStart >= after && slotEnd <= before) {\n                  \n                  // Verificar si el slot NO está ocupado\n                  const estaOcupado = eventosOcupados.some(evento => {\n                    const eventoStart = new Date(evento.start);\n                    const eventoEnd = new Date(evento.end);\n                    return (slotStart >= eventoStart && slotStart < eventoEnd) ||\n                           (slotEnd > eventoStart && slotEnd <= eventoEnd) ||\n                           (slotStart <= eventoStart && slotEnd >= eventoEnd);\n                  });\n                  \n                  if (!estaOcupado) {\n                    // Formatear para hora de México y hora del cliente\n                    const fechaLegibleMx = formatearFecha(slotStart, 0);\n                    const fechaLegibleCliente = formatearFecha(slotStart, diferenciaHoraria);\n                    \n                    // Solo agregar si ambas fechas son válidas\n                    if (fechaLegibleMx !== 'sin_dato' && \n                        fechaLegibleMx !== 'fuera_de_horario' &&\n                        fechaLegibleCliente !== 'sin_dato' &&\n                        fechaLegibleCliente !== 'fuera_de_horario') {\n                      \n                      slotsDisponibles.push({\n                        start: slotStart.toISOString().replace('Z', '-06:00'),\n                        start_legible_mx: fechaLegibleMx,\n                        start_legible_cliente: fechaLegibleCliente,\n                        pais_cliente: paisCliente,\n                        diferencia_horaria: diferenciaHoraria\n                      });\n                    }\n                  }\n                  \n                }\n              }\n            }\n          }\n          \n          // Avanzar al siguiente día\n          currentDate.setDate(currentDate.getDate() + 1);\n          currentDate.setHours(0, 0, 0, 0);\n        }\n      }\n      \n      response = {\n        success: true,\n        action: 'disponibilidad_consultada',\n        total_disponibles: slotsDisponibles.length,\n        total_ocupados: eventosOcupados.length,\n        slots_disponibles: slotsDisponibles,\n        slots_ocupados: eventosOcupados,\n        pais_cliente: paisCliente,\n        diferencia_horaria: diferenciaHoraria,\n        mensaje: `Se encontraron ${slotsDisponibles.length} horarios disponibles`\n      };\n      \n    } else {\n      \n      response = {\n        success: false,\n        action: 'disponibilidad_consultada',\n        error: agentData.mensaje || 'No se pudo consultar la disponibilidad',\n        mensaje: agentData.mensaje || 'Error al consultar el calendario'\n      };\n      \n    }\n\n  } else {\n    \n    // ============================================\n    // RESPUESTA: ACCIÓN DESCONOCIDA\n    // ============================================\n    \n    response = {\n      success: false,\n      action: 'unknown',\n      error: 'Acción no reconocida',\n      mensaje: `La acción '${accion}' no es válida`\n    };\n    \n  }\n\n} catch (error) {\n  \n  // ============================================\n  // RESPUESTA: ERROR EN PROCESAMIENTO\n  // ============================================\n  \n  response = {\n    success: false,\n    action: 'error_procesamiento',\n    error: error.message,\n    error_stack: error.stack,\n    mensaje: 'Error al procesar la respuesta del agente',\n    debug_info: {\n      accion_detectada: accion,\n      exitoso: exitoso,\n      tiene_respuesta_herramienta: !!respuestaHerramienta,\n      tipo_respuesta_herramienta: typeof respuestaHerramienta\n    }\n  };\n  \n}\n\n// ============================================\n// 8. RETORNAR RESPUESTA\n// ============================================\nreturn response;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        640,
+        720
+      ],
+      "id": "18775bd7-fa03-4bfd-908c-971196836c74",
+      "name": "parsear"
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        864,
+        720
+      ],
+      "id": "220beeaf-0803-4f9b-a925-a816003f1f06",
+      "name": "devolver_respuesta"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('variables').item.json.action }}",
+                    "rightValue": "cita_agendada",
+                    "operator": {
+                      "type": "string",
+                      "operation": "contains"
+                    },
+                    "id": "cacb1404-17bb-4da0-aa3d-30580ef64607"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "cita agendada"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "e4a1bb3e-8c6f-4438-aaa1-a653c38d54ae",
+                    "leftValue": "={{ $('variables').item.json.action }}",
+                    "rightValue": "cita_cancelada",
+                    "operator": {
+                      "type": "string",
+                      "operation": "contains"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "cita cancelada"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        1760,
+        720
+      ],
+      "id": "c545a729-f436-4000-9d3e-34aaf6ab68d0",
+      "name": "tarea"
+    },
+    {
+      "parameters": {
+        "tableId": "citas",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "client_id",
+              "fieldValue": "={{ $('obtener_registro_lead').item.json.client_id }}"
+            },
+            {
+              "fieldId": "estado",
+              "fieldValue": "=cita agendada"
+            },
+            {
+              "fieldId": "nombre",
+              "fieldValue": "={{ $('obtener_registro_lead').item.json.nombre ?? $('variables').item.json.nombre_cliente }}"
+            },
+            {
+              "fieldId": "fecha_cita",
+              "fieldValue": "={{ $('variables').item.json.fecha_cita_mx }}"
+            },
+            {
+              "fieldId": "email",
+              "fieldValue": "={{ $('obtener_registro_lead').item.json.email ?? $('variables').item.json.email_cliente }}"
+            },
+            {
+              "fieldId": "telefono",
+              "fieldValue": "={{ $('obtener_registro_lead').item.json.telefono ?? $('variables').item.json.telefono_cliente }}"
+            },
+            {
+              "fieldId": "servicio",
+              "fieldValue": "={{ $('variables').item.json.servicio_interes }}"
+            },
+            {
+              "fieldId": "pais",
+              "fieldValue": "={{ $('obtener_registro_lead').item.json.pais ?? $('variables').item.json.pais_cliente }}"
+            },
+            {
+              "fieldId": "empresa",
+              "fieldValue": "={{ $('obtener_registro_lead').item.json.empresa ?? $('variables').item.json.empresa_cliente }}"
+            },
+            {
+              "fieldId": "enlace_reunion",
+              "fieldValue": "={{ $('variables').item.json.meet_link }}"
+            },
+            {
+              "fieldId": "fecha_cita_timezone_cliente",
+              "fieldValue": "={{ $('variables').item.json.fecha_cita_cliente }}"
+            },
+            {
+              "fieldId": "duracion_minutos",
+              "fieldValue": "30"
+            },
+            {
+              "fieldId": "fecha_cita_timezone_legible",
+              "fieldValue": "={{ $('variables').item.json.fecha_cita_legible_cliente }}"
+            },
+            {
+              "fieldId": "fecha_cita_legible",
+              "fieldValue": "={{\n(() => {\n  let fechaRaw = $('variables').item.json.fecha_cita_mx;\n  if (!fechaRaw) return 'Sin fecha';\n\n  // Normaliza formato básico\n  fechaRaw = fechaRaw.replace(' ', 'T').replace(/\\//g, '-');\n\n  // Solo agrega Z si no hay zona horaria ni Z\n  if (!/[+-]\\d{2}:\\d{2}$/.test(fechaRaw) && !fechaRaw.endsWith('Z')) {\n    fechaRaw += 'Z';\n  }\n\n  const fecha = new Date(fechaRaw);\n  if (isNaN(fecha.getTime())) return 'Fecha inválida';\n\n  // Devuelve fecha y hora con formato mexicano\n  return fecha.toLocaleString('es-MX', {\n    timeZone: 'America/Mexico_City',\n    weekday: 'long',\n    day: 'numeric',\n    month: 'long',\n    year: 'numeric',\n    hour: '2-digit',\n    minute: '2-digit',\n    hour12: true\n  });\n})()\n}}"
+            },
+            {
+              "fieldId": "cita_pasada",
+              "fieldValue": "No"
+            },
+            {
+              "fieldId": "google_event_id",
+              "fieldValue": "={{ $('parsear').item.json.event_id }}"
+            },
+            {
+              "fieldId": "recordatorio_enviado",
+              "fieldValue": "FALSE"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        2432,
+        720
+      ],
+      "id": "9ed4dcde-101b-4d9d-94ac-10803fb4c3f7",
+      "name": "crear_cita1",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "your_credential_id",
+          "name": "Supabase account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "leads_formularios_optimizada",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "client_id",
+              "condition": "eq",
+              "keyValue": "={{ $('obtener_registro_lead').item.json.client_id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "es_cliente",
+              "fieldValue": "=true"
+            },
+            {
+              "fieldId": "estado_lead",
+              "fieldValue": "Cita agendada"
+            },
+            {
+              "fieldId": "pais",
+              "fieldValue": "={{ $('obtener_registro_lead').item.json.pais ?? $('variables').item.json.pais_cliente }}"
+            },
+            {
+              "fieldId": "nombre",
+              "fieldValue": "={{ $('obtener_registro_lead').item.json.nombre ?? $('variables').item.json.nombre_cliente }}"
+            },
+            {
+              "fieldId": "nombre_normalizado",
+              "fieldValue": "={{ $('obtener_registro_lead').item.json.nombre_normalizado ?? $('variables').item.json.nombre_cliente_normalizado}}"
+            },
+            {
+              "fieldId": "telefono",
+              "fieldValue": "={{ $('obtener_registro_lead').item.json.telefono ?? $('variables').item.json.telefono_cliente}}"
+            },
+            {
+              "fieldId": "servicio",
+              "fieldValue": "={{ $('variables').item.json.servicio_interes }}"
+            },
+            {
+              "fieldId": "email",
+              "fieldValue": "={{ $('obtener_registro_lead').item.json.email ?? $('variables').item.json.email_cliente}}"
+            },
+            {
+              "fieldId": "empresa",
+              "fieldValue": "={{ $('obtener_registro_lead').item.json.empresa ?? $('variables').item.json.empresa_cliente}}"
+            },
+            {
+              "fieldId": "score_lead",
+              "fieldValue": "=93"
+            },
+            {
+              "fieldId": "identificado",
+              "fieldValue": "TRUE"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        2656,
+        720
+      ],
+      "id": "cc90d0d0-a7fc-40a7-a753-16393e49a9f5",
+      "name": "actualizar_lead1",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "your_credential_id",
+          "name": "Supabase account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('obtener_registro_lead').item.json.email ?? $('variables').item.json.email_cliente}}",
+        "subject": "Cita Agendada",
+        "message": "=<!DOCTYPE html> <html lang=\"es\"> <head>     <meta charset=\"UTF-8\">     <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">     <title>Cita Agendada - your_brand</title> </head> <body style=\"margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #0a0a0a;\">     <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"background-color: #0a0a0a; padding: 20px;\">         <tr>             <td align=\"center\">                 <table width=\"600\" cellpadding=\"0\" cellspacing=\"0\" style=\"background-color: #1a1a1a; border-radius: 15px; overflow: hidden; box-shadow: 0 0 30px rgba(0, 255, 255, 0.2); border: 1px solid #00ffff;\">                                          <!-- Header con logo y fondo decorativo -->                     <tr>                         <td style=\"background: linear-gradient(135deg, #000000 0%, #1a1a1a 100%); padding: 40px 30px; text-align: center; position: relative; border-bottom: 2px solid #00ffff;\">                                                         <!-- Logo -->                             <img src=\"https://ik.imagekit.io/49rd3bmeqs/Logos%20your_brand/logo2%20(3).png?updatedAt=1759468732222\" alt=\"your_brand Logo\" style=\"width: 120px; height: auto; margin-bottom: 20px; filter: drop-shadow(0 0 10px rgba(0, 255, 255, 0.5));\" />                                                          <h1 style=\"margin: 0; color: #00ffff; font-size: 32px; font-weight: 700; text-shadow: 0 0 20px rgba(0, 255, 255, 0.8);\">                                 ✓ Cita Confirmada                             </h1>                             <p style=\"margin: 10px 0 0 0; color: #ffffff; font-size: 16px;\">                                 Tu reunión ha sido agendada exitosamente                             </p>                         </td>                     </tr>                      <!-- Contenido principal -->                     <tr>                         <td style=\"padding: 40px 30px; background: linear-gradient(180deg, #1a1a1a 0%, #0f0f0f 100%);\">                             <p style=\"margin: 0 0 25px 0; color: #ffffff; font-size: 18px; line-height: 1.6;\">                                 Hola <strong style=\"color: #00ffff;\">{{ $('obtener_registro_lead').item.json.nombre ?? $('variables').item.json.nombre_cliente }}</strong>,                             </p>                                                          <p style=\"margin: 0 0 30px 0; color: #e0e0e0; font-size: 16px; line-height: 1.6;\">                                 Nos complace confirmar que tu cita del <strong style=\"color: #00ffff;\">{{ $('variables').item.json.fecha_cita_legible_cliente }}</strong> ha sido agendada.                             </p>                              <!-- Bloque de información de la reunión -->                             <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin: 30px 0;\">                                 <tr>                                     <td style=\"background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%); border-left: 4px solid #00ffff; padding: 25px; border-radius: 10px; box-shadow: 0 0 20px rgba(0, 255, 255, 0.15);\">                                         <h3 style=\"margin: 0 0 15px 0; color: #00ffff; font-size: 20px; display: flex; align-items: center;\">                                             📅 Detalles de tu Reunión                                         </h3>                                         <p style=\"margin: 0 0 10px 0; color: #ffffff; font-size: 15px; line-height: 1.6;\">                                             <strong style=\"color: #00ffff;\">Fecha:</strong> {{ $('variables').item.json.fecha_cita_legible_cliente }}                                      </p>                                         <p style=\"margin: 0; color: #e0e0e0; font-size: 14px; line-height: 1.5;\">                                             <strong style=\"color: #00ffff;\">Enlace:</strong><br>                                             <a href=\"{{ $('variables').item.json.meet_link }}\" style=\"color: #ffffff; word-break: break-all; text-decoration: none;\">{{ $('variables').item.json.meet_link }}</a>                                         </p>                                     </td>                                 </tr>                             </table>                              <!-- Botón llamada a la acción -->                             <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin: 35px 0;\">                                 <tr>                                     <td align=\"center\">                                         <a href=\"{{ $('variables').item.json.meet_link }}\" style=\"display: inline-block; background: linear-gradient(135deg, #00ffff 0%, #00cccc 100%); color: #000000; text-decoration: none; padding: 18px 45px; border-radius: 30px; font-size: 18px; font-weight: 700; box-shadow: 0 0 25px rgba(0, 255, 255, 0.6); text-transform: uppercase; letter-spacing: 1px;\">                                             🎥 Unirse a la Reunión                                         </a>                                     </td>                                 </tr>                             </table>                              <!-- Sección de servicios -->                             <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin: 40px 0 30px 0;\">                                 <tr>                                     <td width=\"33%\" style=\"padding: 5px;\">                                         <div style=\"background-color: #1a1a1a; padding: 20px 10px; border-radius: 10px; text-align: center; border: 1px solid #00ffff; box-shadow: 0 0 15px rgba(0, 255, 255, 0.1);\">                                             <div style=\"font-size: 32px; margin-bottom: 10px;\">🤖</div>                                             <h4 style=\"margin: 0; color: #00ffff; font-size: 14px;\">Inteligencia Artificial</h4>                                         </div>                                     </td>                                     <td width=\"33%\" style=\"padding: 5px;\">                                         <div style=\"background-color: #1a1a1a; padding: 20px 10px; border-radius: 10px; text-align: center; border: 1px solid #00ffff; box-shadow: 0 0 15px rgba(0, 255, 255, 0.1);\">                                             <div style=\"font-size: 32px; margin-bottom: 10px;\">📊</div>                                             <h4 style=\"margin: 0; color: #00ffff; font-size: 14px;\">Marketing Digital</h4>                                         </div>                                     </td>                                     <td width=\"33%\" style=\"padding: 5px;\">                                         <div style=\"background-color: #1a1a1a; padding: 20px 10px; border-radius: 10px; text-align: center; border: 1px solid #00ffff; box-shadow: 0 0 15px rgba(0, 255, 255, 0.1);\">                                             <div style=\"font-size: 32px; margin-bottom: 10px;\">📱</div>                                             <h4 style=\"margin: 0; color: #00ffff; font-size: 14px;\">Redes Sociales</h4>                                         </div>                                     </td>                                 </tr>                             </table>                              <!-- Link al sitio web -->                             <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin: 30px 0;\">                                 <tr>                                     <td align=\"center\" style=\"background-color: #0a0a0a; padding: 20px; border-radius: 10px; border: 1px solid #333333;\">                                         <p style=\"margin: 0 0 10px 0; color: #ffffff; font-size: 15px;\">                                             🌐 Conoce más sobre nuestros servicios                                         </p>                                         <a href=\"https://www.your_brand.com.mx\" style=\"color: #00ffff; text-decoration: none; font-weight: 600; font-size: 16px; text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);\">                                             Visítanos aquí →                                         </a>                                     </td>                                 </tr>                             </table>                          </td>                     </tr>                      <!-- Footer -->                     <tr>                         <td style=\"background-color: #000000; padding: 35px 30px; text-align: center; border-top: 2px solid #00ffff;\">                             <p style=\"margin: 0 0 15px 0; color: #ffffff; font-size: 16px; font-weight: 600;\">                                 Gracias por confiar en nosotros                             </p>                             <p style=\"margin: 0 0 20px 0; color: #00ffff; font-size: 15px;\">                                 your_name<br>                                 <span style=\"color: #999999; font-size: 13px;\">CEO de your_brand</span>                             </p>                             <div style=\"width: 60px; height: 2px; background: linear-gradient(90deg, transparent, #00ffff, transparent); margin: 20px auto;\"></div>                             <p style=\"margin: 0; color: #666666; font-size: 12px;\">                                 © 2025 your_brand. Todos los derechos reservados.                             </p>                             <p style=\"margin: 15px 0 0 0;\">                                 <a href=\"https://www.your_brand.com.mx\" style=\"color: #00ffff; text-decoration: none; margin: 0 10px; font-size: 12px;\">Sitio Web</a>                                 <span style=\"color: #333333;\">|</span>                                 <a href=\"https://wa.me/your_phone_number?text=\" style=\"color: #00ffff; text-decoration: none; margin: 0 10px; font-size: 12px;\">WhatsApp</a>                             </p>                         </td>                     </tr>                  </table>             </td>         </tr>     </table> </body> </html>",
+        "options": {
+          "appendAttribution": false,
+          "senderName": "your_name, CEO de your_brand"
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        2880,
+        720
+      ],
+      "id": "52a45339-cd5a-4798-92be-f0992a74b922",
+      "name": "enviar_correo_cita_agendada1",
+      "webhookId": "61a46709-2e59-4111-9e1c-426028790690",
+      "alwaysOutputData": true,
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "your_credential_id",
+          "name": "your_brand Nuevo"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "phoneNumberId": "710637588808362",
+        "recipientPhoneNumber": "={{ $('obtener_registro_lead').item.json.telefono ?? $('variables').item.json.telefono_cliente}}",
+        "template": "cita_agendada|es_MX",
+        "components": {
+          "component": [
+            {
+              "bodyParameters": {
+                "parameter": [
+                  {
+                    "text": "={{ $('obtener_registro_lead').item.json.nombre ?? $('variables').item.json.nombre_cliente }}"
+                  },
+                  {
+                    "text": "={{ $('variables').item.json.fecha_cita_legible_cliente }}"
+                  },
+                  {
+                    "text": "={{ $('variables').item.json.meet_link }}"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1,
+      "position": [
+        3328,
+        720
+      ],
+      "id": "c369f140-8f7d-479a-97fb-16d3b7fefb1d",
+      "name": "confirmar_cita_wa",
+      "webhookId": "53e8e612-3424-4d89-abec-23266c4eabbc",
+      "alwaysOutputData": true,
+      "credentials": {
+        "whatsAppApi": {
+          "id": "your_credential_id",
+          "name": "WhatsApp account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "chatId": "your_telegram_chat_id",
+        "text": "=Nueva Cita con {{ $('obtener_registro_lead').item.json.nombre ?? $('variables').item.json.nombre_cliente }}\nFecha: {{\n(() => {\n  let fechaRaw = $('variables').item.json.fecha_cita_mx;\n  if (!fechaRaw) return 'Sin fecha';\n\n  // Normaliza formato básico\n  fechaRaw = fechaRaw.replace(' ', 'T').replace(/\\//g, '-');\n\n  // Solo agrega Z si no hay zona horaria ni Z\n  if (!/[+-]\\d{2}:\\d{2}$/.test(fechaRaw) && !fechaRaw.endsWith('Z')) {\n    fechaRaw += 'Z';\n  }\n\n  const fecha = new Date(fechaRaw);\n  if (isNaN(fecha.getTime())) return 'Fecha inválida';\n\n  // Devuelve fecha y hora con formato mexicano\n  return fecha.toLocaleString('es-MX', {\n    timeZone: 'America/Mexico_City',\n    weekday: 'long',\n    day: 'numeric',\n    month: 'long',\n    year: 'numeric',\n    hour: '2-digit',\n    minute: '2-digit',\n    hour12: true\n  });\n})()\n}}\nEnlace: {{ $('variables').item.json.meet_link }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        3104,
+        720
+      ],
+      "id": "13af294f-34f6-436e-890e-78e4471ca8b3",
+      "name": "agenda_telegram_citas",
+      "webhookId": "2e1dac8d-f98d-4807-8539-2fd816da71c0",
+      "alwaysOutputData": true,
+      "credentials": {
+        "telegramApi": {
+          "id": "your_credential_id",
+          "name": "Citas your_brand"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "chatId": "your_telegram_chat_id",
+        "text": "=Cita Cancelada con {{ $('obtener_registro_lead').item.json.nombre }}\nFecha: {{ $('obtener registro de cita1').item.json.fecha_cita_legible }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2656,
+        912
+      ],
+      "id": "046453c4-cc86-496f-8b59-286298d06faf",
+      "name": "agenda_telegram_citas2",
+      "webhookId": "2e1dac8d-f98d-4807-8539-2fd816da71c0",
+      "alwaysOutputData": true,
+      "credentials": {
+        "telegramApi": {
+          "id": "your_credential_id",
+          "name": "Citas your_brand"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "citas",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "client_id",
+              "condition": "eq",
+              "keyValue": "={{ $('obtener_registro_lead').item.json.client_id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "estado",
+              "fieldValue": "cita cancelada"
+            },
+            {
+              "fieldId": "motivo_cancelacion",
+              "fieldValue": "={{ $('devolver_respuesta').item.json.motivo}}"
+            },
+            {
+              "fieldId": "cancelado_por",
+              "fieldValue": "Call Agent"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        2208,
+        912
+      ],
+      "id": "10c83fc3-1c67-4a22-8797-82d39191cb89",
+      "name": "cancelar cita",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "your_credential_id",
+          "name": "Supabase account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('obtener_registro_lead').item.json.email }}",
+        "subject": "Cita Cancelada",
+        "message": "=<!DOCTYPE html> <html lang=\"es\"> <head>     <meta charset=\"UTF-8\">     <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">     <title>Cita Cancelada - your_brand</title> </head> <body style=\"margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #0a0a0a;\">     <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"background-color: #0a0a0a; padding: 20px;\">         <tr>             <td align=\"center\">                 <table width=\"600\" cellpadding=\"0\" cellspacing=\"0\" style=\"background-color: #1a1a1a; border-radius: 15px; overflow: hidden; box-shadow: 0 0 30px rgba(255, 50, 50, 0.2); border: 1px solid #ff3232;\">                                          <!-- Header con logo y fondo decorativo -->                     <tr>                         <td style=\"background: linear-gradient(135deg, #000000 0%, #1a1a1a 100%); padding: 40px 30px; text-align: center; position: relative; border-bottom: 2px solid #ff3232;\">                                                          <!-- Logo -->                             <img src=\"https://ik.imagekit.io/49rd3bmeqs/Logos%20your_brand/logo2%20(3).png?updatedAt=1759468732222\" alt=\"your_brand Logo\" style=\"width: 120px; height: auto; margin-bottom: 20px; filter: drop-shadow(0 0 10px rgba(255, 50, 50, 0.5));\" />                                                          <h1 style=\"margin: 0; color: #ff3232; font-size: 32px; font-weight: 700; text-shadow: 0 0 20px rgba(255, 50, 50, 0.8);\">                                 ✕ Cita Cancelada                             </h1>                             <p style=\"margin: 10px 0 0 0; color: #ffffff; font-size: 16px;\">                                 Tu reunión ha sido cancelada                             </p>                         </td>                     </tr>                      <!-- Contenido principal -->                     <tr>                         <td style=\"padding: 40px 30px; background: linear-gradient(180deg, #1a1a1a 0%, #0f0f0f 100%);\">                             <p style=\"margin: 0 0 25px 0; color: #ffffff; font-size: 18px; line-height: 1.6;\">                                 Hola <strong style=\"color: #00ffff;\">{{ $('obtener_registro_lead').item.json.nombre }}</strong>,                             </p>                                                          <p style=\"margin: 0 0 30px 0; color: #e0e0e0; font-size: 16px; line-height: 1.6;\">                                 Lamentamos que su cita del <strong style=\"color: #ff3232;\">{{ $('obtener registro de cita1').item.json.fecha_cita_timezone_legible }} </strong> haya sido cancelada. Puede solicitar que se le agende una nueva cita cuando guste.                             </p>                              <!-- Bloque de información -->                             <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin: 30px 0;\">                                 <tr>                                     <td style=\"background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%); border-left: 4px solid #ff3232; padding: 25px; border-radius: 10px; box-shadow: 0 0 20px rgba(255, 50, 50, 0.15);\">                                         <h3 style=\"margin: 0 0 15px 0; color: #ff3232; font-size: 20px; display: flex; align-items: center;\">                                             📅 Información de la Cita                                         </h3>                                         <p style=\"margin: 0 0 10px 0; color: #ffffff; font-size: 15px; line-height: 1.6;\">                                             <strong style=\"color: #ff3232;\">Fecha Cancelada:</strong> {{ $('obtener registro de cita1').item.json.fecha_cita_timezone_legible }}                                       </p>                                         <p style=\"margin: 0; color: #e0e0e0; font-size: 14px; line-height: 1.5;\">                                             <strong style=\"color: #00ffff;\">Estado:</strong> Cancelada                                         </p>                                     </td>                                 </tr>                             </table>                              <!-- Botón para agendar nueva cita -->                             <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin: 35px 0;\">                                 <tr>                                     <td align=\"center\">                                         <a href=\"https://wa.me/your_phone_number?text=\" style=\"display: inline-block; background: linear-gradient(135deg, #00ffff 0%, #00cccc 100%); color: #000000; text-decoration: none; padding: 18px 45px; border-radius: 30px; font-size: 18px; font-weight: 700; box-shadow: 0 0 25px rgba(0, 255, 255, 0.6); text-transform: uppercase; letter-spacing: 1px;\">                                             📆 Agendar Nueva Cita                                         </a>                                     </td>                                 </tr>                             </table>                              <!-- Sección de servicios -->                             <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin: 40px 0 30px 0;\">                                 <tr>                                     <td width=\"33%\" style=\"padding: 5px;\">                                         <div style=\"background-color: #1a1a1a; padding: 20px 10px; border-radius: 10px; text-align: center; border: 1px solid #00ffff; box-shadow: 0 0 15px rgba(0, 255, 255, 0.1);\">                                             <div style=\"font-size: 32px; margin-bottom: 10px;\">🤖</div>                                             <h4 style=\"margin: 0; color: #00ffff; font-size: 14px;\">Inteligencia Artificial</h4>                                         </div>                                     </td>                                     <td width=\"33%\" style=\"padding: 5px;\">                                         <div style=\"background-color: #1a1a1a; padding: 20px 10px; border-radius: 10px; text-align: center; border: 1px solid #00ffff; box-shadow: 0 0 15px rgba(0, 255, 255, 0.1);\">                                             <div style=\"font-size: 32px; margin-bottom: 10px;\">📊</div>                                             <h4 style=\"margin: 0; color: #00ffff; font-size: 14px;\">Marketing Digital</h4>                                         </div>                                     </td>                                     <td width=\"33%\" style=\"padding: 5px;\">                                         <div style=\"background-color: #1a1a1a; padding: 20px 10px; border-radius: 10px; text-align: center; border: 1px solid #00ffff; box-shadow: 0 0 15px rgba(0, 255, 255, 0.1);\">                                             <div style=\"font-size: 32px; margin-bottom: 10px;\">📱</div>                                             <h4 style=\"margin: 0; color: #00ffff; font-size: 14px;\">Redes Sociales</h4>                                         </div>                                     </td>                                 </tr>                             </table>                              <!-- Link al sitio web -->                             <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin: 30px 0;\">                                 <tr>                                     <td align=\"center\" style=\"background-color: #0a0a0a; padding: 20px; border-radius: 10px; border: 1px solid #333333;\">                                         <p style=\"margin: 0 0 10px 0; color: #ffffff; font-size: 15px;\">                                             🌐 Conoce más sobre nuestros servicios                                         </p>                                         <a href=\"https://www.your_brand.com.mx\" style=\"color: #00ffff; text-decoration: none; font-weight: 600; font-size: 16px; text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);\">                                             Visítanos aquí →                                         </a>                                     </td>                                 </tr>                             </table>                          </td>                     </tr>                      <!-- Footer -->                     <tr>                         <td style=\"background-color: #000000; padding: 35px 30px; text-align: center; border-top: 2px solid #ff3232;\">                             <p style=\"margin: 0 0 15px 0; color: #ffffff; font-size: 16px; font-weight: 600;\">                                 Gracias por confiar en nosotros                             </p>                             <p style=\"margin: 0 0 20px 0; color: #00ffff; font-size: 15px;\">                                 your_name<br>                                 <span style=\"color: #999999; font-size: 13px;\">CEO de your_brand</span>                             </p>                             <div style=\"width: 60px; height: 2px; background: linear-gradient(90deg, transparent, #00ffff, transparent); margin: 20px auto;\"></div>                             <p style=\"margin: 0; color: #666666; font-size: 12px;\">                                 © 2025 your_brand. Todos los derechos reservados.                             </p>                             <p style=\"margin: 15px 0 0 0;\">                                 <a href=\"https://www.your_brand.com.mx\" style=\"color: #00ffff; text-decoration: none; margin: 0 10px; font-size: 12px;\">Sitio Web</a>                                 <span style=\"color: #333333;\">|</span>                                 <a href=\"https://wa.me/your_phone_number?text=\" style=\"color: #00ffff; text-decoration: none; margin: 0 10px; font-size: 12px;\">WhatsApp</a>                             </p>                         </td>                     </tr>                  </table>             </td>         </tr>     </table> </body> </html>",
+        "options": {
+          "appendAttribution": false,
+          "senderName": "your_name, CEO de your_brand"
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        2432,
+        912
+      ],
+      "id": "a0ef930b-75b7-44d3-ae4d-700a42f8e991",
+      "name": "enviar_correo_cita_cancelada",
+      "webhookId": "61a46709-2e59-4111-9e1c-426028790690",
+      "alwaysOutputData": true,
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "your_credential_id",
+          "name": "your_brand Nuevo"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "phoneNumberId": "710637588808362",
+        "recipientPhoneNumber": "={{ $('obtener_registro_lead').item.json.telefono }}",
+        "template": "cita_cancelada|es",
+        "components": {
+          "component": [
+            {
+              "bodyParameters": {
+                "parameter": [
+                  {
+                    "text": "={{ $('obtener_registro_lead').item.json.nombre }}"
+                  },
+                  {
+                    "text": "={{ $('obtener registro de cita1').item.json.fecha_cita_timezone_legible }} "
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1,
+      "position": [
+        2880,
+        912
+      ],
+      "id": "dd81db8e-abb0-460e-9e41-59cdaa6e81b9",
+      "name": "cancelar_cita_wa",
+      "webhookId": "53e8e612-3424-4d89-abec-23266c4eabbc",
+      "alwaysOutputData": true,
+      "credentials": {
+        "whatsAppApi": {
+          "id": "your_credential_id",
+          "name": "WhatsApp account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "9735481a-ec90-4220-b0a7-45e6e683cfb0",
+              "leftValue": "={{ $('obtener registro de cita').item.json.client_id}}",
+              "rightValue": "",
+              "operator": {
+                "type": "number",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2208,
+        624
+      ],
+      "id": "6e6eba3c-d7b2-4db8-bc41-72007b4b0b4d",
+      "name": "crear o actualizar registro de cita"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "citas",
+        "returnAll": true,
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "client_id",
+              "condition": "eq",
+              "keyValue": "={{ $('obtener_registro_lead').item.json.client_id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1984,
+        624
+      ],
+      "id": "1a42f1ed-755d-4177-9d98-80364c5382f3",
+      "name": "obtener registro de cita",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "your_credential_id",
+          "name": "Supabase account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "value": "your_brand0@gmail.com",
+          "mode": "list",
+          "cachedResultName": "your_brand0@gmail.com"
+        },
+        "start": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Start', ``, 'string') }}",
+        "end": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('End', ``, 'string') }}",
+        "additionalFields": {
+          "attendees": [
+            "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('attendees0_Attendees', ``, 'string') }}"
+          ],
+          "conferenceDataUi": {
+            "conferenceDataValues": {
+              "conferenceSolution": "hangoutsMeet"
+            }
+          },
+          "description": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Description', ``, 'string') }}",
+          "summary": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Summary', ``, 'string') }}"
+        }
+      },
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3,
+      "position": [
+        176,
+        944
+      ],
+      "id": "dad6e9a9-8426-425b-bf92-c675469d0c58",
+      "name": "create_event",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "your_credential_id",
+          "name": "your_brand Nuevo"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "calendar": {
+          "__rl": true,
+          "value": "your_brand0@gmail.com",
+          "mode": "list",
+          "cachedResultName": "your_brand0@gmail.com"
+        },
+        "eventId": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Event_ID', ``, 'string') }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3,
+      "position": [
+        304,
+        944
+      ],
+      "id": "4b98293d-74ae-4edd-9a33-2877600b1323",
+      "name": "delete_event",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "your_credential_id",
+          "name": "your_brand Nuevo"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "calendar": {
+          "__rl": true,
+          "value": "your_brand0@gmail.com",
+          "mode": "list",
+          "cachedResultName": "your_brand0@gmail.com"
+        },
+        "returnAll": true,
+        "timeMin": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('After', ``, 'string') }}",
+        "timeMax": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Before', ``, 'string') }}",
+        "options": {
+          "orderBy": "startTime",
+          "timeZone": {
+            "__rl": true,
+            "value": "America/Mexico_City",
+            "mode": "list",
+            "cachedResultName": "America/Mexico_City"
+          }
+        }
+      },
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3,
+      "position": [
+        432,
+        944
+      ],
+      "id": "07881ad0-9568-4190-849e-213e0d3918be",
+      "name": "get_many",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "your_credential_id",
+          "name": "your_brand Nuevo"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "4ef4be50-92c4-48b2-b26d-cdcea83c2b12",
+              "leftValue": "={{ $json.success }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "ef265edf-8691-4cea-a827-f76dfadb174a",
+              "leftValue": "={{ $json.action }}",
+              "rightValue": "=disponibilidad_consultada",
+              "operator": {
+                "type": "string",
+                "operation": "notContains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        1088,
+        720
+      ],
+      "id": "34b268ad-0d6a-4d57-b89a-fb146ef0c829",
+      "name": "success"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "96e43c43-301f-4040-9dd9-7fd28823848a",
+              "name": "action",
+              "value": "={{ $('devolver_respuesta').item.json.action }}",
+              "type": "string"
+            },
+            {
+              "id": "89f1db3c-26f7-4230-b36c-a2194f2f6fb1",
+              "name": "meet_link",
+              "value": "={{ $('devolver_respuesta').item.json.meet_link }}",
+              "type": "string"
+            },
+            {
+              "id": "e244228a-9e0a-4079-9310-bd7fd790307d",
+              "name": "fecha_cita_legible_cliente",
+              "value": "={{ $('devolver_respuesta').item.json.fecha_cita_legible_cliente ?? $('google_calendar_delete_event').item.json.body.fecha_cancelacion }}",
+              "type": "string"
+            },
+            {
+              "id": "bb892170-9215-47e1-bbd4-f802700fa4c7",
+              "name": "fecha_cita_mx",
+              "value": "={{ $('devolver_respuesta').item.json.fecha_cita_mx }}",
+              "type": "string"
+            },
+            {
+              "id": "e61455c1-3775-47e9-8024-77d7880fa7eb",
+              "name": "fecha_cita_cliente",
+              "value": "={{ $('devolver_respuesta').item.json.fecha_cita_cliente }}",
+              "type": "string"
+            },
+            {
+              "id": "3de36141-bff3-455d-99dd-4cb2de2f054f",
+              "name": "nombre_cliente",
+              "value": "={{ $('devolver_respuesta').item.json.nombre_cliente }}",
+              "type": "string"
+            },
+            {
+              "id": "b874ac05-f36f-43fa-a125-21494da3fe0f",
+              "name": "email_cliente",
+              "value": "={{ $('devolver_respuesta').item.json.email_cliente }}",
+              "type": "string"
+            },
+            {
+              "id": "3c58f0e3-3ffa-4933-a004-6e13cef42fd2",
+              "name": "telefono_cliente",
+              "value": "={{ $('devolver_respuesta').item.json.telefono_cliente }}",
+              "type": "string"
+            },
+            {
+              "id": "d8285f3f-e144-4818-ae61-4d8266fe4571",
+              "name": "pais_cliente",
+              "value": "={{ $('devolver_respuesta').item.json.pais_cliente }}",
+              "type": "string"
+            },
+            {
+              "id": "04bc9250-4415-4432-8d58-5ac9fce84ab8",
+              "name": "empresa_cliente",
+              "value": "={{ $('devolver_respuesta').item.json.empresa_cliente }}",
+              "type": "string"
+            },
+            {
+              "id": "f3a60f6e-3b76-4b95-bd15-3d5a1aadfa3c",
+              "name": "servicio_interes",
+              "value": "={{ $('devolver_respuesta').item.json.servicio_interes }}",
+              "type": "string"
+            },
+            {
+              "id": "d6f72376-0514-463f-9973-b2c5f7f61c77",
+              "name": "nombre_cliente_normalizado",
+              "value": "={{ $('devolver_respuesta').item.json.nombre_cliente.normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').replace(/[^a-zA-ZñÑ]/g, '').toLowerCase() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1312,
+        720
+      ],
+      "id": "784c4e67-04eb-4138-9496-388099dbd6a3",
+      "name": "variables",
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT *\nFROM leads_formularios_optimizada\nWHERE \n  telefono = '{{ $json.telefono_cliente ?? $('google_calendar_delete_event').item.json.body.telefono_cliente}}' \n  OR email = '{{ $json.email_cliente ?? $('google_calendar_delete_event').item.json.body.correo_cliente}}' \n  OR nombre = '{{ $json.nombre_cliente ?? $('google_calendar_delete_event').item.json.body.nombre_cliente}}' \n  OR nombre_normalizado = '{{ $json.nombre_cliente_normalizado }}' \nORDER BY created_at DESC\nLIMIT 1;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1536,
+        720
+      ],
+      "id": "a654ee06-cd2e-49d1-9aab-238f45477516",
+      "name": "obtener_registro_lead",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "your_credential_id",
+          "name": "Postgres account 2"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "citas",
+        "returnAll": true,
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "client_id",
+              "condition": "eq",
+              "keyValue": "={{ $('obtener_registro_lead').item.json.client_id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1984,
+        912
+      ],
+      "id": "c6749628-108f-44cc-adf8-d27eb0e86d9b",
+      "name": "obtener registro de cita1",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "your_credential_id",
+          "name": "Supabase account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "citas",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "client_id",
+              "condition": "eq",
+              "keyValue": "={{ $('obtener_registro_lead').item.json.client_id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "estado",
+              "fieldValue": "=cita agendada"
+            },
+            {
+              "fieldId": "nombre",
+              "fieldValue": "={{ $('obtener_registro_lead').item.json.nombre ?? $('variables').item.json.nombre_cliente }}"
+            },
+            {
+              "fieldId": "fecha_cita",
+              "fieldValue": "={{ $('variables').item.json.fecha_cita_mx }}"
+            },
+            {
+              "fieldId": "email",
+              "fieldValue": "={{ $('obtener_registro_lead').item.json.email ?? $('variables').item.json.email_cliente }}"
+            },
+            {
+              "fieldId": "telefono",
+              "fieldValue": "={{ $('obtener_registro_lead').item.json.telefono ?? $('variables').item.json.telefono_cliente }}"
+            },
+            {
+              "fieldId": "servicio",
+              "fieldValue": "={{ $('variables').item.json.servicio_interes }}"
+            },
+            {
+              "fieldId": "pais",
+              "fieldValue": "={{ $('obtener_registro_lead').item.json.pais ?? $('variables').item.json.pais_cliente }}"
+            },
+            {
+              "fieldId": "empresa",
+              "fieldValue": "={{ $('obtener_registro_lead').item.json.empresa ?? $('variables').item.json.empresa_cliente }}"
+            },
+            {
+              "fieldId": "enlace_reunion",
+              "fieldValue": "={{ $('variables').item.json.meet_link }}"
+            },
+            {
+              "fieldId": "fecha_cita_timezone_cliente",
+              "fieldValue": "={{ $('variables').item.json.fecha_cita_cliente }}"
+            },
+            {
+              "fieldId": "duracion_minutos",
+              "fieldValue": "30"
+            },
+            {
+              "fieldId": "fecha_cita_timezone_legible",
+              "fieldValue": "={{ $('variables').item.json.fecha_cita_legible_cliente }}"
+            },
+            {
+              "fieldId": "fecha_cita_legible",
+              "fieldValue": "={{\n(() => {\n  let fechaRaw = $('variables').item.json.fecha_cita_mx;\n  if (!fechaRaw) return 'Sin fecha';\n\n  // Normaliza formato básico\n  fechaRaw = fechaRaw.replace(' ', 'T').replace(/\\//g, '-');\n\n  // Solo agrega Z si no hay zona horaria ni Z\n  if (!/[+-]\\d{2}:\\d{2}$/.test(fechaRaw) && !fechaRaw.endsWith('Z')) {\n    fechaRaw += 'Z';\n  }\n\n  const fecha = new Date(fechaRaw);\n  if (isNaN(fecha.getTime())) return 'Fecha inválida';\n\n  // Devuelve fecha y hora con formato mexicano\n  return fecha.toLocaleString('es-MX', {\n    timeZone: 'America/Mexico_City',\n    weekday: 'long',\n    day: 'numeric',\n    month: 'long',\n    year: 'numeric',\n    hour: '2-digit',\n    minute: '2-digit',\n    hour12: true\n  });\n})()\n}}"
+            },
+            {
+              "fieldId": "cita_pasada",
+              "fieldValue": "No"
+            },
+            {
+              "fieldId": "google_event_id",
+              "fieldValue": "={{ $('parsear').item.json.event_id }}"
+            },
+            {
+              "fieldId": "recordatorio_enviado",
+              "fieldValue": "FALSE"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        2432,
+        528
+      ],
+      "id": "211287d9-a5b5-4beb-8228-0edfc0788b53",
+      "name": "crear_cita",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "your_credential_id",
+          "name": "Supabase account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "leads_formularios_optimizada",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "client_id",
+              "condition": "eq",
+              "keyValue": "={{ $('obtener_registro_lead').item.json.client_id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "es_cliente",
+              "fieldValue": "=true"
+            },
+            {
+              "fieldId": "estado_lead",
+              "fieldValue": "Cita agendada"
+            },
+            {
+              "fieldId": "pais",
+              "fieldValue": "={{ $('obtener_registro_lead').item.json.pais ?? $('variables').item.json.pais_cliente }}"
+            },
+            {
+              "fieldId": "nombre",
+              "fieldValue": "={{ $('obtener_registro_lead').item.json.nombre ?? $('variables').item.json.nombre_cliente }}"
+            },
+            {
+              "fieldId": "nombre_normalizado",
+              "fieldValue": "={{ $('obtener_registro_lead').item.json.nombre_normalizado ?? $('variables').item.json.nombre_cliente_normalizado}}"
+            },
+            {
+              "fieldId": "telefono",
+              "fieldValue": "={{ $('obtener_registro_lead').item.json.telefono ?? $('variables').item.json.telefono_cliente}}"
+            },
+            {
+              "fieldId": "servicio",
+              "fieldValue": "={{ $('variables').item.json.servicio_interes }}"
+            },
+            {
+              "fieldId": "email",
+              "fieldValue": "={{ $('obtener_registro_lead').item.json.email ?? $('variables').item.json.email_cliente}}"
+            },
+            {
+              "fieldId": "empresa",
+              "fieldValue": "={{ $('obtener_registro_lead').item.json.empresa ?? $('variables').item.json.empresa_cliente}}"
+            },
+            {
+              "fieldId": "score_lead",
+              "fieldValue": "=93"
+            },
+            {
+              "fieldId": "identificado",
+              "fieldValue": "TRUE"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        2656,
+        528
+      ],
+      "id": "bc7cb70b-f177-4ad0-bf5c-d058d1268f26",
+      "name": "actualizar_lead",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "your_credential_id",
+          "name": "Supabase account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('obtener_registro_lead').item.json.email ?? $('variables').item.json.email_cliente}}",
+        "subject": "Cita Agendada",
+        "message": "=<!DOCTYPE html> <html lang=\"es\"> <head>     <meta charset=\"UTF-8\">     <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">     <title>Cita Agendada - your_brand</title> </head> <body style=\"margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #0a0a0a;\">     <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"background-color: #0a0a0a; padding: 20px;\">         <tr>             <td align=\"center\">                 <table width=\"600\" cellpadding=\"0\" cellspacing=\"0\" style=\"background-color: #1a1a1a; border-radius: 15px; overflow: hidden; box-shadow: 0 0 30px rgba(0, 255, 255, 0.2); border: 1px solid #00ffff;\">                                          <!-- Header con logo y fondo decorativo -->                     <tr>                         <td style=\"background: linear-gradient(135deg, #000000 0%, #1a1a1a 100%); padding: 40px 30px; text-align: center; position: relative; border-bottom: 2px solid #00ffff;\">                                                         <!-- Logo -->                             <img src=\"https://ik.imagekit.io/49rd3bmeqs/Logos%20your_brand/logo2%20(3).png?updatedAt=1759468732222\" alt=\"your_brand Logo\" style=\"width: 120px; height: auto; margin-bottom: 20px; filter: drop-shadow(0 0 10px rgba(0, 255, 255, 0.5));\" />                                                          <h1 style=\"margin: 0; color: #00ffff; font-size: 32px; font-weight: 700; text-shadow: 0 0 20px rgba(0, 255, 255, 0.8);\">                                 ✓ Cita Confirmada                             </h1>                             <p style=\"margin: 10px 0 0 0; color: #ffffff; font-size: 16px;\">                                 Tu reunión ha sido agendada exitosamente                             </p>                         </td>                     </tr>                      <!-- Contenido principal -->                     <tr>                         <td style=\"padding: 40px 30px; background: linear-gradient(180deg, #1a1a1a 0%, #0f0f0f 100%);\">                             <p style=\"margin: 0 0 25px 0; color: #ffffff; font-size: 18px; line-height: 1.6;\">                                 Hola <strong style=\"color: #00ffff;\">{{ $('obtener_registro_lead').item.json.nombre ?? $('variables').item.json.nombre_cliente }}</strong>,                             </p>                                                          <p style=\"margin: 0 0 30px 0; color: #e0e0e0; font-size: 16px; line-height: 1.6;\">                                 Nos complace confirmar que tu cita del <strong style=\"color: #00ffff;\">{{ $('variables').item.json.fecha_cita_legible_cliente }}</strong> ha sido agendada.                             </p>                              <!-- Bloque de información de la reunión -->                             <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin: 30px 0;\">                                 <tr>                                     <td style=\"background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%); border-left: 4px solid #00ffff; padding: 25px; border-radius: 10px; box-shadow: 0 0 20px rgba(0, 255, 255, 0.15);\">                                         <h3 style=\"margin: 0 0 15px 0; color: #00ffff; font-size: 20px; display: flex; align-items: center;\">                                             📅 Detalles de tu Reunión                                         </h3>                                         <p style=\"margin: 0 0 10px 0; color: #ffffff; font-size: 15px; line-height: 1.6;\">                                             <strong style=\"color: #00ffff;\">Fecha:</strong> {{ $('variables').item.json.fecha_cita_legible_cliente }}                                      </p>                                         <p style=\"margin: 0; color: #e0e0e0; font-size: 14px; line-height: 1.5;\">                                             <strong style=\"color: #00ffff;\">Enlace:</strong><br>                                             <a href=\"{{ $('variables').item.json.meet_link }}\" style=\"color: #ffffff; word-break: break-all; text-decoration: none;\">{{ $('variables').item.json.meet_link }}</a>                                         </p>                                     </td>                                 </tr>                             </table>                              <!-- Botón llamada a la acción -->                             <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin: 35px 0;\">                                 <tr>                                     <td align=\"center\">                                         <a href=\"{{ $('variables').item.json.meet_link }}\" style=\"display: inline-block; background: linear-gradient(135deg, #00ffff 0%, #00cccc 100%); color: #000000; text-decoration: none; padding: 18px 45px; border-radius: 30px; font-size: 18px; font-weight: 700; box-shadow: 0 0 25px rgba(0, 255, 255, 0.6); text-transform: uppercase; letter-spacing: 1px;\">                                             🎥 Unirse a la Reunión                                         </a>                                     </td>                                 </tr>                             </table>                              <!-- Sección de servicios -->                             <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin: 40px 0 30px 0;\">                                 <tr>                                     <td width=\"33%\" style=\"padding: 5px;\">                                         <div style=\"background-color: #1a1a1a; padding: 20px 10px; border-radius: 10px; text-align: center; border: 1px solid #00ffff; box-shadow: 0 0 15px rgba(0, 255, 255, 0.1);\">                                             <div style=\"font-size: 32px; margin-bottom: 10px;\">🤖</div>                                             <h4 style=\"margin: 0; color: #00ffff; font-size: 14px;\">Inteligencia Artificial</h4>                                         </div>                                     </td>                                     <td width=\"33%\" style=\"padding: 5px;\">                                         <div style=\"background-color: #1a1a1a; padding: 20px 10px; border-radius: 10px; text-align: center; border: 1px solid #00ffff; box-shadow: 0 0 15px rgba(0, 255, 255, 0.1);\">                                             <div style=\"font-size: 32px; margin-bottom: 10px;\">📊</div>                                             <h4 style=\"margin: 0; color: #00ffff; font-size: 14px;\">Marketing Digital</h4>                                         </div>                                     </td>                                     <td width=\"33%\" style=\"padding: 5px;\">                                         <div style=\"background-color: #1a1a1a; padding: 20px 10px; border-radius: 10px; text-align: center; border: 1px solid #00ffff; box-shadow: 0 0 15px rgba(0, 255, 255, 0.1);\">                                             <div style=\"font-size: 32px; margin-bottom: 10px;\">📱</div>                                             <h4 style=\"margin: 0; color: #00ffff; font-size: 14px;\">Redes Sociales</h4>                                         </div>                                     </td>                                 </tr>                             </table>                              <!-- Link al sitio web -->                             <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin: 30px 0;\">                                 <tr>                                     <td align=\"center\" style=\"background-color: #0a0a0a; padding: 20px; border-radius: 10px; border: 1px solid #333333;\">                                         <p style=\"margin: 0 0 10px 0; color: #ffffff; font-size: 15px;\">                                             🌐 Conoce más sobre nuestros servicios                                         </p>                                         <a href=\"https://www.your_brand.com.mx\" style=\"color: #00ffff; text-decoration: none; font-weight: 600; font-size: 16px; text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);\">                                             Visítanos aquí →                                         </a>                                     </td>                                 </tr>                             </table>                          </td>                     </tr>                      <!-- Footer -->                     <tr>                         <td style=\"background-color: #000000; padding: 35px 30px; text-align: center; border-top: 2px solid #00ffff;\">                             <p style=\"margin: 0 0 15px 0; color: #ffffff; font-size: 16px; font-weight: 600;\">                                 Gracias por confiar en nosotros                             </p>                             <p style=\"margin: 0 0 20px 0; color: #00ffff; font-size: 15px;\">                                 your_name<br>                                 <span style=\"color: #999999; font-size: 13px;\">CEO de your_brand</span>                             </p>                             <div style=\"width: 60px; height: 2px; background: linear-gradient(90deg, transparent, #00ffff, transparent); margin: 20px auto;\"></div>                             <p style=\"margin: 0; color: #666666; font-size: 12px;\">                                 © 2025 your_brand. Todos los derechos reservados.                             </p>                             <p style=\"margin: 15px 0 0 0;\">                                 <a href=\"https://www.your_brand.com.mx\" style=\"color: #00ffff; text-decoration: none; margin: 0 10px; font-size: 12px;\">Sitio Web</a>                                 <span style=\"color: #333333;\">|</span>                                 <a href=\"https://wa.me/your_phone_number?text=\" style=\"color: #00ffff; text-decoration: none; margin: 0 10px; font-size: 12px;\">WhatsApp</a>                             </p>                         </td>                     </tr>                  </table>             </td>         </tr>     </table> </body> </html>",
+        "options": {
+          "appendAttribution": false,
+          "senderName": "your_name, CEO de your_brand"
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        2880,
+        528
+      ],
+      "id": "69577a13-3b97-4bc3-80ea-9504e92a0378",
+      "name": "enviar_correo_cita_agendada",
+      "webhookId": "61a46709-2e59-4111-9e1c-426028790690",
+      "alwaysOutputData": true,
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "your_credential_id",
+          "name": "your_brand Nuevo"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "phoneNumberId": "710637588808362",
+        "recipientPhoneNumber": "={{ $('obtener_registro_lead').item.json.telefono ?? $('variables').item.json.telefono_cliente}}",
+        "template": "cita_agendada|es_MX",
+        "components": {
+          "component": [
+            {
+              "bodyParameters": {
+                "parameter": [
+                  {
+                    "text": "={{ $('obtener_registro_lead').item.json.nombre ?? $('variables').item.json.nombre_cliente }}"
+                  },
+                  {
+                    "text": "={{ $('variables').item.json.fecha_cita_legible_cliente }}"
+                  },
+                  {
+                    "text": "={{ $('variables').item.json.meet_link }}"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1,
+      "position": [
+        3328,
+        528
+      ],
+      "id": "44c8c623-cdbd-4701-a382-e992e08389be",
+      "name": "confirmar_cita_wa1",
+      "webhookId": "53e8e612-3424-4d89-abec-23266c4eabbc",
+      "alwaysOutputData": true,
+      "credentials": {
+        "whatsAppApi": {
+          "id": "your_credential_id",
+          "name": "WhatsApp account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "chatId": "your_telegram_chat_id",
+        "text": "=Nueva Cita con {{ $('obtener_registro_lead').item.json.nombre ?? $('variables').item.json.nombre_cliente }}\nFecha: {{\n(() => {\n  let fechaRaw = $('variables').item.json.fecha_cita_mx;\n  if (!fechaRaw) return 'Sin fecha';\n\n  // Normaliza formato básico\n  fechaRaw = fechaRaw.replace(' ', 'T').replace(/\\//g, '-');\n\n  // Solo agrega Z si no hay zona horaria ni Z\n  if (!/[+-]\\d{2}:\\d{2}$/.test(fechaRaw) && !fechaRaw.endsWith('Z')) {\n    fechaRaw += 'Z';\n  }\n\n  const fecha = new Date(fechaRaw);\n  if (isNaN(fecha.getTime())) return 'Fecha inválida';\n\n  // Devuelve fecha y hora con formato mexicano\n  return fecha.toLocaleString('es-MX', {\n    timeZone: 'America/Mexico_City',\n    weekday: 'long',\n    day: 'numeric',\n    month: 'long',\n    year: 'numeric',\n    hour: '2-digit',\n    minute: '2-digit',\n    hour12: true\n  });\n})()\n}}\nEnlace: {{ $('variables').item.json.meet_link }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        3104,
+        528
+      ],
+      "id": "e6934deb-7507-4ef1-bc8b-a040a8659549",
+      "name": "agenda_telegram_citas1",
+      "webhookId": "2e1dac8d-f98d-4807-8539-2fd816da71c0",
+      "alwaysOutputData": true,
+      "credentials": {
+        "telegramApi": {
+          "id": "your_credential_id",
+          "name": "Citas your_brand"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "phoneNumberId": "your_whatsapp_phone_number_id",
+        "recipientPhoneNumber": "={{ $json.body.call.retell_llm_dynamic_variables.telefono ?? $json.body.call.from_number ?? $json.body.args.contactar}}",
+        "template": "reportes_quejas_retell_mandar_plantilla|es_MX",
+        "components": {
+          "component": [
+            {
+              "bodyParameters": {
+                "parameter": [
+                  {
+                    "text": "={{ $json.body.args.motivo_de_contacto }}"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        48,
+        1136
+      ],
+      "id": "dd084007-fe9b-49f5-a125-3c62d536f63a",
+      "name": "Send template",
+      "webhookId": "3c7123cc-57b3-4124-ad23-a45af059cf07",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "your_credential_id",
+          "name": "WhatsApp account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"success\": \"{{ $json.messages[0].message_status === 'accepted' ? 'success' : 'failed' }}\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        272,
+        1136
+      ],
+      "id": "fffb16f5-40bb-4ad9-a0b7-9d152dedcd55",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO conversaciones (\n    session_id,\n    message,\n    etiqueta,\n    clasificacion_cita,\n    fecha\n)\nVALUES (\n    '{{ $('obtener_registro_lead').item.json.client_id }}',\n    jsonb_build_object(\n        'type', 'ai',\n        'content', jsonb_pretty(json_build_object(\n            'respuesta', 'Cita agendada\n¡Hola {{ $('obtener_registro_lead').item.json.nombre ?? $('variables').item.json.nombre_cliente }}, tu cita del {{ $('variables').item.json.fecha_cita_legible_cliente }} ha sido agendada con éxito!.\nEste es el enlace de la reunión: {{ $('variables').item.json.meet_link }}.\n\n¡Nos morimos de ganas por platicar como podemos crecer juntos!. \n\nSi necesitas reagendar, cancelar o posponer tu cita puedes contactarme, recuerda hacerlo con tiempo.',\n            'escalamiento', null,\n            'enviar_formulario', null,\n            'estado', null\n        )::jsonb),\n        'tool_calls', '[]'::jsonb,\n        'additional_kwargs', '{}'::jsonb,\n        'response_metadata', '{}'::jsonb,\n        'invalid_tool_calls', '[]'::jsonb\n    ),\n    'ventas',\n    'agendar_cita',\n    '{{ $now.toISO() }}'::timestamptz\n);",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        3552,
+        528
+      ],
+      "id": "ece20ff1-98e8-48ef-a3ff-5244917156e3",
+      "name": "actualizar memoria agente3",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "your_postgres_credential_id",
+          "name": "Postgres account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO conversaciones (\n    session_id,\n    message,\n    etiqueta,\n    clasificacion_cita,\n    fecha\n)\nVALUES (\n    '{{ $('obtener_registro_lead').item.json.client_id }}',\n    jsonb_build_object(\n        'type', 'ai',\n        'content', jsonb_pretty(json_build_object(\n            'respuesta', 'Cita agendada\n¡Hola {{ $('obtener_registro_lead').item.json.nombre ?? $('variables').item.json.nombre_cliente }}, tu cita del {{ $('variables').item.json.fecha_cita_legible_cliente }} ha sido agendada con éxito!.\nEste es el enlace de la reunión: {{ $('variables').item.json.meet_link }}.\n\n¡Nos morimos de ganas por platicar como podemos crecer juntos!. \n\nSi necesitas reagendar, cancelar o posponer tu cita puedes contactarme, recuerda hacerlo con tiempo.',\n            'escalamiento', null,\n            'enviar_formulario', null,\n            'estado', null\n        )::jsonb),\n        'tool_calls', '[]'::jsonb,\n        'additional_kwargs', '{}'::jsonb,\n        'response_metadata', '{}'::jsonb,\n        'invalid_tool_calls', '[]'::jsonb\n    ),\n    'ventas',\n    'agendar_cita',\n    '{{ $now.toISO() }}'::timestamptz\n);",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        3552,
+        720
+      ],
+      "id": "e8ca2e17-d9a1-45a0-8af3-a18dbbb33615",
+      "name": "actualizar memoria agente",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "your_postgres_credential_id",
+          "name": "Postgres account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO conversaciones (\n    session_id,\n    message,\n    etiqueta,\n    clasificacion_cita,\n    fecha\n)\nVALUES (\n    '{{ $('obtener_registro_lead').item.json.client_id }}',\n    jsonb_build_object(\n        'type', 'ai',\n        'content', jsonb_pretty(json_build_object(\n            'respuesta', 'Cita cancelada\nHola, {{ $('obtener_registro_lead').item.json.nombre }}, tu cita del {{ $('obtener registro de cita1').item.json.fecha_cita_timezone_legible }}  ha sido cancelada con éxito. Lamentamos que no pudiéramos conversar mas profundamente sobre  tu empresa. Si necesitas agendar una nueva cita no dudes en contactarme.',\n            'escalamiento', null,\n            'enviar_formulario', null,\n            'estado', null\n        )::jsonb),\n        'tool_calls', '[]'::jsonb,\n        'additional_kwargs', '{}'::jsonb,\n        'response_metadata', '{}'::jsonb,\n        'invalid_tool_calls', '[]'::jsonb\n    ),\n    'ventas',\n    'cancelar_cita',\n    '{{ $now.toISO() }}'::timestamptz\n);",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        3104,
+        912
+      ],
+      "id": "7b4b27f4-b669-4eca-ae94-40bc019a1650",
+      "name": "actualizar memoria agente1",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "your_postgres_credential_id",
+          "name": "Postgres account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO conversaciones (\n    session_id,\n    message,\n    etiqueta,\n    fecha\n)\nVALUES (\n    '{{ $('contactar_whatsapp').item.json.body.call.retell_llm_dynamic_variables.client_id }}',\n    jsonb_build_object(\n        'type', 'ai',\n        'content', jsonb_pretty(json_build_object(\n            'respuesta', 'Hola, estamos encantados en atenderte por este canal respecto a tu problema tecnico o queja, puedes mencionarnos mas sobre ello para poderte atender de la mejor manera 😁.',\n            'escalamiento', null,\n            'enviar_formulario', null,\n            'estado', null\n        )::jsonb),\n        'tool_calls', '[]'::jsonb,\n        'additional_kwargs', '{}'::jsonb,\n        'response_metadata', '{}'::jsonb,\n        'invalid_tool_calls', '[]'::jsonb\n    ),\n    'queja',\n    '{{ $now.toISO() }}'::timestamptz\n);",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        496,
+        1136
+      ],
+      "id": "2881a423-949d-41b7-9b83-c289bd827669",
+      "name": "actualizar memoria agente2",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "your_postgres_credential_id",
+          "name": "Postgres account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4o-mini"
+        },
+        "builtInTools": {},
+        "options": {
+          "textFormat": {
+            "textOptions": {
+              "type": "json_object"
+            }
+          }
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        48,
+        944
+      ],
+      "id": "8ceabbd3-be24-461e-84e1-0ff5a7d981f4",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "your_credential_id",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.body }}",
+        "options": {
+          "systemMessage": "# AGENTE OPTIMIZADO N8N - GOOGLE CALENDAR\n\n## IDENTIDAD\n- Función: Ejecutar herramientas de Google Calendar y devolver solo campos necesarios\n- Zona horaria: America/Mexico_City (GMT-6)\n- Fecha actual: {{ $now }}\n\n## INPUT\nDatos en: `{{ $json.body }}`\n\n---\n\n## PROCESO POR ACCIÓN\n\n### 1️⃣ AGENDAR CITA\n\n**Input recibido:**\n- accion, summary, attendee_email, start_datetime, description\n- empresa_cliente, telefono_cliente, pais_cliente, servicio_interes, nombre_cliente\n\n**Pasos:**\n1. Normalizar teléfono (agregar código de país si falta)\n2. Convertir start_datetime a formato ISO con -06:00\n3. Calcular end_datetime (start + 30 min)\n4. Ejecutar `create_event` en Google Calendar\n5. Extraer hangoutLink de la respuesta\n\n**Códigos de país comunes:**\nMéxico: +52, Colombia: +57, España: +34, USA: +1, Argentina: +54, Chile: +56\n\n**Output JSON:**\n```json\n{\n  \"campos_originales\": {\n    \"accion\": \"agendar_cita\",\n    \"summary\": \"del input\",\n    \"attendee_email\": \"del input\",\n    \"start_datetime\": \"del input\",\n    \"description\": \"del input\",\n    \"empresa_cliente\": \"del input\",\n    \"telefono_cliente\": \"del input\",\n    \"pais_cliente\": \"del input\",\n    \"servicio_interes\": \"del input\",\n    \"nombre_cliente\": \"del input\"\n  },\n  \"campos_normalizados\": {\n    \"telefono_normalizado\": \"+your_phone_number\",\n    \"fecha_cita_mx\": \"2025-11-17T11:00:00-06:00\",\n    \"fecha_cita_mx_legible\": \"lunes 17 de noviembre de 2025 a las 11:00 AM\",\n    \"fecha_cita_zonahoraria_cliente\": \"2025-11-17T11:00:00-06:00\",\n    \"fecha_cita_zonahoraria_cliente_legible\": \"lunes 17 de noviembre de 2025 a las 11:00 AM\"\n  },\n  \"herramienta_ejecutada\": \"create_event\",\n  \"respuesta_herramienta\": {\n    \"id\": \"event_id\",\n    \"hangoutLink\": \"https://meet.google.com/your-meeting-link\",\n    \"htmlLink\": \"calendar_link\",\n    \"start\": {\"dateTime\": \"...\", \"timeZone\": \"...\"},\n    \"end\": {\"dateTime\": \"...\", \"timeZone\": \"...\"},\n    \"conferenceData\": {...},\n    \"status\": \"confirmed\"\n  },\n  \"estado_ejecucion\": \"exitoso\",\n  \"mensaje\": \"Cita agendada exitosamente.\"\n}\n```\n\n---\n\n### 2️⃣ CANCELAR CITA\n\n**Input recibido:**\n- accion, motivo, correo_cliente, fecha_cancelacion, telefono_cliente, nombre_cliente, google_event_id\n\n**Pasos:**\n1. Buscar cita google_event_id\n4. Ejecutar `delete_event` con ese event_id\n\n**Output JSON:**\n```json\n{\n  \"campos_originales\": {\n    \"accion\": \"cancelar_cita\",\n    \"motivo\": \"del input\",\n    \"correo_cliente\": \"del input\",\n    \"fecha_cancelacion\": \"del input\",\n    \"telefono_cliente\": \"del input\",\n    \"nombre_cliente\": \"del input\"\n  },\n  \"herramienta_ejecutada\": \"delete_event\",\n  \"respuesta_herramienta\": {\n    \"event_id_encontrado\": \"abc123\",\n    \"status\": \"cancelled\"\n  },\n  \"estado_ejecucion\": \"exitoso\",\n  \"mensaje\": \"Cita cancelada exitosamente.\"\n}\n```\n\n**Si NO se encuentra cita:**\n```json\n{\n  \"campos_originales\": {...},\n  \"herramienta_ejecutada\": \"delete_event\",\n  \"respuesta_herramienta\": null,\n  \"estado_ejecucion\": \"error\",\n  \"mensaje\": \"No se encontró cita para cancelar\"\n}\n```\n\n---\n\n### 3️⃣ DISPONIBILIDAD\n\n**Input recibido:**\n- accion, After, Before, Return\n\n**Pasos:**\n1. Ejecutar `get_many` con After y Before\n2. Devolver lista de eventos\n\n**Output JSON:**\n```json\n{\n  \"campos_originales\": {\n    \"accion\": \"disponibilidad\",\n    \"After\": \"del input\",\n    \"Before\": \"del input\",\n    \"Return\": \"del input\"\n  },\n  \"herramienta_ejecutada\": \"getall_events\",\n  \"respuesta_herramienta\": {\n    \"items\": [\n      {\n        \"id\": \"event1\",\n        \"summary\": \"Evento 1\",\n        \"start\": {\"dateTime\": \"2025-11-12T10:00:00-06:00\"},\n        \"end\": {\"dateTime\": \"2025-11-12T10:30:00-06:00\"}\n      }\n    ]\n  },\n  \"estado_ejecucion\": \"exitoso\",\n  \"mensaje\": \"Se consultó la disponibilidad correctamente.\"\n}\n```\n\n---\n\n## NORMALIZACIÓN RÁPIDA\n\n### Teléfono:\n- Si empieza con +: dejar tal cual\n- Si NO: agregar código según país\n- Eliminar espacios/guiones\n\n### Fecha:\n- Si start_datetime es ISO (contiene \"T\" y \"-06:00\"): usar directo\n- Si es texto (\"mañana a las 3 PM\"): parsear a ISO\n- Formato final: `YYYY-MM-DDTHH:MM:SS-06:00`\n- Legible: \"lunes 17 de noviembre de 2025 a las 11:00 AM\"\n\n---\n\n## REGLAS CRÍTICAS\n\n✅ SOLO incluir campos especificados en los outputs de ejemplo\n✅ campos_originales: copiar tal cual del input\n✅ respuesta_herramienta: SOLO campos relevantes (no todo el objeto gigante)\n✅ Para cancelar: buscar primero con google_event_id, luego delete_event\n✅ Si error: estado_ejecucion = \"error\" y mensaje descriptivo\n\n❌ NO incluir campos extra innecesarios\n❌ NO copiar objetos gigantes de Google Calendar completos\n❌ NO incluir validaciones en el output\n❌ NO agregar metadata innecesaria\n\n---\n\n## MANEJO DE ERRORES\n\nSi falla herramienta:\n```json\n{\n  \"campos_originales\": {...},\n  \"herramienta_ejecutada\": \"nombre\",\n  \"respuesta_herramienta\": null,\n  \"estado_ejecucion\": \"error\",\n  \"mensaje\": \"Descripción del error\"\n}\n```\n\n---\n\n**FIN DEL PROMPT**"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        176,
+        720
+      ],
+      "id": "796886a4-e060-4199-bd0c-1b0cb6be8b8b",
+      "name": "AI Agent1"
+    }
+  ],
+  "pinData": {
+    "google_calendar_create_event": [
+      {
+        "json": {
+          "headers": {
+            "host": "your_n8n_domain_service",
+            "user-agent": "axios/1.11.0",
+            "content-length": "521",
+            "accept": "application/json, text/plain, */*",
+            "accept-encoding": "gzip, compress, deflate, br",
+            "content-type": "application/json",
+            "x-forwarded-for": "your_ip_address",
+            "x-forwarded-host": "your_n8n_domain_service",
+            "x-forwarded-port": "443",
+            "x-forwarded-proto": "https",
+            "x-forwarded-server": "737fb838982b",
+            "x-real-ip": "your_ip_address",
+            "x-retell-signature": "v=1763013593422,d=056031a343cc3f22f6f11fbf4c8c021a5d2f6d798d99a211e10e884bbc1ca49c"
+          },
+          "params": {},
+          "query": {},
+          "body": {
+            "accion": "agendar_cita",
+            "summary": "Reunión comercial your_brand - your_name",
+            "attendee_email": "your_email@example.com",
+            "start_datetime": "2025-11-17T11:00:00-06:00",
+            "description": "Cliente: your_name | Empresa: your_company | Servicio: Inteligencia Artificial | Teléfono: +your_phone_number | Email: your_email@example.com",
+            "empresa_cliente": "your_company",
+            "telefono_cliente": "+your_phone_number",
+            "pais_cliente": "México",
+            "servicio_interes": "Inteligencia Artificial",
+            "nombre_cliente": "your_name"
+          },
+          "webhookUrl": "https://your_n8n_domain_service/webhook/3a98c752-8895-4960-80ac-497af91f0811",
+          "executionMode": "production"
+        }
+      }
+    ],
+    "google_calendar_delete_event": [
+      {
+        "json": {
+          "headers": {
+            "host": "your_n8n_domain_service",
+            "user-agent": "axios/1.11.0",
+            "content-length": "221",
+            "accept": "application/json, text/plain, */*",
+            "accept-encoding": "gzip, compress, deflate, br",
+            "content-type": "application/json",
+            "x-forwarded-for": "your_ip_address",
+            "x-forwarded-host": "your_n8n_domain_service",
+            "x-forwarded-port": "443",
+            "x-forwarded-proto": "https",
+            "x-forwarded-server": "737fb838982b",
+            "x-real-ip": "your_ip_address",
+            "x-retell-signature": "v=1763045556726,d=a27c353f2866040de1222cc8e2818b7511b0a3e64436d3bf677ef1becca3d845"
+          },
+          "params": {},
+          "query": {},
+          "body": {
+            "accion": "cancelar_cita",
+            "correo_cliente": "your_email@example.com",
+            "motivo": "Inconveniente familiar",
+            "fecha_cancelacion": "2025-11-18T22:00:00.000Z",
+            "telefono_cliente": "+your_phone_number",
+            "nombre_cliente": "your_name"
+          },
+          "webhookUrl": "https://your_n8n_domain_service/webhook/5b6da4d8-8bde-4d07-ac4d-eda9ab5c5095",
+          "executionMode": "production"
+        }
+      }
+    ],
+    "contactar_whatsapp": [
+      {
+        "json": {
+          "headers": {
+            "host": "your_n8n_domain_service",
+            "user-agent": "axios/1.11.0",
+            "content-length": "18096",
+            "accept": "application/json, text/plain, */*",
+            "accept-encoding": "gzip, compress, deflate, br",
+            "content-type": "application/json",
+            "x-forwarded-for": "your_ip_address",
+            "x-forwarded-host": "your_n8n_domain_service",
+            "x-forwarded-port": "443",
+            "x-forwarded-proto": "https",
+            "x-forwarded-server": "737fb838982b",
+            "x-real-ip": "your_ip_address",
+            "x-retell-signature": "v=1763067861212,d=72ec7fce1efedf86f7ab8733de37360d09cf081237b92232188ce0c8c6f52a5e"
+          },
+          "params": {},
+          "query": {},
+          "body": {
+            "call": {
+              "call_id": "call_a3482e1b1c60f19bfc0340f50c5",
+              "call_type": "phone_call",
+              "agent_id": "agent_294c64b56446f4bea8fbeab653",
+              "agent_version": 10,
+              "agent_name": "Agente_llamadas_your_brand_v5_optimizado_simplificado",
+              "retell_llm_dynamic_variables": {
+                "lk-call-info": "Cg4xODUuNDUuMTUyLjIxNhDEJxgB",
+                "lk-real-ip": "your_ip_address",
+                "lk-transport": "udp",
+                "nombre": "your_name",
+                "nombre_completo": "your_full_name",
+                "email": "your_email@example.com",
+                "telefono": "+your_phone_number",
+                "servicio": "Inteligencia Artificial",
+                "empresa": "your_company",
+                "estado": "Colima",
+                "pais": "México",
+                "estado_lead": "Cita agendada",
+                "client_id": "1762459014109100",
+                "whatsapp": "+your_phone_number",
+                "es_cliente": "true",
+                "fecha_cita": "2025-11-18T22:00:00.000Z",
+                "enlace_reunion": "https://meet.google.com/your-meeting-link",
+                "motivo_cancelacion": "Inconveniente familiar",
+                "fecha_cita_timezone_cliente": "2025-11-18T22:00:00.000Z",
+                "asistencia": "sin_dato",
+                "cita_pasada": "No",
+                "fecha_cita_timezone_legible": "lunes 18 de noviembre de 2025 a las 4:00 PM",
+                "fecha_cita_legible": "martes, 18 de noviembre de 2025, 04:00 p.m.",
+                "call_id": "sin_dato",
+                "call_type": "sin_dato",
+                "call_status": "sin_dato",
+                "from_number": "sin_dato",
+                "to_number": "sin_dato",
+                "agent_id": "sin_dato",
+                "agent_name": "sin_dato",
+                "agent_version": "sin_dato",
+                "direction": "sin_dato",
+                "resumenes_previos": "[Llamada 1 - 13/11/2025]: La llamada comenzó con your_name saludando al agente. your_name preguntó sobre el estado de su cita, ya que quería saber si tenía alguna programada. El agente le informó que su cita había sido cancelada y que no tenía ninguna cita agendada. your_name mostró interés en reprogramar su cita. La conversación se centró en la reprogramación de la cita, pero no se concretó un nuevo horario.\n\n[Llamada 2 - 13/11/2025]: La llamada comenzó con your_name, quien deseaba cancelar su cita programada para el martes 18 de noviembre de 2025. Mencionó que tenía un inconveniente familiar que necesitaba atender. El agente confirmó la cancelación de la cita y agradeció a your_name por la información proporcionada. your_name no solicitó ningún otro servicio ni información adicional. La llamada finalizó con el agente deseándole un excelente día y your_name agradeciendo la atención.\n\n[Llamada 3 - 13/11/2025]: sin_dato\n\n[Llamada 4 - 13/11/2025]: La llamada comenzó con your_name solicitando reagendar una cita. El agente verificó la disponibilidad y propuso varias fechas y horas. Finalmente, se acordó que la cita sería el martes 18 de noviembre de 2025 a las 11:00 a.m. hora de México. your_name confirmó su preferencia por esa hora y el agente se comprometió a enviar el enlace de la reunión. La conversación finalizó con your_name agradeciendo la atención y confirmando la cita.\n\n[Llamada 5 - 13/11/2025]: La llamada comenzó con un saludo cordial entre el usuario y el agente. No se abordaron necesidades específicas ni se discutieron servicios. El agente se mostró disponible para ayudar en lo que el usuario requiriera. No se tomaron decisiones ni se acordaron acciones durante esta breve interacción. La conversación finalizó sin información adicional relevante.",
+                "estado_cita": "cita cancelada",
+                "event": "call_inbound"
+              },
+              "collected_dynamic_variables": {
+                "current_agent_state": "NODO_SOPORTE",
+                "previous_agent_state": "NODO1"
+              },
+              "custom_sip_headers": {
+                "x-lk-call-info": "Cg4xODUuNDUuMTUyLjIxNhDEJxgB",
+                "x-lk-real-ip": "your_ip_address",
+                "x-lk-transport": "udp"
+              },
+              "call_status": "ongoing",
+              "start_timestamp": 1763067833459,
+              "transcript": "Agent: ¡Hola \nUser: Hola, buenas.\nAgent: your_name!\nAgent: ¡Hola! Soy \nUser: Buenas tardes. Este, soporte, disculpe.\nAgent: ¿Me escuchas bien? Repito la pregunta...\nUser: Para contactar, este, a soporte, disculpe.\nAgent: Entiendo tu situación, your_name. Te conecto con soporte por WhatsApp. ¿Estás de acuerdo?\nUser: Sí, por favor.\n",
+              "transcript_object": [
+                {
+                  "role": "agent",
+                  "content": "¡Hola ",
+                  "words": [
+                    {
+                      "word": "¡Hola ",
+                      "start": 0.528,
+                      "end": 0.928
+                    }
+                  ],
+                  "metadata": {
+                    "response_id": 0
+                  }
+                },
+                {
+                  "role": "user",
+                  "content": "Hola, buenas.",
+                  "words": [
+                    {
+                      "word": "Hola, ",
+                      "start": 0.977,
+                      "end": 1.537
+                    },
+                    {
+                      "word": "buenas.",
+                      "start": 1.537,
+                      "end": 1.6969999999999998
+                    }
+                  ]
+                },
+                {
+                  "role": "agent",
+                  "content": "your_name!",
+                  "words": [
+                    {
+                      "word": "your_name ",
+                      "start": 0.928,
+                      "end": 1.328
+                    },
+                    {
+                      "word": "your_surname!",
+                      "start": 1.328,
+                      "end": 1.728
+                    }
+                  ],
+                  "metadata": {
+                    "response_id": 0
+                  }
+                },
+                {
+                  "role": "agent",
+                  "content": "¡Hola! Soy ",
+                  "words": [
+                    {
+                      "word": "¡Hola!",
+                      "start": 3.404,
+                      "end": 3.804
+                    },
+                    {
+                      "word": " Soy ",
+                      "start": 4.100583251953125,
+                      "end": 4.500583251953125
+                    }
+                  ],
+                  "metadata": {
+                    "response_id": 1
+                  }
+                },
+                {
+                  "role": "user",
+                  "content": "Buenas tardes. Este, soporte, disculpe.",
+                  "words": [
+                    {
+                      "word": "Buenas ",
+                      "start": 3.3969999,
+                      "end": 3.7969999999999997
+                    },
+                    {
+                      "word": "tardes. ",
+                      "start": 3.7969999999999997,
+                      "end": 4.357
+                    },
+                    {
+                      "word": "Este, ",
+                      "start": 4.357,
+                      "end": 4.917000000000001
+                    },
+                    {
+                      "word": "soporte, ",
+                      "start": 4.9969995,
+                      "end": 6.917000000000001
+                    },
+                    {
+                      "word": "disculpe.",
+                      "start": 7.1569994,
+                      "end": 7.557
+                    }
+                  ]
+                },
+                {
+                  "role": "agent",
+                  "content": "¿Me escuchas bien? Repito la pregunta...",
+                  "words": [
+                    {
+                      "word": "¿Me ",
+                      "start": 9.063,
+                      "end": 9.463
+                    },
+                    {
+                      "word": "escuchas ",
+                      "start": 9.463,
+                      "end": 9.863
+                    },
+                    {
+                      "word": "bien?",
+                      "start": 9.863,
+                      "end": 10.263
+                    },
+                    {
+                      "word": " Repito ",
+                      "start": 10.270416748046875,
+                      "end": 10.670416748046875
+                    },
+                    {
+                      "word": "la ",
+                      "start": 10.670416748046875,
+                      "end": 11.070416748046876
+                    },
+                    {
+                      "word": "pregunta...",
+                      "start": 11.070416748046876,
+                      "end": 11.470416748046874
+                    }
+                  ],
+                  "metadata": {
+                    "response_id": 3
+                  }
+                },
+                {
+                  "role": "user",
+                  "content": "Para contactar, este, a soporte, disculpe.",
+                  "words": [
+                    {
+                      "word": "Para ",
+                      "start": 12.997000499999999,
+                      "end": 13.237
+                    },
+                    {
+                      "word": "contactar, ",
+                      "start": 13.237,
+                      "end": 13.957001
+                    },
+                    {
+                      "word": "este, ",
+                      "start": 13.957001,
+                      "end": 14.197
+                    },
+                    {
+                      "word": "a ",
+                      "start": 14.197,
+                      "end": 14.277
+                    },
+                    {
+                      "word": "soporte, ",
+                      "start": 14.277,
+                      "end": 14.917000999999999
+                    },
+                    {
+                      "word": "disculpe.",
+                      "start": 14.917000999999999,
+                      "end": 15.157
+                    }
+                  ]
+                },
+                {
+                  "role": "agent",
+                  "content": "Entiendo tu situación, your_name. Te conecto con soporte por WhatsApp. ¿Estás de acuerdo?",
+                  "words": [
+                    {
+                      "word": "Entiendo ",
+                      "start": 17.487,
+                      "end": 17.887
+                    },
+                    {
+                      "word": "tu ",
+                      "start": 17.887,
+                      "end": 18.287
+                    },
+                    {
+                      "word": "situación, ",
+                      "start": 18.287,
+                      "end": 18.687
+                    },
+                    {
+                      "word": "your_name ",
+                      "start": 18.687,
+                      "end": 19.087
+                    },
+                    {
+                      "word": "your_surname.",
+                      "start": 19.087,
+                      "end": 19.487
+                    },
+                    {
+                      "word": " Te ",
+                      "start": 19.716083251953126,
+                      "end": 20.116083251953125
+                    },
+                    {
+                      "word": "conecto ",
+                      "start": 20.116083251953125,
+                      "end": 20.516083251953123
+                    },
+                    {
+                      "word": "con ",
+                      "start": 20.516083251953123,
+                      "end": 20.916083251953125
+                    },
+                    {
+                      "word": "soporte ",
+                      "start": 20.916083251953125,
+                      "end": 21.316083251953124
+                    },
+                    {
+                      "word": "por ",
+                      "start": 21.316083251953124,
+                      "end": 21.716083251953126
+                    },
+                    {
+                      "word": "WhatsApp.",
+                      "start": 21.716083251953126,
+                      "end": 22.116083251953125
+                    },
+                    {
+                      "word": " ¿Estás ",
+                      "start": 22.363125,
+                      "end": 22.763125
+                    },
+                    {
+                      "word": "de ",
+                      "start": 22.763125,
+                      "end": 23.163125
+                    },
+                    {
+                      "word": "acuerdo?",
+                      "start": 23.163125,
+                      "end": 23.563125
+                    }
+                  ],
+                  "metadata": {
+                    "response_id": 4
+                  }
+                },
+                {
+                  "role": "user",
+                  "content": "Sí, por favor.",
+                  "words": [
+                    {
+                      "word": "Sí, ",
+                      "start": 24.987,
+                      "end": 25.466998999999998
+                    },
+                    {
+                      "word": "por ",
+                      "start": 25.466998999999998,
+                      "end": 25.626998999999998
+                    },
+                    {
+                      "word": "favor.",
+                      "start": 25.626998999999998,
+                      "end": 25.947
+                    }
+                  ]
+                }
+              ],
+              "transcript_with_tool_calls": [
+                {
+                  "role": "agent",
+                  "content": "¡Hola ",
+                  "words": [
+                    {
+                      "word": "¡Hola ",
+                      "start": 0.528,
+                      "end": 0.928
+                    }
+                  ],
+                  "metadata": {
+                    "response_id": 0
+                  }
+                },
+                {
+                  "role": "user",
+                  "content": "Hola, buenas.",
+                  "words": [
+                    {
+                      "word": "Hola, ",
+                      "start": 0.977,
+                      "end": 1.537
+                    },
+                    {
+                      "word": "buenas.",
+                      "start": 1.537,
+                      "end": 1.6969999999999998
+                    }
+                  ]
+                },
+                {
+                  "role": "agent",
+                  "content": "your_name!",
+                  "words": [
+                    {
+                      "word": "your_name ",
+                      "start": 0.928,
+                      "end": 1.328
+                    },
+                    {
+                      "word": "your_surname!",
+                      "start": 1.328,
+                      "end": 1.728
+                    }
+                  ],
+                  "metadata": {
+                    "response_id": 0
+                  }
+                },
+                {
+                  "role": "agent",
+                  "content": "¡Hola! Soy ",
+                  "words": [
+                    {
+                      "word": "¡Hola!",
+                      "start": 3.404,
+                      "end": 3.804
+                    },
+                    {
+                      "word": " Soy ",
+                      "start": 4.100583251953125,
+                      "end": 4.500583251953125
+                    }
+                  ],
+                  "metadata": {
+                    "response_id": 1
+                  }
+                },
+                {
+                  "role": "user",
+                  "content": "Buenas tardes. Este, soporte, disculpe.",
+                  "words": [
+                    {
+                      "word": "Buenas ",
+                      "start": 3.3969999,
+                      "end": 3.7969999999999997
+                    },
+                    {
+                      "word": "tardes. ",
+                      "start": 3.7969999999999997,
+                      "end": 4.357
+                    },
+                    {
+                      "word": "Este, ",
+                      "start": 4.357,
+                      "end": 4.917000000000001
+                    },
+                    {
+                      "word": "soporte, ",
+                      "start": 4.9969995,
+                      "end": 6.917000000000001
+                    },
+                    {
+                      "word": "disculpe.",
+                      "start": 7.1569994,
+                      "end": 7.557
+                    }
+                  ]
+                },
+                {
+                  "role": "agent",
+                  "content": "¿Me escuchas bien? Repito la pregunta...",
+                  "words": [
+                    {
+                      "word": "¿Me ",
+                      "start": 9.063,
+                      "end": 9.463
+                    },
+                    {
+                      "word": "escuchas ",
+                      "start": 9.463,
+                      "end": 9.863
+                    },
+                    {
+                      "word": "bien?",
+                      "start": 9.863,
+                      "end": 10.263
+                    },
+                    {
+                      "word": " Repito ",
+                      "start": 10.270416748046875,
+                      "end": 10.670416748046875
+                    },
+                    {
+                      "word": "la ",
+                      "start": 10.670416748046875,
+                      "end": 11.070416748046876
+                    },
+                    {
+                      "word": "pregunta...",
+                      "start": 11.070416748046876,
+                      "end": 11.470416748046874
+                    }
+                  ],
+                  "metadata": {
+                    "response_id": 3
+                  }
+                },
+                {
+                  "role": "user",
+                  "content": "Para contactar, este, a soporte, disculpe.",
+                  "words": [
+                    {
+                      "word": "Para ",
+                      "start": 12.997000499999999,
+                      "end": 13.237
+                    },
+                    {
+                      "word": "contactar, ",
+                      "start": 13.237,
+                      "end": 13.957001
+                    },
+                    {
+                      "word": "este, ",
+                      "start": 13.957001,
+                      "end": 14.197
+                    },
+                    {
+                      "word": "a ",
+                      "start": 14.197,
+                      "end": 14.277
+                    },
+                    {
+                      "word": "soporte, ",
+                      "start": 14.277,
+                      "end": 14.917000999999999
+                    },
+                    {
+                      "word": "disculpe.",
+                      "start": 14.917000999999999,
+                      "end": 15.157
+                    }
+                  ]
+                },
+                {
+                  "role": "tool_call_invocation",
+                  "tool_call_id": "e24dfc8e4061341f",
+                  "name": "transition_to_NODO_SOPORTE",
+                  "arguments": "{}",
+                  "time_sec": 16.547
+                },
+                {
+                  "role": "agent",
+                  "content": "Entiendo tu situación, your_name. Te conecto con soporte por WhatsApp. ¿Estás de acuerdo?",
+                  "words": [
+                    {
+                      "word": "Entiendo ",
+                      "start": 17.487,
+                      "end": 17.887
+                    },
+                    {
+                      "word": "tu ",
+                      "start": 17.887,
+                      "end": 18.287
+                    },
+                    {
+                      "word": "situación, ",
+                      "start": 18.287,
+                      "end": 18.687
+                    },
+                    {
+                      "word": "your_name ",
+                      "start": 18.687,
+                      "end": 19.087
+                    },
+                    {
+                      "word": "your_surname.",
+                      "start": 19.087,
+                      "end": 19.487
+                    },
+                    {
+                      "word": " Te ",
+                      "start": 19.716083251953126,
+                      "end": 20.116083251953125
+                    },
+                    {
+                      "word": "conecto ",
+                      "start": 20.116083251953125,
+                      "end": 20.516083251953123
+                    },
+                    {
+                      "word": "con ",
+                      "start": 20.516083251953123,
+                      "end": 20.916083251953125
+                    },
+                    {
+                      "word": "soporte ",
+                      "start": 20.916083251953125,
+                      "end": 21.316083251953124
+                    },
+                    {
+                      "word": "por ",
+                      "start": 21.316083251953124,
+                      "end": 21.716083251953126
+                    },
+                    {
+                      "word": "WhatsApp.",
+                      "start": 21.716083251953126,
+                      "end": 22.116083251953125
+                    },
+                    {
+                      "word": " ¿Estás ",
+                      "start": 22.363125,
+                      "end": 22.763125
+                    },
+                    {
+                      "word": "de ",
+                      "start": 22.763125,
+                      "end": 23.163125
+                    },
+                    {
+                      "word": "acuerdo?",
+                      "start": 23.163125,
+                      "end": 23.563125
+                    }
+                  ],
+                  "metadata": {
+                    "response_id": 4
+                  }
+                },
+                {
+                  "role": "user",
+                  "content": "Sí, por favor.",
+                  "words": [
+                    {
+                      "word": "Sí, ",
+                      "start": 24.987,
+                      "end": 25.466998999999998
+                    },
+                    {
+                      "word": "por ",
+                      "start": 25.466998999999998,
+                      "end": 25.626998999999998
+                    },
+                    {
+                      "word": "favor.",
+                      "start": 25.626998999999998,
+                      "end": 25.947
+                    }
+                  ]
+                },
+                {
+                  "role": "tool_call_invocation",
+                  "tool_call_id": "a5ab9c38a639bcbd",
+                  "name": "contactar_whatsapp",
+                  "arguments": "{\"soporte_tecnico\":\"Necesito asistencia con la cita cancelada y reprogramación.\",\"contactar\":\"+your_phone_number\",\"queja\":\"Quiero reprogramar mi cita para la consulta de Inteligencia Artificial.\"}",
+                  "time_sec": 27.751,
+                  "type": "custom"
+                }
+              ],
+              "public_log_url": "https://dxc03zgurdly9.cloudfront.net/e4d934d629d542a9c385b89f63630549748b1dcc31c49ae3a14f46ca0959896d/public.log",
+              "latency": {},
+              "metadata": {
+                "webhookUrl": "https://your_n8n_domain_service/webhook/cbd2e2b3-ef04-4596-b74a-85c764a4cbee",
+                "id": "82",
+                "lead_id": "wp_1762458996_PeFGsOi8",
+                "fb_click_id": "",
+                "nombre": "your_full_name",
+                "email": "your_email@example.com",
+                "telefono": "+your_phone_number",
+                "servicio": "Inteligencia Artificial",
+                "fuente": "WordPress",
+                "empresa": "your_company",
+                "estado": "Colima",
+                "pais": "México",
+                "codigo_postal": "28970",
+                "direccion_ip": "",
+                "identificador_externo": "wp_1762458996_PeFGsOi8",
+                "url_origen": "https://your_brand.com.mx/landing-page/",
+                "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36",
+                "nombre_formulario": "WordPress_Form_contact_form_landing",
+                "nombre_campana": "WordPress_Form",
+                "nombre_conjunto_anuncios": "",
+                "nombre_anuncio": "",
+                "nombre_pagina": "www.your_brand.com.mx",
+                "estado_lead": "Cita agendada",
+                "fecha_creado": "2025-11-06T00:00:00.000Z",
+                "fecha_creado_timestamp": "2025-11-06T19:56:51.834Z",
+                "created_at": "2025-11-06T19:56:52.346Z",
+                "updated_at": "2025-11-13T14:46:18.384Z",
+                "fecha_conversion": "2025-11-13T11:06:30.928Z",
+                "enviado_meta": "",
+                "score_lead": 93,
+                "mes_creacion": 11,
+                "ano_creacion": 2025,
+                "utm_source": "",
+                "utm_medium": "",
+                "utm_campaign": "",
+                "utm_content": "",
+                "utm_term": "",
+                "fbclid": "",
+                "fuente_completa": "direct",
+                "campana_nombre": "",
+                "anuncio_nombre": "",
+                "error_meta": "",
+                "client_id": "1762459014109100",
+                "messenger": "your_name Ramirez",
+                "instagram": "",
+                "whatsapp": "+your_phone_number",
+                "telegram": "your_nameramirez99\n",
+                "messenger_normalizado": "your_normalized_name",
+                "instagram_normalizado": "",
+                "telegram_normalizado": "your_normalized_name",
+                "identificado": "TRUE",
+                "nombre_normalizado": "your_normalized_name",
+                "es_cliente": "true",
+                "fbp": "",
+                "conversationid": "",
+                "accountid": "",
+                "content_type": "",
+                "private": "",
+                "content_attributes": "",
+                "contact_id": "",
+                "sessionid": "",
+                "agente": "",
+                "message_type": "",
+                "sender": "",
+                "chatwoot_contact_id": "",
+                "instrucciones": "Cliente: your_full_name\nEmpresa: your_company\nServicio de interés: Inteligencia Artificial\nPaís: México\nEstado Lead: Cita agendada\nScore: 93/100\nFuente: WordPress\nCita agendada: martes, 18 de noviembre de 2025, 04:00 p.m.\n\n📋 Historial de llamadas previas:\n[Llamada 1 - 13/11/2025]: La llamada comenzó con your_name saludando al agente. your_name preguntó sobre el estado de su cita, ya que quería saber si tenía alguna programada. El agente le informó que su cita había sido cancelada y que no tenía ninguna cita agendada. your_name mostró interés en reprogramar su cita. La conversación se centró en la reprogramación de la cita, pero no se concretó un nuevo horario.\n\n[Llamada 2 - 13/11/2025]: La llamada comenzó con your_name, quien deseaba cancelar su cita programada para el martes 18 de noviembre de 2025. Mencionó que tenía un inconveniente familiar que necesitaba atender. El agente confirmó la cancelación de la cita y agradeció a your_name por la información proporcionada. your_name no solicitó ningún otro servicio ni información adicional. La llamada finalizó con el agente deseándole un excelente día y your_name agradeciendo la atención.\n\n[Llamada 3 - 13/11/2025]: sin_dato\n\n[Llamada 4 - 13/11/2025]: La llamada comenzó con your_name solicitando reagendar una cita. El agente verificó la disponibilidad y propuso varias fechas y horas. Finalmente, se acordó que la cita sería el martes 18 de noviembre de 2025 a las 11:00 a.m. hora de México. your_name confirmó su preferencia por esa hora y el agente se comprometió a enviar el enlace de la reunión. La conversación finalizó con your_name agradeciendo la atención y confirmando la cita.\n\n[Llamada 5 - 13/11/2025]: La llamada comenzó con un saludo cordial entre el usuario y el agente. No se abordaron necesidades específicas ni se discutieron servicios. El agente se mostró disponible para ayudar en lo que el usuario requiriera. No se tomaron decisiones ni se acordaron acciones durante esta breve interacción. La conversación finalizó sin información adicional relevante.",
+                "fecha_cita": "2025-11-18T22:00:00.000Z",
+                "resumen": "",
+                "estado_cita": "cita cancelada",
+                "enlace_reunion": "https://meet.google.com/your-meeting-link",
+                "notas_internas": "",
+                "duracion_minutos": "",
+                "recordatorio_enviado": "",
+                "cancelado_por": "",
+                "motivo_cancelacion": "Inconveniente familiar",
+                "creado": "",
+                "actualizado": "",
+                "fecha_cita_timezone_cliente": "2025-11-18T22:00:00.000Z",
+                "asistencia": "",
+                "cita_pasada": "No",
+                "fecha_cita_timezone_legible": "lunes 18 de noviembre de 2025 a las 4:00 PM",
+                "fecha_cita_legible": "martes, 18 de noviembre de 2025, 04:00 p.m.",
+                "call_id": "",
+                "call_type": "",
+                "call_status": "",
+                "from_number": "",
+                "to_number": "",
+                "agent_id": "",
+                "agent_name": "",
+                "agent_version": "",
+                "transcript": "",
+                "direction": "",
+                "start_timestamp": "",
+                "end_timestamp": "",
+                "duration_ms": "",
+                "recording_url": "",
+                "recording_multi_channel_url": "",
+                "public_log_url": "",
+                "disconnection_reason": "",
+                "call_summary": "",
+                "resumenes_previos_concatenados": "[Llamada 1 - 13/11/2025]: La llamada comenzó con your_name saludando al agente. your_name preguntó sobre el estado de su cita, ya que quería saber si tenía alguna programada. El agente le informó que su cita había sido cancelada y que no tenía ninguna cita agendada. your_name mostró interés en reprogramar su cita. La conversación se centró en la reprogramación de la cita, pero no se concretó un nuevo horario.\n\n[Llamada 2 - 13/11/2025]: La llamada comenzó con your_name, quien deseaba cancelar su cita programada para el martes 18 de noviembre de 2025. Mencionó que tenía un inconveniente familiar que necesitaba atender. El agente confirmó la cancelación de la cita y agradeció a your_name por la información proporcionada. your_name no solicitó ningún otro servicio ni información adicional. La llamada finalizó con el agente deseándole un excelente día y your_name agradeciendo la atención.\n\n[Llamada 3 - 13/11/2025]: sin_dato\n\n[Llamada 4 - 13/11/2025]: La llamada comenzó con your_name solicitando reagendar una cita. El agente verificó la disponibilidad y propuso varias fechas y horas. Finalmente, se acordó que la cita sería el martes 18 de noviembre de 2025 a las 11:00 a.m. hora de México. your_name confirmó su preferencia por esa hora y el agente se comprometió a enviar el enlace de la reunión. La conversación finalizó con your_name agradeciendo la atención y confirmando la cita.\n\n[Llamada 5 - 13/11/2025]: La llamada comenzó con un saludo cordial entre el usuario y el agente. No se abordaron necesidades específicas ni se discutieron servicios. El agente se mostró disponible para ayudar en lo que el usuario requiriera. No se tomaron decisiones ni se acordaron acciones durante esta breve interacción. La conversación finalizó sin información adicional relevante.",
+                "event": "call_inbound"
+              },
+              "call_cost": {
+                "product_costs": [],
+                "total_duration_seconds": 0,
+                "total_duration_unit_price": 0,
+                "combined_cost": 0
+              },
+              "data_storage_setting": "everything",
+              "opt_in_signed_url": false,
+              "from_number": "+your_phone_number",
+              "to_number": "+523385261245",
+              "direction": "inbound"
+            },
+            "name": "contactar_whatsapp",
+            "args": {
+              "soporte_tecnico": "Necesito asistencia con la cita cancelada y reprogramación.",
+              "contactar": "+your_phone_number",
+              "queja": "Quiero reprogramar mi cita para la consulta de Inteligencia Artificial."
+            }
+          },
+          "webhookUrl": "https://your_n8n_domain_service/webhook/4117fcff-da2b-4ae5-967c-2736f2c54b0b",
+          "executionMode": "production"
+        }
+      }
+    ],
+    "getall_event1": [
+      {
+        "json": {
+          "headers": {
+            "host": "your_n8n_domain_service",
+            "user-agent": "axios/1.11.0",
+            "content-length": "121",
+            "accept": "application/json, text/plain, */*",
+            "accept-encoding": "gzip, compress, deflate, br",
+            "content-type": "application/json",
+            "x-forwarded-for": "your_ip_address",
+            "x-forwarded-host": "your_n8n_domain_service",
+            "x-forwarded-port": "443",
+            "x-forwarded-proto": "https",
+            "x-forwarded-server": "737fb838982b",
+            "x-real-ip": "your_ip_address",
+            "x-retell-signature": "v=1763228432431,d=7d298d905e6b7f7ebf06dfafc123c5ea0930bef727d14cf727c4d6ba818fca1a"
+          },
+          "params": {},
+          "query": {},
+          "body": {
+            "accion": "getall_event1",
+            "After": "2025-12-18T00:00:00-06:00",
+            "Before": "2025-12-22T23:59:59-06:00",
+            "Return": "all_events"
+          },
+          "webhookUrl": "https://your_n8n_domain_service/webhook/393b1071-01bf-4480-9173-fe98e9922fc6",
+          "executionMode": "production"
+        }
+      }
+    ]
+  },
+  "connections": {
+    "getall_event1": {
+      "main": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "google_calendar_create_event": {
+      "main": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "google_calendar_delete_event": {
+      "main": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "parsear": {
+      "main": [
+        [
+          {
+            "node": "devolver_respuesta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "tarea": {
+      "main": [
+        [
+          {
+            "node": "obtener registro de cita",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "obtener registro de cita1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "crear_cita1": {
+      "main": [
+        [
+          {
+            "node": "actualizar_lead1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "actualizar_lead1": {
+      "main": [
+        [
+          {
+            "node": "enviar_correo_cita_agendada1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "enviar_correo_cita_agendada1": {
+      "main": [
+        [
+          {
+            "node": "agenda_telegram_citas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "agenda_telegram_citas": {
+      "main": [
+        [
+          {
+            "node": "confirmar_cita_wa",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "agenda_telegram_citas2": {
+      "main": [
+        [
+          {
+            "node": "cancelar_cita_wa",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "cancelar cita": {
+      "main": [
+        [
+          {
+            "node": "enviar_correo_cita_cancelada",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "enviar_correo_cita_cancelada": {
+      "main": [
+        [
+          {
+            "node": "agenda_telegram_citas2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "crear o actualizar registro de cita": {
+      "main": [
+        [
+          {
+            "node": "crear_cita",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "crear_cita1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "obtener registro de cita": {
+      "main": [
+        [
+          {
+            "node": "crear o actualizar registro de cita",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "devolver_respuesta": {
+      "main": [
+        [
+          {
+            "node": "success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "create_event": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "delete_event": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get_many": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "success": {
+      "main": [
+        [
+          {
+            "node": "variables",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "variables": {
+      "main": [
+        [
+          {
+            "node": "obtener_registro_lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "obtener_registro_lead": {
+      "main": [
+        [
+          {
+            "node": "tarea",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "obtener registro de cita1": {
+      "main": [
+        [
+          {
+            "node": "cancelar cita",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "crear_cita": {
+      "main": [
+        [
+          {
+            "node": "actualizar_lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "actualizar_lead": {
+      "main": [
+        [
+          {
+            "node": "enviar_correo_cita_agendada",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "enviar_correo_cita_agendada": {
+      "main": [
+        [
+          {
+            "node": "agenda_telegram_citas1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "agenda_telegram_citas1": {
+      "main": [
+        [
+          {
+            "node": "confirmar_cita_wa1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "contactar_whatsapp": {
+      "main": [
+        [
+          {
+            "node": "Send template",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send template": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "confirmar_cita_wa1": {
+      "main": [
+        [
+          {
+            "node": "actualizar memoria agente3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "confirmar_cita_wa": {
+      "main": [
+        [
+          {
+            "node": "actualizar memoria agente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "cancelar_cita_wa": {
+      "main": [
+        [
+          {
+            "node": "actualizar memoria agente1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respond to Webhook": {
+      "main": [
+        [
+          {
+            "node": "actualizar memoria agente2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent1": {
+      "main": [
+        [
+          {
+            "node": "parsear",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Mexico_City",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "binaryMode": "separate"
+  },
+  "versionId": "af0978b0-2f46-4dca-93e9-37fc7879a346",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "your_instance_id"
+  },
+  "id": "your_credential_id",
+  "tags": []
+}

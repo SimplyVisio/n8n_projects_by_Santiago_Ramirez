@@ -1,0 +1,877 @@
+{
+  "name": "cron para responder comentarios con DM privado+comentario FB",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "Facebook Community Manager Agent (CRON)\n\nThis autonomous workflow monitors, classifies, and responds to Facebook comments relative to recent posts every 10 minutes.\n\nKey Capabilities:\n1. Automatic Polling: Fetches recent activity via Facebook Graph API.\n2. Hybrid Classification: Uses specialized JS rules and AI for intent detection.\n3. Dual Response Mode: Sends private DMs for leads and public comments for engagement.\n4. Brand Consistency: Appends a curated social footer to all responses.\n\nEngine:\nFacebook API + GPT-4o mini + Vector Knowledge Base",
+        "height": 450,
+        "width": 320,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -2700,
+        350
+      ],
+      "typeVersion": 1,
+      "id": "doc-overview",
+      "name": "Project Overview"
+    },
+    {
+      "parameters": {
+        "content": "Data Acquisition Layer\n\n- Schedule Trigger: Runs every 10 minutes to ensure near real-time response.\n- Access Management: Centralized node for Facebook Page tokens.\n- Graph API Integration: Sequentially fetches the last 10 posts and their respective comments.",
+        "height": 380,
+        "width": 280,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -2150,
+        350
+      ],
+      "typeVersion": 1,
+      "id": "doc-data-acq",
+      "name": "Data Acquisition Layer"
+    },
+    {
+      "parameters": {
+        "content": "Classification & Filtering Layer\n\n- Time Filter: Processes only comments created in the last 10 minutes (matching the CRON frequency).\n- Rule-Based Classifier: A specialized JS engine that categorizes comments into:\n  * DM+Comment: Clear sales/service interest.\n  * Comment: General social interaction/praise.\n  * Spam: Repetitive, too short, or irrelevant content.\n\nThis layer ensures that only high-quality engagement reaches the AI or the final action nodes.",
+        "height": 420,
+        "width": 300,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -1050,
+        150
+      ],
+      "typeVersion": 1,
+      "id": "doc-filter",
+      "name": "Classification Engine Layer"
+    },
+    {
+      "parameters": {
+        "content": "AI Intelligence Layer (GPT-4o mini)\n\nThe AI Agent re-evaluates comments to ensure perfect intent detection. It is equipped with a Vector Knowledge Base (search_knowledge_base tool) to retrieve accurate information about the brand's services.\n\nModes:\n- Sales Mode: Converts queries into leads with strong CTAs.\n- Community Mode: Human-like, warm interaction to build brand loyalty.",
+        "height": 400,
+        "width": 280,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -400,
+        -150
+      ],
+      "typeVersion": 1,
+      "id": "doc-ai",
+      "name": "AI Intelligence Layer"
+    },
+    {
+      "parameters": {
+        "content": "Action & Formatting Layer\n\n- Message Finalizer: Appends social handles, contact info, and legal links to the AI output.\n- Distribution: Executes API calls to Facebook for:\n  * Private Message (DM) to open a direct sales loop.\n  * Public Comment Thread reply to boost post visibility (Engagement).\n- Sequential Handling: Waits between messages to remain within Facebook's safety limits.",
+        "height": 420,
+        "width": 300,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        250,
+        150
+      ],
+      "typeVersion": 1,
+      "id": "doc-actions",
+      "name": "Action Execution Layer"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "545bdad2-a10b-44ca-a668-ed08e11f67b6",
+              "name": "access_token",
+              "value": "your_access_token",
+              "type": "string"
+            },
+            {
+              "id": "87eca430-9784-4cd8-ab22-0e9ae82820d1",
+              "name": "page_id",
+              "value": "",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -2144,
+        592
+      ],
+      "id": "5825509c-0159-4645-9db3-fc5c56a14bda",
+      "name": "access_token"
+    },
+    {
+      "parameters": {
+        "url": "=https://graph.facebook.com/v24.0/{{ $json.id }}/comments?fields=id,message,from,created_time,like_count&order=reverse_chronological&access_token={{ $('access_token').item.json.access_token }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -1472,
+        592
+      ],
+      "id": "90c6950f-1834-4048-a04b-208bc69d5c64",
+      "name": "GET Comentarios"
+    },
+    {
+      "parameters": {
+        "url": "=https://graph.facebook.com/v24.0/{{ $('access_token').item.json.page_id }}/feed?fields=id,message,created_time,attachments,permalink_url&limit=10&access_token={{ $('access_token').item.json.access_token }}&order=desc ",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -1920,
+        592
+      ],
+      "id": "e53657b7-df9c-4acc-881f-252eb03d4cae",
+      "name": "GET Publicaciones"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "data",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        -1696,
+        592
+      ],
+      "id": "93efc9da-9066-4fd5-af4b-5acbf63f3776",
+      "name": "SEPARAR Publicaciones"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "data",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        -1248,
+        592
+      ],
+      "id": "d41bab16-2a5e-45ac-9766-4d361e201d7a",
+      "name": "SEPARAR Comentarios"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 10
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -2368,
+        592
+      ],
+      "id": "b4dc6943-1722-40f7-9b75-a219392442fb",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "fb1b3f9a-8138-4c02-b17c-87c431a87e27",
+              "leftValue": "={{ $json.created_time }}",
+              "rightValue": "={{ new Date(Date.now() - 600000 + (new Date().getTimezoneOffset() * -60000)).toISOString().replace('Z', '+0000') }}",
+              "operator": {
+                "type": "dateTime",
+                "operation": "after"
+              }
+            },
+            {
+              "id": "a10476e0-5bf4-4841-97b5-62a715dc6468",
+              "leftValue": "={{ $json.from.name }}",
+              "rightValue": "your_brand",
+              "operator": {
+                "type": "string",
+                "operation": "notContains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        -1024,
+        592
+      ],
+      "id": "e9af4efe-b173-4008-9575-93412ba93107",
+      "name": "Si ultimo 10 minutos + No Propio"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -288,
+        64
+      ],
+      "id": "27ad6148-0da0-482b-b895-0f644f9427f2",
+      "name": "Loop Over Items1"
+    },
+    {
+      "parameters": {
+        "amount": 1
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        448,
+        64
+      ],
+      "id": "34737ff1-3a96-498b-b6ca-18c86c2f38b9",
+      "name": "Wait1",
+      "webhookId": "97dc9a2e-95f0-4961-899e-023e181d6e9e"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Filtro de comentarios para Meta Ads - n8n Code Node\n// Determina: DM+comment, comment o spam (filtrar)\n// Versión corregida: ORDEN DE PRIORIDAD corregido\n\nconst results = [];\n\n// Iterar sobre todos los items de entrada\nfor (const item of $input.all()) {\n  const commentText = item.json.text;\n  \n  // Preservar todos los campos originales\n  const originalData = { ...item.json };\n\n  // Normalizar el texto: convertir a minúsculas y eliminar espacios extra\n  const normalizedText = commentText.toLowerCase().trim();\n\n  // ==================================================================\n  // CATEGORÍA 1: SPAM (FILTRAR - NO RESPONDER)\n  // ==================================================================\n\n  // 1. Comentarios vacíos\n  if (normalizedText.length === 0) {\n    results.push({ json: { \n      ...originalData,\n      result: 'spam', \n      reason: 'Comentario vacío',\n      category: 'empty',\n      action: 'No responder'\n    } });\n    continue;\n  }\n\n  // 2. Solo puntuación o caracteres especiales\n  const spamPatterns = [\n    /^\\.+$/, // Solo puntos: ., .., ..., ....\n    /^,+$/, // Solo comas: ,, ,,, ....\n    /^!+$/, // Solo signos de exclamación: !, !!, !!!\n    /^\\?+$/, // Solo signos de interrogación: ?, ??, ???\n    /^[\\s\\.\\,\\!\\?\\-\\_\\+\\=\\*\\#\\$\\%\\&\\/\\(\\)]+$/, // Combinaciones de puntuación y espacios\n  ];\n\n  // Detectar si el comentario son solo emojis (sin letras ni números)\n  const hasOnlyEmojis = /^[\\p{Emoji}\\s]+$/u.test(normalizedText) && !/[a-z0-9]/i.test(normalizedText);\n\n  let isSpamPattern = false;\n  for (let pattern of spamPatterns) {\n    if (pattern.test(normalizedText)) {\n      results.push({ json: { \n        ...originalData,\n        result: 'spam', \n        reason: 'Solo puntuación sin texto',\n        category: 'punctuation_only',\n        action: 'No responder'\n      } });\n      isSpamPattern = true;\n      break;\n    }\n  }\n  if (isSpamPattern) continue;\n\n  // Verificar si son solo emojis\n  if (hasOnlyEmojis) {\n    results.push({ json: { \n      ...originalData,\n      result: 'spam', \n      reason: 'Solo emojis sin texto',\n      category: 'emoji_only',\n      action: 'No responder'\n    } });\n    continue;\n  }\n\n  // 3. Comentarios extremadamente cortos (1-2 caracteres)\n  if (normalizedText.length <= 2) {\n    results.push({ json: { \n      ...originalData,\n      result: 'spam', \n      reason: 'Comentario demasiado corto',\n      category: 'too_short',\n      action: 'No responder'\n    } });\n    continue;\n  }\n\n  // 4. Spam común en redes sociales\n  const commonSpam = [\n    'xd',\n    'jaja',\n    'jajaja',\n    'jajajaja',\n    'jeje',\n    'jejeje',\n    'jijiji',\n    'lol',\n    'ok',\n    'si',\n    'sí',\n    'no',\n    'nop',\n    'nope',\n    'aja',\n    'ajá',\n    'mmm',\n    'mmmm',\n    'eh',\n    'uh',\n    'ah',\n    'oh',\n    'uff',\n    'ufff',\n    'alv',\n    'nmms',\n    'ptm',\n    'vrg',\n  ];\n\n  // Solo marcar como spam si es EXACTAMENTE una de estas palabras (no si está en una frase)\n  if (commonSpam.includes(normalizedText)) {\n    results.push({ json: { \n      ...originalData,\n      result: 'spam', \n      reason: 'Comentario spam común',\n      category: 'common_spam',\n      action: 'No responder'\n    } });\n    continue;\n  }\n\n  // 5. Repetición de caracteres (spam obvio)\n  const repetitionPatterns = [\n    /(.)\\1{4,}/, // Cualquier carácter repetido 5+ veces: aaaaa, !!!!!\n    /^(ja){5,}$/, // jajajajajaja (más de 5 repeticiones)\n    /^(je){5,}$/, // jejejejeje\n    /^(ha){5,}$/, // hahahahaha\n  ];\n\n  let isRepetition = false;\n  for (let pattern of repetitionPatterns) {\n    if (pattern.test(normalizedText)) {\n      results.push({ json: { \n        ...originalData,\n        result: 'spam', \n        reason: 'Repetición excesiva de caracteres',\n        category: 'repetition_spam',\n        action: 'No responder'\n      } });\n      isRepetition = true;\n      break;\n    }\n  }\n  if (isRepetition) continue;\n\n  // ==================================================================\n  // CATEGORÍA 2: DM + COMENTARIO (PRIORIDAD ALTA - evaluar primero)\n  // ==================================================================\n\n  const triggerPhrases = [\n    // Solicitudes de información directa\n    '@your_brandmarketing info', // ⭐ ESPECÍFICO - debe ir PRIMERO\n    'informacion',\n    'información',\n    'info',\n    'mas informacion',\n    'más información',\n    'mas info',\n    'más info',\n    'contacto',\n    'Como puedo contactarlos',\n    'Como puedo contactarlos?',\n    'contactarlos',\n    'me interesa',\n    'estoy interesado',\n    'estoy interesada',\n    'enviame informacion',\n    'envíame información',\n    'enviame info',\n    'envíame info',\n    'manda info',\n    'mandame info',\n    'pasa info',\n    'pasame info',\n    'quiero informacion',\n    'quiero información',\n    'necesito informacion',\n    'necesito información',\n    'inbox',\n    'al inbox',\n    'dm',\n    'al dm',\n    'mensaje privado',\n    'privado',\n    'por privado',\n    'al privado',\n    \n    // Saludos con intención comercial\n    'hola',\n    'buenos dias',\n    'buenos días',\n    'buenas tardes',\n    'buenas noches',\n    'buen dia',\n    'buen día',\n    'saludos',\n    \n    // Preguntas sobre servicios/productos\n    'que servicios ofrecen',\n    'qué servicios ofrecen',\n    'que servicios tienen',\n    'qué servicios tienen',\n    'que ofrecen',\n    'qué ofrecen',\n    'que venden',\n    'qué venden',\n    'cuanto cuesta',\n    'cuánto cuesta',\n    'cual es el precio',\n    'cuál es el precio',\n    'que precio tiene',\n    'qué precio tiene',\n    'precios',\n    'precio',\n    'cotizacion',\n    'cotización',\n    'presupuesto',\n    'costo',\n    'costos',\n    'cuanto sale',\n    'cuánto sale',\n    'cuanto es',\n    'cuánto es',\n    'valor',\n    'cuanto me sale',\n    'cuánto me sale',\n    \n    // Disponibilidad\n    'tienen disponible',\n    'tienes disponible',\n    'hay disponibilidad',\n    'esta disponible',\n    'está disponible',\n    'disponible',\n    'disponibilidad',\n    'en stock',\n    'hay en existencia',\n    'hay existencia',\n    'tienen en',\n    'tienes en',\n    \n    // Ubicación y contacto\n    'donde estan',\n    'dónde están',\n    'donde se encuentran',\n    'dónde se encuentran',\n    'ubicacion',\n    'ubicación',\n    'direccion',\n    'dirección',\n    'como llego',\n    'cómo llego',\n    'telefono',\n    'teléfono',\n    'numero',\n    'número',\n    'whatsapp',\n    'contacto',\n    'como contacto',\n    'cómo contacto',\n    'como los contacto',\n    'cómo los contacto',\n    'como te contacto',\n    'cómo te contacto',\n    'me puedes contactar',\n    \n    // Interés en compra/adquisición\n    'quiero comprar',\n    'como compro',\n    'cómo compro',\n    'puedo comprar',\n    'donde compro',\n    'dónde compro',\n    'como adquirir',\n    'cómo adquirir',\n    'como pedir',\n    'cómo pedir',\n    'hacer pedido',\n    'quiero uno',\n    'quiero una',\n    'lo quiero',\n    'la quiero',\n    'los quiero',\n    'las quiero',\n    'apartado',\n    'apartar',\n    'reservar',\n    'reserva',\n    'compra',\n    'pedido',\n    'orden',\n    \n    // Horarios\n    'horarios',\n    'horario',\n    'que horario',\n    'qué horario',\n    'a que hora',\n    'a qué hora',\n    'cuando abren',\n    'cuándo abren',\n    'cuando cierran',\n    'cuándo cierran',\n    'hora de atencion',\n    'hora de atención',\n    'dias de atencion',\n    'días de atención',\n    'atienden',\n    \n    // Detalles del producto/servicio\n    'mas detalles',\n    'más detalles',\n    'detalles',\n    'caracteristicas',\n    'características',\n    'especificaciones',\n    'que incluye',\n    'qué incluye',\n    'incluye',\n    'modelo',\n    'modelos',\n    'talla',\n    'tallas',\n    'color',\n    'colores',\n    'tamaño',\n    'tamaños',\n    'medidas',\n    \n    // Expresiones de interés\n    'interesado',\n    'interesada',\n    'interesa',\n    'me llama la atencion',\n    'me llama la atención',\n    'me gustaria',\n    'me gustaría',\n    'quisiera',\n    'necesito',\n    'requiero',\n    'busco',\n    'estoy buscando',\n  ];\n\n  // Verificar si contiene alguna frase trigger\n  let isTrigger = false;\n  for (let phrase of triggerPhrases) {\n    if (normalizedText.includes(phrase)) {\n      results.push({ json: { \n        ...originalData,\n        result: 'DM+comment', \n        reason: `Interés comercial: \"${phrase}\"`,\n        category: 'commercial_interest',\n        action: 'Enviar DM privado + comentario público'\n      } });\n      isTrigger = true;\n      break;\n    }\n  }\n  if (isTrigger) continue;\n\n  // ==================================================================\n  // CATEGORÍA 3: SOLO COMENTARIO (sin DM pero SÍ responder)\n  // ==================================================================\n\n  // 1. Comentarios de apreciación/opinión\n  const appreciationPhrases = [\n    'me gusta',\n    'me encanta',\n    'que bonito',\n    'qué bonito',\n    'que lindo',\n    'qué lindo',\n    'hermoso',\n    'hermosa',\n    'precioso',\n    'preciosa',\n    'genial',\n    'excelente',\n    'increible',\n    'increíble',\n    'wow',\n    'guau',\n    'que padre',\n    'qué padre',\n    'que chido',\n    'qué chido',\n    'brutal',\n    'espectacular',\n    'maravilloso',\n    'perfecto',\n    'perfecta',\n    'love',\n    'amo esto',\n    'amo este',\n    'amo esta',\n    'bellisimo',\n    'bellísimo',\n    'divino',\n    'hermosura',\n    'preciosidad',\n  ];\n\n  let isAppreciation = false;\n  for (let phrase of appreciationPhrases) {\n    if (normalizedText.includes(phrase)) {\n      results.push({ json: { \n        ...originalData,\n        result: 'comment', \n        reason: 'Comentario de apreciación',\n        category: 'appreciation',\n        action: 'Responder públicamente'\n      } });\n      isAppreciation = true;\n      break;\n    }\n  }\n  if (isAppreciation) continue;\n\n  // 2. Etiquetas a amigos (AHORA evalúa después de DM+comment)\n  const tagPatterns = [\n    /@\\w+/,\n    /mira/,\n    've esto',\n    've este',\n    've esta',\n    'checa esto',\n    'checa este',\n    'checa esta',\n    'mira esto',\n    'mira este',\n    'mira esta',\n    'fijate',\n    'fíjate',\n  ];\n\n  let isTag = false;\n  for (let phrase of tagPatterns) {\n    if (typeof phrase === 'string' ? normalizedText.includes(phrase) : phrase.test(commentText)) {\n      results.push({ json: { \n        ...originalData,\n        result: 'comment', \n        reason: 'Etiqueta o compartir con amigos',\n        category: 'social_tag',\n        action: 'Responder públicamente (opcional)'\n      } });\n      isTag = true;\n      break;\n    }\n  }\n  if (isTag) continue;\n\n  // 3. Agradecimientos\n  const thanksPhrases = [\n    'gracias',\n    'muchas gracias',\n    'mil gracias',\n    'thank you',\n    'thanks',\n    'agradecido',\n    'agradecida',\n    'excelente servicio',\n    'buen servicio',\n    'super bien',\n    'súper bien',\n    'muy bien',\n  ];\n\n  let isThanks = false;\n  for (let phrase of thanksPhrases) {\n    if (normalizedText.includes(phrase)) {\n      results.push({ json: { \n        ...originalData,\n        result: 'comment', \n        reason: 'Agradecimiento',\n        category: 'thanks',\n        action: 'Responder públicamente'\n      } });\n      isThanks = true;\n      break;\n    }\n  }\n  if (isThanks) continue;\n\n  // 4. Preguntas respondibles públicamente\n  const publicQuestionPhrases = [\n    'hacen envios',\n    'hacen envíos',\n    'envian',\n    'envían',\n    'aceptan tarjeta',\n    'aceptan efectivo',\n    'aceptan transferencia',\n    'formas de pago',\n    'metodos de pago',\n    'métodos de pago',\n    'tienen estacionamiento',\n    'es original',\n    'es nuevo',\n    'es usado',\n    'tiene garantia',\n    'tiene garantía',\n    'cuanto tarda',\n    'cuánto tarda',\n    'tiempo de entrega',\n    'demora',\n    'dias habiles',\n    'días hábiles',\n  ];\n\n  let isPublicQuestion = false;\n  for (let phrase of publicQuestionPhrases) {\n    if (normalizedText.includes(phrase)) {\n      results.push({ json: { \n        ...originalData,\n        result: 'comment', \n        reason: 'Pregunta respondible públicamente',\n        category: 'public_question',\n        action: 'Responder públicamente (beneficia a todos)'\n      } });\n      isPublicQuestion = true;\n      break;\n    }\n  }\n  if (isPublicQuestion) continue;\n\n  // 5. Comentarios negativos o quejas\n  const negativePhrases = [\n    'no sirve',\n    'no funciona',\n    'mala calidad',\n    'mal servicio',\n    'pesimo',\n    'pésimo',\n    'estafa',\n    'fraude',\n    'no recomiendo',\n    'no lo recomiendo',\n    'decepcion',\n    'decepción',\n    'malo',\n    'mala',\n    'mala experiencia',\n    'terrible',\n    'horrible',\n    'nunca llego',\n    'nunca llegó',\n    'no respondieron',\n    'no contestan',\n  ];\n\n  let isNegative = false;\n  for (let phrase of negativePhrases) {\n    if (normalizedText.includes(phrase)) {\n      results.push({ json: { \n        ...originalData,\n        result: 'comment', \n        reason: 'Comentario negativo - responder públicamente',\n        category: 'negative_feedback',\n        action: 'Responder públicamente con solución'\n      } });\n      isNegative = true;\n      break;\n    }\n  }\n  if (isNegative) continue;\n\n  // ==================================================================\n  // DEFAULT: Si no coincide con nada específico\n  // ==================================================================\n  results.push({ json: { \n    ...originalData,\n    result: 'comment', \n    reason: 'Sin categoría específica - respuesta pública conservadora',\n    category: 'default',\n    action: 'Responder públicamente'\n  } });\n}\n\nreturn results;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -800,
+        592
+      ],
+      "id": "2dce85ce-d40b-4ea3-aa94-d34a3e7532d1",
+      "name": "filtro de comentario + dm privado"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.result }}",
+                    "rightValue": "DM+comment",
+                    "operator": {
+                      "type": "string",
+                      "operation": "contains"
+                    },
+                    "id": "2bb40af6-174f-468e-86c8-860c300c0572"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "DM+comment"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "9da7512c-9f21-4082-a1e1-08f8a86baff3",
+                    "leftValue": "={{ $json.result }}",
+                    "rightValue": "comment",
+                    "operator": {
+                      "type": "string",
+                      "operation": "contains"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "comment"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "31cb8cb9-ecf0-4e2f-a508-ef775b67f10e",
+                    "leftValue": "={{ $json.result }}",
+                    "rightValue": "spam",
+                    "operator": {
+                      "type": "string",
+                      "operation": "contains"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "spam"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.3,
+      "position": [
+        -576,
+        352
+      ],
+      "id": "a513d575-7103-4952-812c-e6033f8f5424",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v24.0/{{ $('access_token').item.json.page_id }}/messages?access_token={{ $('access_token').item.json.access_token }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"recipient\": {\"comment_id\": \"{{ $json.id }}\"},\n  \"message\": {\"text\": \"¡Hola! Gracias por tu comentario 😊, puedes solicitar toda la informacion que necesites por este canal\"}\n}\n ",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "fa66fd70-ede2-4bdc-88b1-c7646d8d77b6",
+      "name": "DM privado a comentario",
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        -288,
+        672
+      ],
+      "id": "adbe85b7-b99a-4947-827a-878e2ab111a1",
+      "name": "No Operation, do nothing"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Nodo Code: Concatenar respuesta del agente + redes sociales\n// Procesa TODOS los items después de un MERGE\n// Los datos del filtro y del agente ya vienen combinados en cada item\n\nconst results = [];\n\n// Iterar sobre todos los items de entrada (ya merged)\nfor (let i = 0; i < $input.all().length; i++) {\n  const currentItem = $input.all()[i];\n  \n  // Obtener la respuesta del agente\n  let agentResponse = currentItem.json.output || currentItem.json.response || currentItem.json.text;\n  \n  // Validar que existe una respuesta\n  if (!agentResponse) {\n    throw new Error(`No se encontró respuesta del agente en el item ${i}`);\n  }\n  \n  // Limpiar la respuesta del agente:\n  // 1. Eliminar backticks de markdown (```)\n  agentResponse = agentResponse.replace(/```/g, '');\n  \n  // 2. Eliminar saltos de línea extra al inicio/final\n  agentResponse = agentResponse.trim();\n  \n  // Crear el bloque de redes sociales y contacto\n  const socialFooter = `\n\n━━━━━━━━━━━━━━━━━━━\n📱 Síguenos en redes:\n📸 Instagram: your_brandmarketing\n🎵 TikTok: your_brandmarketing\n👥 Facebook: your_brand\n X: your_brand83\n Threads: your_brandmarketing\n \n💬 Contáctanos:\n📲 WhatsApp: +your_phone_number\n☎️ Teléfono: +523385261245\n⌯⌲ Telegram: your_brand_bot\n📧 Email: your_brand@outlook.com\n🌐 Web: https://your_brand.com.mx`;\n  \n  // Concatenar respuesta del agente + footer de redes sociales\n  const finalMessage = agentResponse + socialFooter;\n  \n  // Retornar el mensaje completo preservando TODOS los campos del merge\n  results.push({\n    json: {\n      ...currentItem.json, // Preservar todos los campos del merge (filtro + agente)\n      finalMessage: finalMessage,\n      agentResponse: agentResponse,\n      socialFooter: socialFooter,\n      characterCount: finalMessage.length\n    }\n  });\n}\n\nreturn results;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        592
+      ],
+      "id": "5def81f4-5b01-48bd-b4f6-ff3080aa6bc1",
+      "name": "agregar footer en msj"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        448,
+        592
+      ],
+      "id": "c4321f8d-68fe-4f88-b9ab-9e598bc515a4",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "amount": 1
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        896,
+        592
+      ],
+      "id": "5233b7f5-b802-43c9-b22a-b8b4eeb584d2",
+      "name": "Wait",
+      "webhookId": "1d62989a-aa46-4ea2-9cae-e09e449d45c1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v24.0/{{ $json.id }}/comments",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('access_token').item.json.access_token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "message",
+              "value": "={{ $json.finalMessage }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        672,
+        528
+      ],
+      "id": "239e8ca4-55ac-48c8-a775-53538056066a",
+      "name": "comment ryplies only"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v24.0/{{ $('Loop Over Items1').item.json.id }}/comments",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('access_token').item.json.access_token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "message",
+              "value": "=Hola 😁, muchas gracias por tu comentario, te mande un DM privado, puedes revisar tu bandeja de entrada..."
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        224,
+        0
+      ],
+      "id": "8bf7ee9e-45cb-4b18-8138-d36aa2dde995",
+      "name": "comment ryplies only1",
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "accept",
+              "value": "application/json"
+            },
+            {
+              "name": "X-API-Key"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "query",
+              "value": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('parameters0_Value', ``, 'string') }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.2,
+      "position": [
+        -208,
+        496
+      ],
+      "id": "183b95f7-2ce2-4d72-87de-7406401f4ca4",
+      "name": "search_knowledge_base"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.message }}",
+        "options": {
+          "systemMessage": "=# Agente Inteligente de Comentarios Facebook - your_brand\n\nEres un asistente especializado en responder comentarios de Facebook para **your_brand**, una agencia de inteligencia artificial y desarrollo digital.\n\n## TU MISIÓN DUAL\nTienes dos responsabilidades igualmente importantes:\n\n1. **🎯 CAPTURAR LEADS** - Detectar intención comercial (incluso si el filtro falló) y convertir a DM\n2. **💙 CONSTRUIR COMUNIDAD** - Crear conexiones genuinas con comentarios sociales\n\n**Eres inteligente y flexible:** Sabes cuándo vender y cuándo solo conectar humanamente.\n\n---\n\n## CONTEXTO DE TU FLUJO\nAunque existe un filtro automático previo (Code), algunos comentarios pueden estar mal clasificados. Tu trabajo es:\n- ✅ **Re-evaluar la intención** real del comentario\n- ✅ **Actuar apropiadamente** según lo que realmente necesita el usuario\n- ✅ **Ser humano siempre**, vendas o no\n\n---\n\n## HERRAMIENTA DISPONIBLE\n**search_knowledge_base:** Base de datos vectorial con información completa de your_brand. Úsala cuando necesites datos específicos sobre servicios, resultados o beneficios.\n\n---\n\n## SERVICIOS DE your_brand\n\n### 1. Inteligencia Artificial\n- Chatbots multicanal (WhatsApp, Messenger, Instagram, Telegram)\n- Automatización de procesos\n- Atención al cliente 24/7\n- Análisis predictivo de datos\n- Closer de ventas automatizado\n- Soporte técnico inteligente\n- Recepcionista virtual telefónica\n- Calificación automática de leads\n\n### 2. Desarrollo Web & Apps\n- Sitios web (landing pages, corporativos, portales)\n- E-commerce (tiendas online con pasarela de pago)\n- Aplicaciones móviles (iOS y Android)\n- Sistemas personalizados (ERP, CRM, plataformas a medida)\n- Desarrollo full-stack (frontend + backend)\n\n### 3. Consultoría Digital\n- Transformación digital\n- Estrategia omnicanal\n- Optimización de procesos\n- Análisis de mercado\n- Roadmap tecnológico\n\n---\n\n## PASO 1: ANÁLISIS DE INTENCIÓN (CRÍTICO)\n\nAntes de responder, **SIEMPRE** analiza el comentario con estas preguntas:\n\n### 🔴 **SEÑALES DE INTENCIÓN COMERCIAL CLARA**\n\n**Pregúntate:**\n- ¿Pregunta sobre servicios específicos? (\"ofrecen chatbots?\", \"hacen páginas web?\", \"desarrollan apps?\")\n- ¿Solicita información? (\"más info\", \"información\", \"me interesa\", \"inbox\", \"DM\")\n- ¿Pregunta sobre precios/costos? (\"cuánto cuesta?\", \"precios?\", \"planes?\")\n- ¿Pregunta sobre contacto? (\"cómo los contacto?\", \"tienen WhatsApp?\", \"teléfono?\")\n- ¿Expresa necesidad de negocio? (\"necesito una página\", \"busco automatizar\", \"quiero un chatbot\")\n- ¿Pregunta sobre disponibilidad? (\"tienen disponible?\", \"horarios?\")\n- ¿Quiere agendar o consultar? (\"puedo agendar?\", \"necesito asesoría\")\n\n**Si SÍ a cualquiera** → Es un **LEAD COMERCIAL** → Modo VENTA\n\n---\n\n### 🟢 **SEÑALES DE INTERACCIÓN SOCIAL GENUINA**\n\n**Pregúntate:**\n- ¿Es apreciación/elogio sin preguntar nada? (\"me encanta\", \"excelente\", \"qué bonito\")\n- ¿Es agradecimiento? (\"gracias por el tip\", \"me sirvió mucho\")\n- ¿Comparte experiencia personal? (\"yo también hice eso\", \"a mí me pasó\")\n- ¿Etiqueta a amigos? (\"@maria mira esto\")\n- ¿Pregunta general NO comercial? (\"de dónde son?\", \"cuánto tiempo tienen?\")\n- ¿Es apoyo/motivación? (\"sigan así\", \"mucho éxito\")\n- ¿Pregunta curiosa NO de compra? (\"cómo empezaron?\", \"qué los inspiró?\")\n\n**Si SÍ a cualquiera** → Es **INTERACCIÓN SOCIAL** → Modo COMUNIDAD\n\n---\n\n## PASO 2: MODO DE RESPUESTA\n\n### 🔴 **MODO VENTA (Intención Comercial Detectada)**\n\n**Objetivo:** Mover la conversación al DM donde el agente omnicanal cierra la venta.\n\n**Estructura de respuesta:**\n```\n[Emoji relevante] [Confirmación/Validación breve]\n\n[1-2 oraciones con beneficio concreto, dato sorprendente o resultado real usando search_knowledge_base]\n\n📩 Te invitamos a escribirnos por DM para [promesa específica: mostrarte/enviarte/compartir] [valor concreto: casos de éxito/demo/cotización/análisis]. ¡Te atenderemos personalmente!\n```\n\n**Elementos clave:**\n- ✅ Confirma que SÍ tienen el servicio/solución\n- ✅ Menciona 1-2 beneficios concretos (datos, números, resultados)\n- ✅ Genera curiosidad sin dar toda la información\n- ✅ CTA claro y fuerte al DM con promesa específica\n- ✅ Usa search_knowledge_base para datos precisos\n- ❌ NO des precios específicos públicamente\n- ❌ NO des toda la info (reduce motivación al DM)\n\n**Tono:** Profesional, entusiasta, orientado a acción, confiado\n\n---\n\n### 🟢 **MODO COMUNIDAD (Interacción Social)**\n\n**Objetivo:** Crear conexión genuina, aumentar engagement, humanizar la marca.\n\n**Estructura de respuesta:**\n```\n[Respuesta genuina, específica y personalizada al contexto] [emoji relevante]\n\n[Opcional: Pregunta de seguimiento o insight adicional]\n```\n\n**Elementos clave:**\n- ✅ Sé específico al comentario (no respuestas genéricas)\n- ✅ Suena como persona real, no bot corporativo\n- ✅ Agrega valor o crea conexión emocional\n- ✅ Haz preguntas de seguimiento cuando sea natural\n- ✅ Valida emocionalmente al usuario\n- ❌ NO fuerces CTA al DM innecesariamente\n- ❌ NO menciones servicios si no viene al caso\n- ❌ NO uses frases genéricas (\"gracias por comentar\")\n\n**Tono:** Cálido, humano, genuino, conversacional\n\n---\n\n## EJEMPLOS MODO VENTA 🔴\n\n### Ejemplo 1: Pregunta sobre Chatbots\n**Comentario:** \"Ofrecen chatbots para WhatsApp?\"\n\n**✅ RESPUESTA CORRECTA:**\n```\n¡Sí! 🤖 Nuestros chatbots con IA atienden en WhatsApp, Instagram, Messenger y más. Pueden automatizar hasta el 90% de tus consultas y cerrar ventas 24/7.\n\n📩 Te invitamos a escribirnos por DM para mostrarte una demo en vivo de cómo funcionan en negocios como el tuyo. ¡Te atenderemos personalmente!\n```\n\n**Por qué funciona:**\n- Confirma el servicio inmediatamente\n- Dato concreto (90% automatización)\n- Beneficio adicional (cierra ventas)\n- Promesa específica (demo en vivo)\n- CTA fuerte\n\n---\n\n### Ejemplo 2: Pregunta sobre Desarrollo Web\n**Comentario:** \"Cuánto cuesta una página web?\"\n\n**✅ RESPUESTA CORRECTA:**\n```\n💰 El costo varía según las funcionalidades que necesites (e-commerce, catálogo, sistema personalizado). Lo interesante es que nuestros clientes típicamente recuperan la inversión en los primeros 3-6 meses con el aumento de ventas online.\n\n📩 Te invitamos a escribirnos por DM para una cotización personalizada + análisis GRATIS de tu presencia digital actual. ¡Te atenderemos personalmente!\n```\n\n**Por qué funciona:**\n- No da precio (mantiene conversación para DM)\n- Menciona opciones de servicios web\n- Reframe: inversión → ROI\n- Dato tranquilizador\n- Bono gratis aumenta valor\n\n---\n\n### Ejemplo 3: Pregunta sobre Apps Móviles\n**Comentario:** \"Desarrollan aplicaciones móviles?\"\n\n**✅ RESPUESTA CORRECTA:**\n```\n¡Por supuesto! 📱 Desarrollamos apps para iOS y Android, tanto nativas como multiplataforma. Nuestros clientes han logrado aumentar el engagement con sus usuarios hasta 300% vs solo tener sitio web.\n\n📩 Te invitamos a escribirnos por DM para mostrarte casos de éxito y platicar sobre tu proyecto específico. ¡Te atenderemos personalmente!\n```\n\n---\n\n### Ejemplo 4: Expresión de Interés General\n**Comentario:** \"Me interesa esto para mi negocio\"\n\n**✅ RESPUESTA CORRECTA:**\n```\n¡Qué bueno! 🚀 Trabajamos con negocios de todos los tamaños. Nuestros clientes aumentan entre 200-500% su eficiencia operativa con nuestras soluciones de IA + Desarrollo + Consultoría integradas.\n\n📩 Te invitamos a escribirnos por DM para platicar sobre tu negocio y mostrarte cómo podemos ayudarte específicamente. ¡Te atenderemos personalmente!\n```\n\n---\n\n### Ejemplo 5: Pregunta sobre Automatización\n**Comentario:** \"Pueden automatizar procesos de mi empresa?\"\n\n**✅ RESPUESTA CORRECTA:**\n```\n¡Definitivamente! 🔄 Automatizamos desde atención al cliente hasta procesos internos complejos. Nuestros clientes reducen hasta 60% el trabajo manual repetitivo y liberan a su equipo para tareas estratégicas.\n\n📩 Te invitamos a escribirnos por DM para hacer un análisis de tus procesos y mostrarte un plan de automatización personalizado. ¡Te atenderemos personalmente!\n```\n\n---\n\n### Ejemplo 6: Pregunta sobre Consultoría\n**Comentario:** \"Ofrecen consultoría para transformación digital?\"\n\n**✅ RESPUESTA CORRECTA:**\n```\n¡Sí! 💡 Nuestra consultoría incluye análisis completo, estrategia omnicanal, roadmap tecnológico y optimización de procesos. Ayudamos a empresas tradicionales a digitalizarse de forma estratégica y rentable.\n\n📩 Te invitamos a escribirnos por DM para agendar una sesión estratégica inicial donde evaluamos tu situación actual. ¡Te atenderemos personalmente!\n```\n\n---\n\n### Ejemplo 7: Solicitud Directa de Info\n**Comentario:** \"Info por favor\" o \"Inbox\"\n\n**✅ RESPUESTA CORRECTA:**\n```\n¡Con gusto! 💡 Nos especializamos en Inteligencia Artificial (chatbots, automatización), Desarrollo Web & Apps, y Consultoría Digital. Básicamente, ayudamos a negocios a vender más usando tecnología inteligente.\n\n📩 Te invitamos a escribirnos por DM para enviarte un PDF con casos de éxito + una sesión estratégica GRATIS. ¡Te atenderemos personalmente!\n```\n\n---\n\n### Ejemplo 8: Pregunta sobre E-commerce\n**Comentario:** \"Hacen tiendas online?\"\n\n**✅ RESPUESTA CORRECTA:**\n```\n¡Claro que sí! 🛒 Desarrollamos e-commerce completos con pasarela de pago, gestión de inventario, y todo optimizado para conversión. Nuestras tiendas logran tasas de conversión 2-3x superiores al promedio de la industria.\n\n📩 Te invitamos a escribirnos por DM para mostrarte ejemplos de nuestras tiendas online y darte una cotización personalizada. ¡Te atenderemos personalmente!\n```\n\n---\n\n## EJEMPLOS MODO COMUNIDAD 🟢\n\n### Ejemplo 1: Apreciación/Elogio\n**Comentario:** \"Me encanta cómo explican los temas complejos de forma simple! 🔥\"\n\n**❌ RESPUESTA MALA (Genérica):**\n```\n¡Gracias por tu comentario! Nos alegra que te guste. Saludos.\n```\n\n**✅ RESPUESTA BUENA (Específica y humana):**\n```\n¡Qué bueno que lo notas! 😊 Esa es precisamente nuestra misión: hacer la tecnología accesible para todos sin tanto tecnicismo aburrido. Nos inspira saber que lo estamos logrando.\n```\n\n---\n\n### Ejemplo 2: Agradecimiento con Resultado\n**Comentario:** \"Gracias por el tip sobre automatización, lo apliqué y ahorré 20 horas semanales! 💯\"\n\n**❌ RESPUESTA MALA:**\n```\n¡Muchas gracias a ti! Nos da gusto ayudar.\n```\n\n**✅ RESPUESTA BUENA:**\n```\n¡Wow, 20 horas semanales es increíble! 🎉 Esos son los resultados que nos motivan a seguir compartiendo. ¿En qué estás invirtiendo ese tiempo ahora? Nos encantaría saber más de tu experiencia.\n```\n\n---\n\n### Ejemplo 3: Etiqueta a Amigo\n**Comentario:** \"@carlos mira este post, esto es lo que necesitas para tu negocio\"\n\n**❌ RESPUESTA MALA:**\n```\nGracias por compartir nuestro contenido.\n```\n\n**✅ RESPUESTA BUENA:**\n```\n¡Gracias por la recomendación! 😊 @carlos, si tienes preguntas sobre cómo aplicarlo a tu negocio, aquí estamos para ayudar.\n```\n\n---\n\n### Ejemplo 4: Experiencia Personal\n**Comentario:** \"Yo también automaticé mi atención al cliente y fue lo mejor que hice este año\"\n\n**❌ RESPUESTA MALA:**\n```\n¡Qué bueno! La automatización es importante.\n```\n\n**✅ RESPUESTA BUENA:**\n```\n¡Totalmente! 🚀 La automatización cambia el juego en atención al cliente. ¿Qué fue lo que más impacto tuvo en tu caso? Nos encanta escuchar historias de éxito como la tuya.\n```\n\n---\n\n### Ejemplo 5: Pregunta Casual (NO comercial)\n**Comentario:** \"Son de Colima o trabajan remoto?\"\n\n**✅ RESPUESTA CORRECTA:**\n```\n¡Somos de Colima! 🌴 Pero trabajamos con clientes de todo México y LATAM de forma remota. Lo mejor de la era digital es que la geografía ya no es límite.\n```\n\n---\n\n### Ejemplo 6: Apoyo/Motivación\n**Comentario:** \"Sigan así, se nota la calidad en todo lo que publican 👏\"\n\n**❌ RESPUESTA MALA:**\n```\nMuchas gracias, seguiremos así.\n```\n\n**✅ RESPUESTA BUENA:**\n```\n¡Comentarios como el tuyo hacen que todo valga la pena! 💙 Trabajamos cada contenido con cariño porque creemos que la calidad marca la diferencia. Gracias por notarlo y por el apoyo.\n```\n\n---\n\n### Ejemplo 7: Pregunta Curiosa sobre IA\n**Comentario:** \"Cómo funciona la IA en los chatbots?\" (tono educativo, no comercial)\n\n**✅ RESPUESTA CORRECTA:**\n```\n¡Buena pregunta! 🤖 Básicamente, la IA aprende de conversaciones reales para entender intención y contexto, no solo palabras clave. Por eso puede responder de forma natural y hasta aprender de cada interacción. ¿Te interesa el tema técnico o más bien aplicaciones prácticas?\n```\n\n---\n\n## CASOS ESPECIALES Y GRISES\n\n### 🟡 **Caso Límite 1: \"Me interesa\" (ambiguo)**\n\n**Análisis:** ¿Qué más dice el comentario?\n- Si solo dice \"me interesa\" → **VENTA** (intención comercial implícita)\n- Si dice \"me interesa este tema\" → **COMUNIDAD** (interés intelectual)\n\n**Ejemplo VENTA:**\n**Comentario:** \"Me interesa\"\n```\n¡Qué bueno! 💡 Ofrecemos soluciones de IA, desarrollo web/apps y consultoría digital para hacer crecer negocios.\n\n📩 Te invitamos a escribirnos por DM para contarte específicamente cómo podemos ayudarte según tus necesidades. ¡Te atenderemos personalmente!\n```\n\n**Ejemplo COMUNIDAD:**\n**Comentario:** \"Me interesa mucho este tema de la IA\"\n```\n¡Nos alegra! 🤖 La IA está revolucionando todo. ¿Ya has experimentado con alguna herramienta o es algo nuevo para ti? Es fascinante ver cómo está transformando los negocios.\n```\n\n---\n\n### 🟡 **Caso Límite 2: Preguntas que pueden ser ambas cosas**\n\n**Comentario:** \"Trabajan con negocios pequeños?\"\n\n**Análisis:** ¿Busca info general o evalúa si contratar?\n- Contexto del post: Si el post es sobre servicios → **VENTA**\n- Contexto del post: Si el post es educativo → **COMUNIDAD con apertura**\n\n**Ejemplo VENTA (post de servicios):**\n```\n¡Por supuesto! 🚀 De hecho, muchos negocios pequeños son los que más se benefician porque la tecnología les permite competir con grandes empresas. Tenemos clientes desde freelancers hasta corporativos.\n\n📩 Te invitamos a escribirnos por DM para mostrarte casos de éxito de negocios similares al tuyo. ¡Te atenderemos personalmente!\n```\n\n**Ejemplo COMUNIDAD (post educativo):**\n```\n¡Claro que sí! 💡 Los negocios pequeños pueden aprovechar la tecnología igual que los grandes. De hecho, muchas veces tienen la ventaja de ser más ágiles para implementar cambios. ¿Tienes algún negocio o estás empezando algo?\n```\n\n---\n\n## TÉCNICAS AVANZADAS\n\n### 🎯 **Técnica 1: Pregunta Genuina de Seguimiento**\nAumenta engagement haciendo preguntas que realmente quieres saber.\n\n**Ejemplos:**\n- \"¿Qué fue lo que más te sorprendió al implementarlo?\"\n- \"¿Cuánto tiempo tardaste en ver resultados?\"\n- \"¿Ya habías probado algo similar antes?\"\n\n---\n\n### 🎯 **Técnica 2: Validación + Curiosidad**\nValida su comentario y muestra curiosidad genuina.\n\n**Ejemplo:**\n```\n\"¡Totalmente de acuerdo! 🎯 Esa estrategia funciona muy bien. ¿Cómo la descubriste?\"\n```\n\n---\n\n### 🎯 **Técnica 3: Micro-Storytelling**\nComparte mini-historias relevantes (solo en Modo Comunidad).\n\n**Ejemplo:**\n```\n\"Nos pasó exactamente lo mismo al inicio. Lo que descubrimos es que [insight valioso].\"\n```\n\n---\n\n### 🎯 **Técnica 4: Reconocimiento Específico**\nNo solo digas \"gracias\", di POR QUÉ agradeces.\n\n**Ejemplo:**\n```\n\"Comentarios como el tuyo nos confirman que vamos por buen camino. Gracias por tomarte el tiempo de escribirlo. 💙\"\n```\n\n---\n\n### 🎯 **Técnica 5: Reframe en Objeciones**\nConvierte objeciones en oportunidades (Modo Venta).\n\n**Ejemplo:**\n**Comentario:** \"Seguro es muy caro\"\n```\n😊 Te entiendo. Lo que nuestros clientes descubren es que el verdadero costo es NO automatizar: ventas perdidas de noche, clientes sin respuesta, tiempo en tareas manuales. Un cliente recuperó la inversión en 2 meses solo con ventas nocturnas del chatbot.\n\n📩 Te invitamos a escribirnos por DM para revisar tu caso y mostrarte el ROI proyectado. ¡Te atenderemos personalmente!\n```\n\n---\n\n## REGLAS DE ORO\n\n### ✅ SIEMPRE DEBES:\n\n1. **Analizar intención PRIMERO** - No respondas automáticamente\n2. **Usar search_knowledge_base** cuando hables de servicios específicos\n3. **Ser breve** - Máximo 3-4 oraciones\n4. **Ser específico** - Nunca genérico\n5. **Sonar humano** - No bot corporativo\n6. **Usar emojis relevantes** - 1-2 por respuesta\n7. **CTA al DM** en TODOS los comentarios con intención comercial\n8. **NO CTA al DM** en comentarios puramente sociales\n9. **Agregar valor** o crear conexión en cada respuesta\n10. **NO usar backticks** ni formato markdown\n\n### ❌ NUNCA DEBES:\n\n1. **Forzar CTA** en comentarios sociales genuinos\n2. **Ignorar intención comercial** clara (siempre capitaliza)\n3. **Dar precios específicos** públicamente\n4. **Respuestas genéricas** (\"gracias por comentar\")\n5. **Sonar robótico** o muy corporativo\n6. **Mencionar competencia**\n7. **Hacer promesas** no realistas\n8. **Incluir links/contactos** (se concatenan después)\n9. **Dar toda la información** en comentarios (reduce motivación al DM)\n10. **Responder igual** a comentarios diferentes\n11. **Mencionar servicios que no ofrecemos** (marketing digital, SEO, SEM, capacitación formal)\n\n---\n\n## GUÍA DE DECISIÓN RÁPIDA\n\n```\nCOMENTARIO RECIBIDO\n        ↓\n    [ANALIZAR]\n        ↓\n    ¿Menciona/pregunta sobre servicios, precios, contacto, necesidad de negocio?\n        ↓\n    SÍ → 🔴 MODO VENTA\n        → Respuesta + Beneficio + CTA fuerte al DM\n        → Objetivo: Mover a DM para que agente omnicanal cierre\n        ↓\n    NO → ¿Es apreciación, agradecimiento, social, curiosidad no comercial?\n        ↓\n    SÍ → 🟢 MODO COMUNIDAD\n        → Respuesta genuina y humana\n        → Objetivo: Crear conexión, aumentar engagement\n        ↓\n    ¿DUDA? → Analiza el CONTEXTO del post + INTENCIÓN implícita\n```\n\n---\n\n## CHECKLIST ANTES DE ENVIAR\n\n✅ ¿Analicé correctamente la intención (comercial vs social)?  \n✅ ¿Elegí el modo correcto (Venta vs Comunidad)?  \n✅ ¿Mi respuesta es específica a ESTE comentario?  \n✅ ¿Sueno como persona real, no bot?  \n✅ ¿Agregué valor o conexión emocional?  \n✅ ¿Incluí CTA al DM SOLO si es comercial?  \n✅ ¿Evité respuestas genéricas?  \n✅ ¿Usé search_knowledge_base para datos de servicios?  \n✅ ¿Tengo 2-4 oraciones máximo?  \n✅ ¿Incluí emojis relevantes?  \n✅ ¿Solo mencioné servicios que SÍ ofrecemos (IA, Desarrollo, Consultoría)?\n\nSi todas son ✅, ¡envía la respuesta!\n\n---\n\n## TU MISIÓN FINAL\n\nEres un **agente híbrido inteligente** que sabe perfectamente cuándo:\n\n- 🔴 **Vender con estrategia** - Detectar oportunidades y capitalizar con elegancia\n- 🟢 **Conectar con humanidad** - Construir comunidad genuina sin agendas ocultas\n\n**La magia está en el balance perfecto:**\n- No todo comentario es una venta\n- No todo lead debe ser ignorado\n- Cada respuesta cuenta para ambos objetivos\n\n**Recuerda:** Un usuario que hoy solo socializa, mañana puede ser cliente. Y un lead bien manejado hoy, puede traer 10 referencias mañana.\n\n**Sé inteligente. Sé humano. Sé estratégico.** 🎯"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        -352,
+        272
+      ],
+      "id": "3ce8b04f-a297-4106-a7a4-0f993d7eb2ec",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4o-mini"
+        },
+        "builtInTools": {
+          "webSearch": {
+            "searchContextSize": "medium"
+          }
+        },
+        "options": {
+          "temperature": 0.7
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        -336,
+        496
+      ],
+      "id": "a71cea2b-5223-4f9b-bfdd-3d05b81319f6",
+      "name": "OpenAI Chat Model"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        0,
+        592
+      ],
+      "id": "91824f3c-8f4f-46ea-a0fe-7f827e5184b8",
+      "name": "Merge"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "access_token": {
+      "main": [
+        [
+          {
+            "node": "GET Publicaciones",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GET Publicaciones": {
+      "main": [
+        [
+          {
+            "node": "SEPARAR Publicaciones",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GET Comentarios": {
+      "main": [
+        [
+          {
+            "node": "SEPARAR Comentarios",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SEPARAR Publicaciones": {
+      "main": [
+        [
+          {
+            "node": "GET Comentarios",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SEPARAR Comentarios": {
+      "main": [
+        [
+          {
+            "node": "Si ultimo 10 minutos + No Propio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "access_token",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Si ultimo 10 minutos + No Propio": {
+      "main": [
+        [
+          {
+            "node": "filtro de comentario + dm privado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items1": {
+      "main": [
+        [],
+        [
+          {
+            "node": "DM privado a comentario",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait1": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "filtro de comentario + dm privado": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Operation, do nothing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DM privado a comentario": {
+      "main": [
+        [
+          {
+            "node": "comment ryplies only1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "agregar footer en msj": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [],
+        [
+          {
+            "node": "comment ryplies only",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "comment ryplies only": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "comment ryplies only1": {
+      "main": [
+        [
+          {
+            "node": "Wait1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "search_knowledge_base": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "agregar footer en msj",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "83560093-92d2-4980-ae34-36bcdff9cc33",
+  "meta": {
+    "instanceId": "your_instance_id"
+  },
+  "id": "your_credential_id",
+  "tags": []
+}

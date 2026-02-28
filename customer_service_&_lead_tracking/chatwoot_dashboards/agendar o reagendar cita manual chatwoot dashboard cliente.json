@@ -1,0 +1,1428 @@
+{
+  "name": "agendar o reagendar cita manual chatwoot dashboard cliente",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "Chatwoot Dashboard Backend: Scheduling Sync\n\nThis workflow serves as the intelligent backend for the Chatwoot 'Booking iFrame'. It acts as a real-time bridge between Google Calendar events and our central sales ecosystem.\n\nOperational Lifecycle:\n1. Synchronization: Triggers when an agent or customer books/reschedules an event.\n2. Normalization: A robust JS layer parses the description field to extract PII (Name, Email, Phone, Company) and normalizes it for database consistency.\n3. Automation Suite: \n   - Updates lead status in Supabase.\n   - Sends premium HTML confirmation emails via Gmail.\n   - Delivers instant WhatsApp confirmations.\n   - Reports the booking to internal Telegram channels.\n   - Updates the AI Agent's memory (Postgres) to ensure context continuity.",
+        "height": 450,
+        "width": 320,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -800,
+        -600
+      ],
+      "typeVersion": 1,
+      "id": "doc-chatwoot-booking",
+      "name": "iFrame Backend Documentation"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "leads_formularios_optimizada",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "client_id",
+              "condition": "eq",
+              "keyValue": "={{ $('Get many rows').item.json.client_id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "es_cliente",
+              "fieldValue": "=true"
+            },
+            {
+              "fieldId": "estado_lead",
+              "fieldValue": "Cita agendada"
+            },
+            {
+              "fieldId": "pais",
+              "fieldValue": "={{ $('normalizar').item.json.normalizado.cliente.pais ?? $('Get many rows').item.json.pais}}"
+            },
+            {
+              "fieldId": "nombre",
+              "fieldValue": "={{ $('Get many rows').item.json.nombre ?? $('normalizar').item.json.normalizado.cliente.nombre}}"
+            },
+            {
+              "fieldId": "nombre_normalizado",
+              "fieldValue": "={{ $('Get many rows').item.json.nombre_normalizado ?? $('normalizar').item.json.normalizado.cliente.nombreNormalizado}}"
+            },
+            {
+              "fieldId": "telefono",
+              "fieldValue": "={{ $('Get many rows').item.json.telefono ?? $('normalizar').item.json.normalizado.cliente.telefonoNormalizado}}"
+            },
+            {
+              "fieldId": "servicio",
+              "fieldValue": "={{ $('normalizar').item.json.normalizado.servicio ?? $('Get many rows').item.json.servicio}}"
+            },
+            {
+              "fieldId": "email",
+              "fieldValue": "={{ $('Get many rows').item.json.email ?? $('normalizar').item.json.normalizado.cliente.emailNormalizado }}"
+            },
+            {
+              "fieldId": "empresa",
+              "fieldValue": "={{ $('Get many rows').item.json.empresa ?? $('normalizar').item.json.normalizado.cliente.empresa}}"
+            },
+            {
+              "fieldId": "score_lead",
+              "fieldValue": "=93"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1472,
+        -464
+      ],
+      "id": "c69c9a1c-7801-4fb1-b7d4-87d06886457e",
+      "name": "actualizar_lead1",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "your_supabase_credential_id",
+          "name": "Supabase account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Get many rows').item.json.email ?? $('normalizar').item.json.normalizado.cliente.emailNormalizado }}",
+        "subject": "Cita Reagendada",
+        "message": "=<!DOCTYPE html> <html lang=\"es\"> <head>     <meta charset=\"UTF-8\">     <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">     <title>Cita Reagendada - your_brand</title> </head> <body style=\"margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #0a0a0a;\">     <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"background-color: #0a0a0a; padding: 20px;\">         <tr>             <td align=\"center\">                 <table width=\"600\" cellpadding=\"0\" cellspacing=\"0\" style=\"background-color: #1a1a1a; border-radius: 15px; overflow: hidden; box-shadow: 0 0 30px rgba(255, 165, 0, 0.2); border: 1px solid #ffa500;\">                                          <!-- Header con logo y fondo decorativo -->                     <tr>                         <td style=\"background: linear-gradient(135deg, #000000 0%, #1a1a1a 100%); padding: 40px 30px; text-align: center; position: relative; border-bottom: 2px solid #ffa500;\">                                                          <!-- Logo -->                             <img src=\"https://ik.imagekit.io/your_id/Logos%20your_brand/logo.png\" alt=\"your_brand Logo\" style=\"width: 120px; height: auto; margin-bottom: 20px;\" />                                                          <h1 style=\"margin: 0; color: #ffa500; font-size: 32px; font-weight: 700; text-shadow: 0 0 20px rgba(255, 165, 0, 0.8);\">                                 🔄 Cita Reagendada                             </h1>                             <p style=\"margin: 10px 0 0 0; color: #ffffff; font-size: 16px;\">                                 Tu reunión ha sido reagendada exitosamente                             </p>                         </td>                     </tr>                      <!-- Contenido principal -->                     <tr>                         <td style=\"padding: 40px 30px; background: linear-gradient(180deg, #1a1a1a 0%, #0f0f0f 100%);\">                             <p style=\"margin: 0 0 25px 0; color: #ffffff; font-size: 18px; line-height: 1.6;\">                                 Hola <strong style=\"color: #00ffff;\">{{ $('obtener_citas').item.json.nombre ?? $('normalizar').item.json.normalizado.cliente.nombre}}</strong>,                             </p>                                                          <p style=\"margin: 0 0 30px 0; color: #e0e0e0; font-size: 16px; line-height: 1.6;\">                                 Nos complace confirmar que tu cita ha sido reagendada para el <strong style=\"color: #ffa500;\">\n{{ $('normalizar').item.json.normalizado.fechas.inicioTextoCliente }}</strong>.                             </p>                              <!-- Bloque de información de la reunión -->                             <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin: 30px 0;\">                                 <tr>                                     <td style=\"background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%); border-left: 4px solid #ffa500; padding: 25px; border-radius: 10px; box-shadow: 0 0 20px rgba(255, 165, 0, 0.15);\">                                         <h3 style=\"margin: 0 0 15px 0; color: #ffa500; font-size: 20px; display: flex; align-items: center;\">                                             📅 Detalles de tu Reunión                                         </h3>                                         <p style=\"margin: 0 0 10px 0; color: #ffffff; font-size: 15px; line-height: 1.6;\">                                             <strong style=\"color: #ffa500;\">Nueva Fecha:</strong> {{ $('normalizar').item.json.normalizado.fechas.inicioTextoCliente }}                                        </p>                                         <p style=\"margin: 0; color: #e0e0e0; font-size: 14px; line-height: 1.5;\">                                             <strong style=\"color: #ffa500;\">Enlace:</strong><br>                                             <a href=\"{{ $('normalizar').item.json.normalizado.reunion.linkMeet }}\" style=\"color: #ffffff; word-break: break-all; text-decoration: none;\">{{ $('normalizar').item.json.normalizado.reunion.linkMeet }}</a>                                         </p>                                     </td>                                 </tr>                             </table>                              <!-- Botón llamada a la acción -->                             <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin: 35px 0;\">                                 <tr>                                     <td align=\"center\">                                         <a href=\"{{ $('normalizar').item.json.normalizado.reunion.linkMeet }}\" style=\"display: inline-block; background: linear-gradient(135deg, #ffa500 0%, #ff8c00 100%); color: #000000; text-decoration: none; padding: 18px 45px; border-radius: 30px; font-size: 18px; font-weight: 700; box-shadow: 0 0 25px rgba(255, 165, 0, 0.6); text-transform: uppercase; letter-spacing: 1px;\">                                             🎥 Unirse a la Reunión                                         </a>                                     </td>                                 </tr>                             </table>                              <!-- Sección de servicios -->                             <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin: 40px 0 30px 0;\">                                 <tr>                                     <td width=\"33%\" style=\"padding: 5px;\">                                         <div style=\"background-color: #1a1a1a; padding: 20px 10px; border-radius: 10px; text-align: center; border: 1px solid #00ffff; box-shadow: 0 0 15px rgba(0, 255, 255, 0.1);\">                                             <div style=\"font-size: 32px; margin-bottom: 10px;\">🤖</div>                                             <h4 style=\"margin: 0; color: #00ffff; font-size: 14px;\">Inteligencia Artificial</h4>                                         </div>                                     </td>                                     <td width=\"33%\" style=\"padding: 5px;\">                                         <div style=\"background-color: #1a1a1a; padding: 20px 10px; border-radius: 10px; text-align: center; border: 1px solid #00ffff; box-shadow: 0 0 15px rgba(0, 255, 255, 0.1);\">                                             <div style=\"font-size: 32px; margin-bottom: 10px;\">📊</div>                                             <h4 style=\"margin: 0; color: #00ffff; font-size: 14px;\">Marketing Digital</h4>                                         </div>                                     </td>                                     <td width=\"33%\" style=\"padding: 5px;\">                                         <div style=\"background-color: #1a1a1a; padding: 20px 10px; border-radius: 10px; text-align: center; border: 1px solid #00ffff; box-shadow: 0 0 15px rgba(0, 255, 255, 0.1);\">                                             <div style=\"font-size: 32px; margin-bottom: 10px;\">📱</div>                                             <h4 style=\"margin: 0; color: #00ffff; font-size: 14px;\">Redes Sociales</h4>                                         </div>                                     </td>                                 </tr>                             </table>                              <!-- Link al sitio web -->                             <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin: 30px 0;\">                                 <tr>                                     <td align=\"center\" style=\"background-color: #0a0a0a; padding: 20px; border-radius: 10px; border: 1px solid #333333;\">                                         <p style=\"margin: 0 0 10px 0; color: #ffffff; font-size: 15px;\">                                             🌐 Conoce más sobre nuestros servicios                                         </p>                                         <a href=\"https://www.your_brand.com.mx\" style=\"color: #00ffff; text-decoration: none; font-weight: 600; font-size: 16px; text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);\">                                             Visítanos aquí →                                         </a>                                     </td>                                 </tr>                             </table>                          </td>                     </tr>                      <!-- Footer -->                     <tr>                         <td style=\"background-color: #000000; padding: 35px 30px; text-align: center; border-top: 2px solid #ffa500;\">                             <p style=\"margin: 0 0 15px 0; color: #ffffff; font-size: 16px; font-weight: 600;\">                                 Gracias por confiar en nosotros                             </p>                             <p style=\"margin: 0 0 20px 0; color: #00ffff; font-size: 15px;\">                                 your_name<br>                                 <span style=\"color: #999999; font-size: 13px;\">CEO de your_brand</span>                             </p>                             <div style=\"width: 60px; height: 2px; background: linear-gradient(90deg, transparent, #00ffff, transparent); margin: 20px auto;\"></div>                             <p style=\"margin: 0; color: #666666; font-size: 12px;\">                                 © 2025 your_brand. Todos los derechos reservados.                             </p>                             <p style=\"margin: 15px 0 0 0;\">                                 <a href=\"https://www.your_brand.com.mx\" style=\"color: #00ffff; text-decoration: none; margin: 0 10px; font-size: 12px;\">Sitio Web</a>                                 <span style=\"color: #333333;\">|</span>                                 <a href=\"https://wa.me/your_phone_number?text=\" style=\"color: #00ffff; text-decoration: none; margin: 0 10px; font-size: 12px;\">WhatsApp</a>                             </p>                         </td>                     </tr>                  </table>             </td>         </tr>     </table> </body> </html>",
+        "options": {
+          "appendAttribution": false,
+          "senderName": "your_name, CEO de your_brand"
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1920,
+        -656
+      ],
+      "id": "6b222a7a-b3ec-4c9e-aaa3-0613405ceffa",
+      "name": "enviar_correo_cita_reprogramada1",
+      "webhookId": "61a46709-2e59-4111-9e1c-426028790690",
+      "alwaysOutputData": true,
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "your_gmail_credential_id",
+          "name": "your_brand Nuevo"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "phoneNumberId": "710637588808362",
+        "recipientPhoneNumber": "={{ $('Get many rows').item.json.telefono ?? $('normalizar').item.json.normalizado.cliente.telefonoNormalizado}}",
+        "template": "cita_reagendada|es",
+        "components": {
+          "component": [
+            {
+              "bodyParameters": {
+                "parameter": [
+                  {
+                    "text": "={{ $('Get many rows').item.json.nombre ?? $('normalizar').item.json.normalizado.cliente.nombre}}"
+                  },
+                  {
+                    "text": "={{ $('normalizar').item.json.normalizado.fechas.inicioTextoCliente }}"
+                  },
+                  {
+                    "text": "={{ $('normalizar').item.json.normalizado.reunion.linkMeet }}"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1,
+      "position": [
+        2368,
+        -656
+      ],
+      "id": "76baf1db-5aca-49d6-b980-1407d31ca4e5",
+      "name": "reagendar_cita_wa",
+      "webhookId": "53e8e612-3424-4d89-abec-23266c4eabbc",
+      "alwaysOutputData": true,
+      "credentials": {
+        "whatsAppApi": {
+          "id": "your_whatsapp_credential_id",
+          "name": "WhatsApp account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "chatId": "your_telegram_chat_id",
+        "text": "=Nueva Cita con {{ $('Get many rows').item.json.nombre ?? $('normalizar').item.json.normalizado.cliente.nombre}}\nFecha: {{ $('normalizar').item.json.normalizado.fechas.inicioTexto }}\nEnlace: {{ $('normalizar').item.json.normalizado.reunion.linkMeet }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1920,
+        -464
+      ],
+      "id": "77458575-eec5-4f6b-af34-72644bec2806",
+      "name": "agenda_telegram_citas",
+      "webhookId": "2e1dac8d-f98d-4807-8539-2fd816da71c0",
+      "alwaysOutputData": true,
+      "credentials": {
+        "telegramApi": {
+          "id": "your_telegram_credential_id",
+          "name": "Citas your_brand"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "chatId": "=your_telegram_chat_id",
+        "text": "=Cita reagendada con {{ $('Get many rows').item.json.nombre ?? $('normalizar').item.json.normalizado.cliente.nombre}}\nFecha: {{ $('normalizar').item.json.normalizado.fechas.inicioTexto }}\nEnlace: {{ $('normalizar').item.json.normalizado.reunion.linkMeet }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2144,
+        -656
+      ],
+      "id": "6595a3d3-f8fb-42e2-b584-d774423c6db8",
+      "name": "agenda_telegram_citas1",
+      "webhookId": "2e1dac8d-f98d-4807-8539-2fd816da71c0",
+      "alwaysOutputData": true,
+      "credentials": {
+        "telegramApi": {
+          "id": "your_telegram_credential_id",
+          "name": "Citas your_brand"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "9735481a-ec90-4220-b0a7-45e6e683cfb0",
+              "leftValue": "={{ $('obtener_citas').item.json.client_id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "number",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1024,
+        -656
+      ],
+      "id": "55a4dbc4-bf67-4ac8-8618-23f8cd6db074",
+      "name": "crear o actualizar registro de cita"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "citas",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "client_id",
+              "condition": "eq",
+              "keyValue": "={{ $('Get many rows').item.json.client_id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "estado",
+              "fieldValue": "=cita agendada"
+            },
+            {
+              "fieldId": "nombre",
+              "fieldValue": "={{ $('Get many rows').item.json.nombre ?? $('normalizar').item.json.normalizado.cliente.nombre}}"
+            },
+            {
+              "fieldId": "fecha_cita",
+              "fieldValue": "={{ $('normalizar').item.json.normalizado.fechas.inicioISO }}"
+            },
+            {
+              "fieldId": "email",
+              "fieldValue": "={{ $('Get many rows').item.json.email ?? $('normalizar').item.json.normalizado.cliente.emailNormalizado}}"
+            },
+            {
+              "fieldId": "telefono",
+              "fieldValue": "={{ $('Get many rows').item.json.telefono ?? $('normalizar').item.json.normalizado.cliente.telefonoNormalizado}}"
+            },
+            {
+              "fieldId": "servicio",
+              "fieldValue": "={{ $('normalizar').item.json.normalizado.servicio ?? $('Get many rows').item.json.servicio}}"
+            },
+            {
+              "fieldId": "pais",
+              "fieldValue": "={{ $('normalizar').item.json.normalizado.cliente.pais ?? $('Get many rows').item.json.pais}}"
+            },
+            {
+              "fieldId": "empresa",
+              "fieldValue": "={{ $('Get many rows').item.json.empresa ?? $('normalizar').item.json.normalizado.cliente.empresa}}"
+            },
+            {
+              "fieldId": "enlace_reunion",
+              "fieldValue": "={{ $('normalizar').item.json.original.hangoutLink }}"
+            },
+            {
+              "fieldId": "fecha_cita_timezone_cliente",
+              "fieldValue": "={{ $('normalizar').item.json.normalizado.fechas.inicioISOCliente }}"
+            },
+            {
+              "fieldId": "fecha_cita_timezone_legible",
+              "fieldValue": "={{ $('normalizar').item.json.normalizado.fechas.inicioTextoCliente }}"
+            },
+            {
+              "fieldId": "fecha_cita_legible",
+              "fieldValue": "={{ $('normalizar').item.json.normalizado.fechas.inicioTexto }}"
+            },
+            {
+              "fieldId": "cita_pasada",
+              "fieldValue": "No"
+            },
+            {
+              "fieldId": "google_event_id",
+              "fieldValue": "={{ $('normalizar').item.json.original.id }}"
+            },
+            {
+              "fieldId": "recordatorio_enviado",
+              "fieldValue": "FALSE"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1472,
+        -848
+      ],
+      "id": "b28ba0fb-7462-4136-ad7e-d40677e46160",
+      "name": "crear_cita",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "your_supabase_credential_id",
+          "name": "Supabase account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Get many rows').item.json.email ?? $('normalizar').item.json.normalizado.cliente.emailNormalizado }}",
+        "subject": "Cita Agendada",
+        "message": "=<!DOCTYPE html> <html lang=\"es\"> <head>     <meta charset=\"UTF-8\">     <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">     <title>Cita Agendada - your_brand</title> </head> <body style=\"margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #0a0a0a;\">     <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"background-color: #0a0a0a; padding: 20px;\">         <tr>             <td align=\"center\">                 <table width=\"600\" cellpadding=\"0\" cellspacing=\"0\" style=\"background-color: #1a1a1a; border-radius: 15px; overflow: hidden; box-shadow: 0 0 30px rgba(0, 255, 255, 0.2); border: 1px solid #00ffff;\">                                          <!-- Header con logo y fondo decorativo -->                     <tr>                         <td style=\"background: linear-gradient(135deg, #000000 0%, #1a1a1a 100%); padding: 40px 30px; text-align: center; position: relative; border-bottom: 2px solid #00ffff;\">                                                         <!-- Logo -->                             <img src=\"https://ik.imagekit.io/49rd3bmeqs/Logos%20your_brand/logo2%20(3).png?updatedAt=1759468732222\" alt=\"your_brand Logo\" style=\"width: 120px; height: auto; margin-bottom: 20px; filter: drop-shadow(0 0 10px rgba(0, 255, 255, 0.5));\" />                                                          <h1 style=\"margin: 0; color: #00ffff; font-size: 32px; font-weight: 700; text-shadow: 0 0 20px rgba(0, 255, 255, 0.8);\">                                 ✓ Cita Confirmada                             </h1>                             <p style=\"margin: 10px 0 0 0; color: #ffffff; font-size: 16px;\">                                 Tu reunión ha sido agendada exitosamente                             </p>                         </td>                     </tr>                      <!-- Contenido principal -->                     <tr>                         <td style=\"padding: 40px 30px; background: linear-gradient(180deg, #1a1a1a 0%, #0f0f0f 100%);\">                             <p style=\"margin: 0 0 25px 0; color: #ffffff; font-size: 18px; line-height: 1.6;\">                                 Hola <strong style=\"color: #00ffff;\">{{ $('Get many rows').item.json.nombre ?? $('normalizar').item.json.normalizado.cliente.nombre}}</strong>,                             </p>                                                          <p style=\"margin: 0 0 30px 0; color: #e0e0e0; font-size: 16px; line-height: 1.6;\">                                 Nos complace confirmar que tu cita del <strong style=\"color: #00ffff;\">{{ $('normalizar').item.json.normalizado.fechas.inicioTextoCliente }}</strong> ha sido agendada.                             </p>                              <!-- Bloque de información de la reunión -->                             <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin: 30px 0;\">                                 <tr>                                     <td style=\"background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%); border-left: 4px solid #00ffff; padding: 25px; border-radius: 10px; box-shadow: 0 0 20px rgba(0, 255, 255, 0.15);\">                                         <h3 style=\"margin: 0 0 15px 0; color: #00ffff; font-size: 20px; display: flex; align-items: center;\">                                             📅 Detalles de tu Reunión                                         </h3>                                         <p style=\"margin: 0 0 10px 0; color: #ffffff; font-size: 15px; line-height: 1.6;\">                                             <strong style=\"color: #00ffff;\">Fecha:</strong> {{ $('normalizar').item.json.normalizado.fechas.inicioTextoCliente }}                                       </p>                                         <p style=\"margin: 0; color: #e0e0e0; font-size: 14px; line-height: 1.5;\">                                             <strong style=\"color: #00ffff;\">Enlace:</strong><br>                                             <a href=\"{{ $('normalizar').item.json.normalizado.reunion.linkMeet }}\" style=\"color: #ffffff; word-break: break-all; text-decoration: none;\">{{ $('normalizar').item.json.normalizado.reunion.linkMeet }}</a>                                         </p>                                     </td>                                 </tr>                             </table>                              <!-- Botón llamada a la acción -->                             <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin: 35px 0;\">                                 <tr>                                     <td align=\"center\">                                         <a href=\"{{ $('normalizar').item.json.normalizado.reunion.linkMeet }}\" style=\"display: inline-block; background: linear-gradient(135deg, #00ffff 0%, #00cccc 100%); color: #000000; text-decoration: none; padding: 18px 45px; border-radius: 30px; font-size: 18px; font-weight: 700; box-shadow: 0 0 25px rgba(0, 255, 255, 0.6); text-transform: uppercase; letter-spacing: 1px;\">                                             🎥 Unirse a la Reunión                                         </a>                                     </td>                                 </tr>                             </table>                              <!-- Sección de servicios -->                             <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin: 40px 0 30px 0;\">                                 <tr>                                     <td width=\"33%\" style=\"padding: 5px;\">                                         <div style=\"background-color: #1a1a1a; padding: 20px 10px; border-radius: 10px; text-align: center; border: 1px solid #00ffff; box-shadow: 0 0 15px rgba(0, 255, 255, 0.1);\">                                             <div style=\"font-size: 32px; margin-bottom: 10px;\">🤖</div>                                             <h4 style=\"margin: 0; color: #00ffff; font-size: 14px;\">Inteligencia Artificial</h4>                                         </div>                                     </td>                                     <td width=\"33%\" style=\"padding: 5px;\">                                         <div style=\"background-color: #1a1a1a; padding: 20px 10px; border-radius: 10px; text-align: center; border: 1px solid #00ffff; box-shadow: 0 0 15px rgba(0, 255, 255, 0.1);\">                                             <div style=\"font-size: 32px; margin-bottom: 10px;\">📊</div>                                             <h4 style=\"margin: 0; color: #00ffff; font-size: 14px;\">Marketing Digital</h4>                                         </div>                                     </td>                                     <td width=\"33%\" style=\"padding: 5px;\">                                         <div style=\"background-color: #1a1a1a; padding: 20px 10px; border-radius: 10px; text-align: center; border: 1px solid #00ffff; box-shadow: 0 0 15px rgba(0, 255, 255, 0.1);\">                                             <div style=\"font-size: 32px; margin-bottom: 10px;\">📱</div>                                             <h4 style=\"margin: 0; color: #00ffff; font-size: 14px;\">Redes Sociales</h4>                                         </div>                                     </td>                                 </tr>                             </table>                              <!-- Link al sitio web -->                             <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin: 30px 0;\">                                 <tr>                                     <td align=\"center\" style=\"background-color: #0a0a0a; padding: 20px; border-radius: 10px; border: 1px solid #333333;\">                                         <p style=\"margin: 0 0 10px 0; color: #ffffff; font-size: 15px;\">                                             🌐 Conoce más sobre nuestros servicios                                         </p>                                         <a href=\"https://www.your_brand.com.mx\" style=\"color: #00ffff; text-decoration: none; font-weight: 600; font-size: 16px; text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);\">                                             Visítanos aquí →                                         </a>                                     </td>                                 </tr>                             </table>                          </td>                     </tr>                      <!-- Footer -->                     <tr>                         <td style=\"background-color: #000000; padding: 35px 30px; text-align: center; border-top: 2px solid #00ffff;\">                             <p style=\"margin: 0 0 15px 0; color: #ffffff; font-size: 16px; font-weight: 600;\">                                 Gracias por confiar en nosotros                             </p>                             <p style=\"margin: 0 0 20px 0; color: #00ffff; font-size: 15px;\">                                 your_name<br>                                 <span style=\"color: #999999; font-size: 13px;\">CEO de your_brand</span>                             </p>                             <div style=\"width: 60px; height: 2px; background: linear-gradient(90deg, transparent, #00ffff, transparent); margin: 20px auto;\"></div>                             <p style=\"margin: 0; color: #666666; font-size: 12px;\">                                 © 2025 your_brand. Todos los derechos reservados.                             </p>                             <p style=\"margin: 15px 0 0 0;\">                                 <a href=\"https://www.your_brand.com.mx\" style=\"color: #00ffff; text-decoration: none; margin: 0 10px; font-size: 12px;\">Sitio Web</a>                                 <span style=\"color: #333333;\">|</span>                                 <a href=\"https://wa.me/your_phone_number?text=\" style=\"color: #00ffff; text-decoration: none; margin: 0 10px; font-size: 12px;\">WhatsApp</a>                             </p>                         </td>                     </tr>                  </table>             </td>         </tr>     </table> </body> </html>",
+        "options": {
+          "appendAttribution": false,
+          "senderName": "your_name, CEO de your_brand"
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1920,
+        -848
+      ],
+      "id": "30a7e53b-6d96-4ace-a8d4-c7fce95cd4d6",
+      "name": "enviar_correo_cita_agendada",
+      "webhookId": "61a46709-2e59-4111-9e1c-426028790690",
+      "alwaysOutputData": true,
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "your_gmail_credential_id",
+          "name": "your_brand Nuevo"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "chatId": "your_telegram_chat_id",
+        "text": "=Nueva Cita con {{ $('Get many rows').item.json.nombre ?? $('normalizar').item.json.normalizado.cliente.nombre}}\nFecha: {{ $('normalizar').item.json.normalizado.fechas.inicioTexto }}\nEnlace: {{ $('normalizar').item.json.normalizado.reunion.linkMeet }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2144,
+        -848
+      ],
+      "id": "1613f570-42f3-4e04-9793-cf34b4531125",
+      "name": "agenda_telegram_citas4",
+      "webhookId": "2e1dac8d-f98d-4807-8539-2fd816da71c0",
+      "alwaysOutputData": true,
+      "credentials": {
+        "telegramApi": {
+          "id": "your_telegram_credential_id",
+          "name": "Citas your_brand"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "phoneNumberId": "710637588808362",
+        "recipientPhoneNumber": "={{ $('Get many rows').item.json.telefono ?? $('normalizar').item.json.normalizado.cliente.telefonoNormalizado}}",
+        "template": "cita_agendada|es_MX",
+        "components": {
+          "component": [
+            {
+              "bodyParameters": {
+                "parameter": [
+                  {
+                    "text": "={{ $('Get many rows').item.json.nombre ?? $('normalizar').item.json.normalizado.cliente.nombre}}"
+                  },
+                  {
+                    "text": "={{ $('normalizar').item.json.normalizado.fechas.inicioTextoCliente }}"
+                  },
+                  {
+                    "text": "={{ $('normalizar').item.json.normalizado.reunion.linkMeet }}"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1,
+      "position": [
+        2368,
+        -848
+      ],
+      "id": "2247c81c-bd40-4ea7-967e-08b6b8e9aef0",
+      "name": "confirmar_cita_wa1",
+      "webhookId": "53e8e612-3424-4d89-abec-23266c4eabbc",
+      "alwaysOutputData": true,
+      "credentials": {
+        "whatsAppApi": {
+          "id": "your_whatsapp_credential_id",
+          "name": "WhatsApp account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO conversaciones (\n    session_id,\n    message,\n    etiqueta,\n    clasificacion_cita,\n    fecha\n)\nVALUES (\n    '{{ $('Get many rows').item.json.client_id }}',\n    jsonb_build_object(\n        'type', 'ai',\n        'content', jsonb_pretty(json_build_object(\n            'respuesta', 'Cita reagendada\nHola {{ $('Get many rows').item.json.nombre ?? $('normalizar').item.json.normalizado.cliente.nombre}}, hemos reagendado tu cita para el {{ $('normalizar').item.json.normalizado.fechas.inicioTextoCliente }} con éxito.\nEste es el nuevo enlace de reunión: {{ $('normalizar').item.json.normalizado.reunion.linkMeet }}.\nSi necesitas reagendar, cancelar o posponer tu cita puedes contactarme, recuerda hacerlo con tiempo.',\n            'escalamiento', null,\n            'enviar_formulario', null,\n            'estado', null\n        )::jsonb),\n        'tool_calls', '[]'::jsonb,\n        'additional_kwargs', '{}'::jsonb,\n        'response_metadata', '{}'::jsonb,\n        'invalid_tool_calls', '[]'::jsonb\n    ),\n    'ventas',\n    'agendar_cita',\n    '{{ $now.toISO() }}'::timestamptz\n);",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        2592,
+        -656
+      ],
+      "id": "fc4ce93f-c137-4370-b604-a9a73cfc20da",
+      "name": "actualizar memoria agente6",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "your_postgres_credential_id",
+          "name": "Postgres account 2"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO conversaciones (\n    session_id,\n    message,\n    etiqueta,\n    clasificacion_cita,\n    fecha\n)\nVALUES (\n    '{{ $('Get many rows').item.json.client_id }}',\n    jsonb_build_object(\n        'type', 'ai',\n        'content', jsonb_pretty(json_build_object(\n            'respuesta', 'Cita agendada\n¡Hola {{ $('Get many rows').item.json.nombre ?? $('normalizar').item.json.normalizado.cliente.nombre}}, tu cita del {{ $('normalizar').item.json.normalizado.fechas.inicioTextoCliente }} ha sido agendada con éxito!.\nEste es el enlace de la reunión: {{ $('normalizar').item.json.normalizado.reunion.linkMeet }}.\n\n¡Nos morimos de ganas por platicar como podemos crecer juntos!. \n\nSi necesitas reagendar, cancelar o posponer tu cita puedes contactarme, recuerda hacerlo con tiempo.',\n            'escalamiento', null,\n            'enviar_formulario', null,\n            'estado', null\n        )::jsonb),\n        'tool_calls', '[]'::jsonb,\n        'additional_kwargs', '{}'::jsonb,\n        'response_metadata', '{}'::jsonb,\n        'invalid_tool_calls', '[]'::jsonb\n    ),\n    'ventas',\n    'agendar_cita',\n    '{{ $now.toISO() }}'::timestamptz\n);",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        2592,
+        -848
+      ],
+      "id": "31ba3a03-936d-48cf-826d-0335dd2dc5d5",
+      "name": "actualizar memoria agente4",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "your_postgres_credential_id",
+          "name": "Postgres account 2"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "calendarId": {
+          "__rl": true,
+          "value": "your_calendar_id@gmail.com",
+          "mode": "list",
+          "cachedResultName": "your_calendar_id@gmail.com"
+        },
+        "triggerOn": "eventCreated",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleCalendarTrigger",
+      "typeVersion": 1,
+      "position": [
+        -320,
+        -656
+      ],
+      "id": "4e4c4361-dbd8-4b3b-90e9-97a799592d36",
+      "name": "Google Calendar Trigger",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "your_google_calendar_credential_id",
+          "name": "your_brand Nuevo"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT *\nFROM citas\nWHERE client_id = '{{ $json.client_id }}'\nORDER BY fecha_cita_timezone_cliente DESC\nLIMIT 1;\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        800,
+        -656
+      ],
+      "id": "f10eda5e-a43d-46fb-93d9-cb842669ceb9",
+      "name": "obtener_citas",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "your_postgres_credential_id",
+          "name": "Postgres account 2"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT *\nFROM leads_formularios_optimizada\nWHERE \n  -- Búsqueda por nombre normalizado\n  nombre_normalizado = '{{ $('normalizar').item.json.normalizado.cliente.nombreNormalizado }}'\n  \n  -- Búsqueda por teléfono normalizado\n  OR telefono = '{{ $('normalizar').item.json.normalizado.cliente.telefonoNormalizado }}'\n  OR whatsapp = '{{ $('normalizar').item.json.normalizado.cliente.telefonoNormalizado }}'\n  \n  -- Búsqueda por email normalizado\n  OR email = '{{ $('normalizar').item.json.normalizado.cliente.emailNormalizado }}'\n  \n  -- Búsqueda por nombre original\n  OR nombre = '{{ $('normalizar').item.json.normalizado.cliente.nombre }}'\n  \n  -- Búsqueda por teléfono original (sin código de país)\n  OR telefono = '{{ $('normalizar').item.json.normalizado.cliente.telefono }}'\n  OR whatsapp = '{{ $('normalizar').item.json.normalizado.cliente.telefono }}'\n  \n  -- Mantener búsquedas de otros canales si existen\n  OR messenger = '{{ $('normalizar').item.json.normalizado.cliente.nombre }}'\n  OR instagram = '{{ $('normalizar').item.json.normalizado.cliente.nombre }}'\n  OR messenger_normalizado = '{{ $('normalizar').item.json.normalizado.cliente.nombreNormalizado }}'\n  OR instagram_normalizado = '{{ $('normalizar').item.json.normalizado.cliente.nombreNormalizado }}'\n  \nORDER BY created_at DESC\nLIMIT 1;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        576,
+        -656
+      ],
+      "id": "a5ecab60-8fcd-4efa-b459-c873b3572d24",
+      "name": "Get many rows",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "your_postgres_credential_id",
+          "name": "Postgres account 2"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Mapeo de países a códigos de teléfono y zonas horarias\nconst paisConfig = {\n  'México': { codigo: '+52', timezone: 'America/Mexico_City' },\n  'Mexico': { codigo: '+52', timezone: 'America/Mexico_City' },\n  'Colombia': { codigo: '+57', timezone: 'America/Bogota' },\n  'Argentina': { codigo: '+54', timezone: 'America/Argentina/Buenos_Aires' },\n  'Chile': { codigo: '+56', timezone: 'America/your_name' },\n  'Perú': { codigo: '+51', timezone: 'America/Lima' },\n  'Peru': { codigo: '+51', timezone: 'America/Lima' },\n  'España': { codigo: '+34', timezone: 'Europe/Madrid' },\n  'Espana': { codigo: '+34', timezone: 'Europe/Madrid' },\n  'Estados Unidos': { codigo: '+1', timezone: 'America/New_York' },\n  'USA': { codigo: '+1', timezone: 'America/New_York' }\n};\n\n// Servicios válidos\nconst serviciosValidos = [\n  'Marketing Digital Completo',\n  'Inteligencia Artificial',\n  'Desarrollo Web y Apps',\n  'Consultoría Digital',\n  'Capacitación'\n];\n\n// Función para normalizar nombre\nfunction normalizarNombre(nombre) {\n  return nombre\n    .toLowerCase()\n    .normalize(\"NFD\")\n    .replace(/[\\u0300-\\u036f]/g, \"\") // Elimina acentos excepto ñ\n    .replace(/ñ/g, \"ñ\") // Mantiene la ñ\n    .replace(/\\s+/g, ''); // Elimina espacios\n}\n\n// Función para normalizar email\nfunction normalizarEmail(email) {\n  return email.toLowerCase().trim();\n}\n\n// Función para normalizar teléfono\nfunction normalizarTelefono(telefono, pais) {\n  const telefonoLimpio = telefono.replace(/\\s+/g, '').replace(/[-()]/g, '');\n  \n  if (telefonoLimpio.startsWith('+')) {\n    return telefonoLimpio;\n  }\n  \n  const config = paisConfig[pais] || paisConfig['México'];\n  return config.codigo + telefonoLimpio;\n}\n\n// Función para extraer datos del description\nfunction extraerDatosDescription(description) {\n  const datos = {};\n  \n  // Extraer nombre\n  const nombreMatch = description.match(/<b>Reservada por<\\/b>\\s*\\n([^\\n]+)/);\n  datos.nombre = nombreMatch ? nombreMatch[1].trim() : '';\n  \n  // Extraer email\n  const emailMatch = description.match(/([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\\.[a-zA-Z0-9_-]+)/);\n  datos.email = emailMatch ? emailMatch[1].trim() : '';\n  \n  // Extraer teléfono\n  const telefonoMatch = description.match(/([+]?\\d{7,15})/);\n  datos.telefono = telefonoMatch ? telefonoMatch[1].trim() : '';\n  \n  // Extraer servicio\n  const servicioMatch = description.match(/<b>Servicio<\\/b>\\s*\\n([^\\n<]+)/);\n  datos.servicio = servicioMatch ? servicioMatch[1].trim() : '';\n  \n  // Extraer país\n  const paisMatch = description.match(/<b>País<\\/b>\\s*\\n([^\\n<]+)/);\n  datos.pais = paisMatch ? paisMatch[1].trim() : 'México';\n  \n  // Extraer empresa\n  const empresaMatch = description.match(/<b>Empresa<\\/b>\\s*\\n([^\\n<]+)/);\n  datos.empresa = empresaMatch ? empresaMatch[1].trim() : '';\n  \n  return datos;\n}\n\n// Función para validar servicio\nfunction validarServicio(servicio) {\n  const servicioNormalizado = servicio.trim();\n  const encontrado = serviciosValidos.find(s => \n    servicioNormalizado.toLowerCase().includes(s.toLowerCase()) ||\n    s.toLowerCase().includes(servicioNormalizado.toLowerCase())\n  );\n  return encontrado || servicio;\n}\n\n// Función para formatear fecha en texto legible\nfunction formatearFechaTexto(isoDate, timezone) {\n  const fecha = new Date(isoDate);\n  const opciones = {\n    timeZone: timezone,\n    weekday: 'long',\n    year: 'numeric',\n    month: 'long',\n    day: 'numeric',\n    hour: 'numeric',\n    minute: '2-digit',\n    hour12: true\n  };\n  \n  const fechaFormateada = new Intl.DateTimeFormat('es-MX', opciones).format(fecha);\n  return fechaFormateada.charAt(0).toUpperCase() + fechaFormateada.slice(1);\n}\n\n// Función para convertir fecha a timezone del cliente\nfunction convertirATimezoneCliente(isoDate, timezoneCliente) {\n  const fecha = new Date(isoDate);\n  return fecha.toLocaleString('sv-SE', { timeZone: timezoneCliente }).replace(' ', 'T');\n}\n\n// Procesar el evento\nconst evento = $input.all()[0].json;\n\n// Extraer datos del description\nconst datosExtraidos = extraerDatosDescription(evento.description);\n\n// Obtener configuración del país\nconst configPais = paisConfig[datosExtraidos.pais] || paisConfig['México'];\n\n// Construir objeto normalizado\nconst resultado = {\n  // Campos originales\n  original: {\n    id: evento.id,\n    status: evento.status,\n    htmlLink: evento.htmlLink,\n    summary: evento.summary,\n    description: evento.description,\n    created: evento.created,\n    updated: evento.updated,\n    start: evento.start,\n    end: evento.end,\n    hangoutLink: evento.hangoutLink,\n    conferenceData: evento.conferenceData,\n    attendees: evento.attendees\n  },\n  \n  // Campos normalizados\n  normalizado: {\n    // Información del cliente\n    cliente: {\n      nombre: datosExtraidos.nombre,\n      nombreNormalizado: normalizarNombre(datosExtraidos.nombre),\n      email: datosExtraidos.email,\n      emailNormalizado: normalizarEmail(datosExtraidos.email),\n      telefono: datosExtraidos.telefono,\n      telefonoNormalizado: normalizarTelefono(datosExtraidos.telefono, datosExtraidos.pais),\n      pais: datosExtraidos.pais,\n      empresa: datosExtraidos.empresa\n    },\n    \n    // Información del servicio\n    servicio: validarServicio(datosExtraidos.servicio),\n    servicioOriginal: datosExtraidos.servicio,\n    \n    // Información de fechas\n    fechas: {\n      // Fechas ISO originales de Google\n      inicioISO: evento.start.dateTime,\n      finISO: evento.end.dateTime,\n      timezoneOriginal: evento.start.timeZone,\n      \n      // Fechas convertidas al timezone del cliente\n      inicioISOCliente: convertirATimezoneCliente(evento.start.dateTime, configPais.timezone),\n      finISOCliente: convertirATimezoneCliente(evento.end.dateTime, configPais.timezone),\n      timezoneCliente: configPais.timezone,\n      \n      // Fechas en texto legible\n      inicioTexto: formatearFechaTexto(evento.start.dateTime, evento.start.timeZone),\n      finTexto: formatearFechaTexto(evento.end.dateTime, evento.end.timeZone),\n      inicioTextoCliente: formatearFechaTexto(evento.start.dateTime, configPais.timezone),\n      finTextoCliente: formatearFechaTexto(evento.end.dateTime, configPais.timezone)\n    },\n    \n    // Información de la reunión\n    reunion: {\n      linkMeet: evento.hangoutLink,\n      conferenceId: evento.conferenceData?.conferenceId\n    },\n    \n    // Estado\n    estado: 'cita agendada'\n  }\n};\n\n// Agregar campos de compatibilidad para la consulta SQL\nresultado.normalizado.sql_compat = {\n  nombre_normalizado: resultado.normalizado.cliente.nombreNormalizado,\n  phone_number_normalized: resultado.normalizado.cliente.telefonoNormalizado,\n  sender_name: resultado.normalizado.cliente.nombre,\n  nombre: resultado.normalizado.cliente.nombre,\n  email: resultado.normalizado.cliente.emailNormalizado\n};\n\nreturn resultado;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        128,
+        -656
+      ],
+      "id": "9fb11301-5c47-4b6d-9d89-f4cf112f5ba1",
+      "name": "normalizar"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "8813f44b-ffff-4df0-b468-dd4e27a96e7d",
+              "leftValue": "={{ $('normalizar').item.json.normalizado.estado }}",
+              "rightValue": "cita agendada",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        352,
+        -656
+      ],
+      "id": "103d5edd-b397-4f51-85c0-7377cadd8205",
+      "name": "Filter"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "e54cc873-e175-4da6-bc1a-8d7075bd3321",
+              "leftValue": "={{ $('obtener_citas').item.json.estado }}",
+              "rightValue": "cita agendada",
+              "operator": {
+                "type": "string",
+                "operation": "notContains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1248,
+        -752
+      ],
+      "id": "5de2727e-aa26-4b89-8c23-221198241316",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "tableId": "citas",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "estado",
+              "fieldValue": "=cita agendada"
+            },
+            {
+              "fieldId": "nombre",
+              "fieldValue": "={{ $('Get many rows').item.json.nombre ?? $('normalizar').item.json.normalizado.cliente.nombre}}"
+            },
+            {
+              "fieldId": "fecha_cita",
+              "fieldValue": "={{ $('normalizar').item.json.normalizado.fechas.inicioISO }}"
+            },
+            {
+              "fieldId": "email",
+              "fieldValue": "={{ $('Get many rows').item.json.email ?? $('normalizar').item.json.normalizado.cliente.emailNormalizado}}"
+            },
+            {
+              "fieldId": "telefono",
+              "fieldValue": "={{ $('Get many rows').item.json.telefono ?? $('normalizar').item.json.normalizado.cliente.telefonoNormalizado}}"
+            },
+            {
+              "fieldId": "servicio",
+              "fieldValue": "={{ $('normalizar').item.json.normalizado.servicio ?? $('Get many rows').item.json.servicio}}"
+            },
+            {
+              "fieldId": "pais",
+              "fieldValue": "={{ $('normalizar').item.json.normalizado.cliente.pais ?? $('Get many rows').item.json.pais}}"
+            },
+            {
+              "fieldId": "empresa",
+              "fieldValue": "={{ $('Get many rows').item.json.empresa ?? $('normalizar').item.json.normalizado.cliente.empresa}}"
+            },
+            {
+              "fieldId": "enlace_reunion",
+              "fieldValue": "={{ $('normalizar').item.json.original.hangoutLink }}"
+            },
+            {
+              "fieldId": "fecha_cita_timezone_cliente",
+              "fieldValue": "={{ $('normalizar').item.json.normalizado.fechas.inicioISOCliente }}"
+            },
+            {
+              "fieldId": "fecha_cita_timezone_legible",
+              "fieldValue": "={{ $('normalizar').item.json.normalizado.fechas.inicioTextoCliente }}"
+            },
+            {
+              "fieldId": "fecha_cita_legible",
+              "fieldValue": "={{ $('normalizar').item.json.normalizado.fechas.inicioTexto }}"
+            },
+            {
+              "fieldId": "cita_pasada",
+              "fieldValue": "No"
+            },
+            {
+              "fieldId": "google_event_id",
+              "fieldValue": "={{ $('normalizar').item.json.original.id }}"
+            },
+            {
+              "fieldId": "recordatorio_enviado",
+              "fieldValue": "FALSE"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1248,
+        -464
+      ],
+      "id": "ee8e0cff-b511-417b-9026-c1bb377df8dd",
+      "name": "crear_cita1",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "your_supabase_credential_id",
+          "name": "Supabase account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "citas",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "client_id",
+              "condition": "eq",
+              "keyValue": "={{ $('Get many rows').item.json.client_id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "estado",
+              "fieldValue": "=cita reagendada"
+            },
+            {
+              "fieldId": "nombre",
+              "fieldValue": "={{ $('Get many rows').item.json.nombre ?? $('normalizar').item.json.normalizado.cliente.nombre}}"
+            },
+            {
+              "fieldId": "fecha_cita",
+              "fieldValue": "={{ $('normalizar').item.json.normalizado.fechas.inicioISO }}"
+            },
+            {
+              "fieldId": "email",
+              "fieldValue": "={{ $('Get many rows').item.json.email ?? $('normalizar').item.json.normalizado.cliente.emailNormalizado}}"
+            },
+            {
+              "fieldId": "telefono",
+              "fieldValue": "={{ $('Get many rows').item.json.telefono ?? $('normalizar').item.json.normalizado.cliente.telefonoNormalizado}}"
+            },
+            {
+              "fieldId": "servicio",
+              "fieldValue": "={{ $('normalizar').item.json.normalizado.servicio ?? $('Get many rows').item.json.servicio}}"
+            },
+            {
+              "fieldId": "pais",
+              "fieldValue": "={{ $('normalizar').item.json.normalizado.cliente.pais ?? $('Get many rows').item.json.pais}}"
+            },
+            {
+              "fieldId": "empresa",
+              "fieldValue": "={{ $('Get many rows').item.json.empresa ?? $('normalizar').item.json.normalizado.cliente.empresa}}"
+            },
+            {
+              "fieldId": "enlace_reunion",
+              "fieldValue": "={{ $('normalizar').item.json.original.hangoutLink }}"
+            },
+            {
+              "fieldId": "fecha_cita_timezone_cliente",
+              "fieldValue": "={{ $('normalizar').item.json.normalizado.fechas.inicioISOCliente }}"
+            },
+            {
+              "fieldId": "fecha_cita_timezone_legible",
+              "fieldValue": "={{ $('normalizar').item.json.normalizado.fechas.inicioTextoCliente }}"
+            },
+            {
+              "fieldId": "fecha_cita_legible",
+              "fieldValue": "={{ $('normalizar').item.json.normalizado.fechas.inicioTexto }}"
+            },
+            {
+              "fieldId": "cita_pasada",
+              "fieldValue": "No"
+            },
+            {
+              "fieldId": "google_event_id",
+              "fieldValue": "={{ $('normalizar').item.json.original.id }}"
+            },
+            {
+              "fieldId": "recordatorio_enviado",
+              "fieldValue": "FALSE"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1696,
+        -656
+      ],
+      "id": "7142336c-89e9-45df-b564-81ae3f6b9ced",
+      "name": "reagendar_cita",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "your_supabase_credential_id",
+          "name": "Supabase account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "calendar": {
+          "__rl": true,
+          "value": "your_calendar_id@gmail.com",
+          "mode": "list",
+          "cachedResultName": "your_calendar_id@gmail.com"
+        },
+        "eventId": "={{ $('obtener_citas').item.json.google_calendar_event_id }}",
+        "options": {
+          "sendUpdates": "none"
+        }
+      },
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        1472,
+        -656
+      ],
+      "id": "666f1309-9199-458b-a2a5-f065825d6139",
+      "name": "Eliminar cita anterior",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "your_google_calendar_credential_id",
+          "name": "your_brand Nuevo"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO conversaciones (\n    session_id,\n    message,\n    etiqueta,\n    clasificacion_cita,\n    fecha\n)\nVALUES (\n    '{{ $('Get many rows').item.json.client_id }}',\n    jsonb_build_object(\n        'type', 'ai',\n        'content', jsonb_pretty(json_build_object(\n            'respuesta', 'Cita agendada\n¡Hola {{ $('Get many rows').item.json.nombre ?? $('normalizar').item.json.normalizado.cliente.nombre}}, tu cita del {{ $('normalizar').item.json.normalizado.fechas.inicioTextoCliente }} ha sido agendada con éxito!.\nEste es el enlace de la reunión: {{ $('normalizar').item.json.normalizado.reunion.linkMeet }}.\n\n¡Nos morimos de ganas por platicar como podemos crecer juntos!. \n\nSi necesitas reagendar, cancelar o posponer tu cita puedes contactarme, recuerda hacerlo con tiempo.',\n            'escalamiento', null,\n            'enviar_formulario', null,\n            'estado', null\n        )::jsonb),\n        'tool_calls', '[]'::jsonb,\n        'additional_kwargs', '{}'::jsonb,\n        'response_metadata', '{}'::jsonb,\n        'invalid_tool_calls', '[]'::jsonb\n    ),\n    'ventas',\n    'agendar_cita',\n    '{{ $now.toISO() }}'::timestamptz\n);",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        2368,
+        -464
+      ],
+      "id": "ca2042ac-bfbf-4601-8ba1-06338be0ed30",
+      "name": "actualizar memoria agente",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "your_postgres_credential_id",
+          "name": "Postgres account 2"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "phoneNumberId": "710637588808362",
+        "recipientPhoneNumber": "={{ $('Get many rows').item.json.telefono ?? $('normalizar').item.json.normalizado.cliente.telefonoNormalizado}}",
+        "template": "cita_agendada|es_MX",
+        "components": {
+          "component": [
+            {
+              "bodyParameters": {
+                "parameter": [
+                  {
+                    "text": "={{ $('Get many rows').item.json.nombre ?? $('normalizar').item.json.normalizado.cliente.nombre}}"
+                  },
+                  {
+                    "text": "={{ $('normalizar').item.json.normalizado.fechas.inicioTextoCliente }}"
+                  },
+                  {
+                    "text": "={{ $('normalizar').item.json.normalizado.reunion.linkMeet }}"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1,
+      "position": [
+        2144,
+        -464
+      ],
+      "id": "1dc0cddc-ddfa-4c9f-b17a-ec9d70561a81",
+      "name": "confirmar_cita_wa",
+      "webhookId": "53e8e612-3424-4d89-abec-23266c4eabbc",
+      "alwaysOutputData": true,
+      "credentials": {
+        "whatsAppApi": {
+          "id": "your_whatsapp_credential_id",
+          "name": "WhatsApp account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "leads_formularios_optimizada",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "client_id",
+              "condition": "eq",
+              "keyValue": "={{ $('Get many rows').item.json.client_id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "es_cliente",
+              "fieldValue": "=true"
+            },
+            {
+              "fieldId": "estado_lead",
+              "fieldValue": "Cita agendada"
+            },
+            {
+              "fieldId": "pais",
+              "fieldValue": "={{ $('normalizar').item.json.normalizado.cliente.pais ?? $('Get many rows').item.json.pais}}"
+            },
+            {
+              "fieldId": "nombre",
+              "fieldValue": "={{ $('Get many rows').item.json.nombre ?? $('normalizar').item.json.normalizado.cliente.nombre}}"
+            },
+            {
+              "fieldId": "nombre_normalizado",
+              "fieldValue": "={{ $('Get many rows').item.json.nombre_normalizado ?? $('normalizar').item.json.normalizado.cliente.nombreNormalizado}}"
+            },
+            {
+              "fieldId": "telefono",
+              "fieldValue": "={{ $('Get many rows').item.json.telefono ?? $('normalizar').item.json.normalizado.cliente.telefonoNormalizado}}"
+            },
+            {
+              "fieldId": "servicio",
+              "fieldValue": "={{ $('normalizar').item.json.normalizado.servicio ?? $('Get many rows').item.json.servicio}}"
+            },
+            {
+              "fieldId": "email",
+              "fieldValue": "={{ $('Get many rows').item.json.email ?? $('normalizar').item.json.normalizado.cliente.emailNormalizado }}"
+            },
+            {
+              "fieldId": "empresa",
+              "fieldValue": "={{ $('Get many rows').item.json.empresa ?? $('normalizar').item.json.normalizado.cliente.empresa}}"
+            },
+            {
+              "fieldId": "score_lead",
+              "fieldValue": "=93"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1696,
+        -848
+      ],
+      "id": "19da0d6d-6c35-4d78-b003-0e2fe3672579",
+      "name": "actualizar_lead",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "your_supabase_credential_id",
+          "name": "Supabase account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Get many rows').item.json.email ?? $('normalizar').item.json.normalizado.cliente.emailNormalizado }}",
+        "subject": "Cita Agendada",
+        "message": "=<!DOCTYPE html> <html lang=\"es\"> <head>     <meta charset=\"UTF-8\">     <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">     <title>Cita Agendada - your_brand</title> </head> <body style=\"margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #0a0a0a;\">     <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"background-color: #0a0a0a; padding: 20px;\">         <tr>             <td align=\"center\">                 <table width=\"600\" cellpadding=\"0\" cellspacing=\"0\" style=\"background-color: #1a1a1a; border-radius: 15px; overflow: hidden; box-shadow: 0 0 30px rgba(0, 255, 255, 0.2); border: 1px solid #00ffff;\">                                          <!-- Header con logo y fondo decorativo -->                     <tr>                         <td style=\"background: linear-gradient(135deg, #000000 0%, #1a1a1a 100%); padding: 40px 30px; text-align: center; position: relative; border-bottom: 2px solid #00ffff;\">                                                         <!-- Logo -->                             <img src=\"https://ik.imagekit.io/49rd3bmeqs/Logos%20your_brand/logo2%20(3).png?updatedAt=1759468732222\" alt=\"your_brand Logo\" style=\"width: 120px; height: auto; margin-bottom: 20px; filter: drop-shadow(0 0 10px rgba(0, 255, 255, 0.5));\" />                                                          <h1 style=\"margin: 0; color: #00ffff; font-size: 32px; font-weight: 700; text-shadow: 0 0 20px rgba(0, 255, 255, 0.8);\">                                 ✓ Cita Confirmada                             </h1>                             <p style=\"margin: 10px 0 0 0; color: #ffffff; font-size: 16px;\">                                 Tu reunión ha sido agendada exitosamente                             </p>                         </td>                     </tr>                      <!-- Contenido principal -->                     <tr>                         <td style=\"padding: 40px 30px; background: linear-gradient(180deg, #1a1a1a 0%, #0f0f0f 100%);\">                             <p style=\"margin: 0 0 25px 0; color: #ffffff; font-size: 18px; line-height: 1.6;\">                                 Hola <strong style=\"color: #00ffff;\">{{ $('Get many rows').item.json.nombre ?? $('normalizar').item.json.normalizado.cliente.nombre}}</strong>,                             </p>                                                          <p style=\"margin: 0 0 30px 0; color: #e0e0e0; font-size: 16px; line-height: 1.6;\">                                 Nos complace confirmar que tu cita del <strong style=\"color: #00ffff;\">{{ $('normalizar').item.json.normalizado.fechas.inicioTextoCliente }}</strong> ha sido agendada.                             </p>                              <!-- Bloque de información de la reunión -->                             <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin: 30px 0;\">                                 <tr>                                     <td style=\"background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%); border-left: 4px solid #00ffff; padding: 25px; border-radius: 10px; box-shadow: 0 0 20px rgba(0, 255, 255, 0.15);\">                                         <h3 style=\"margin: 0 0 15px 0; color: #00ffff; font-size: 20px; display: flex; align-items: center;\">                                             📅 Detalles de tu Reunión                                         </h3>                                         <p style=\"margin: 0 0 10px 0; color: #ffffff; font-size: 15px; line-height: 1.6;\">                                             <strong style=\"color: #00ffff;\">Fecha:</strong> {{ $('normalizar').item.json.normalizado.fechas.inicioTextoCliente }}                                       </p>                                         <p style=\"margin: 0; color: #e0e0e0; font-size: 14px; line-height: 1.5;\">                                             <strong style=\"color: #00ffff;\">Enlace:</strong><br>                                             <a href=\"{{ $('normalizar').item.json.normalizado.reunion.linkMeet }}\" style=\"color: #ffffff; word-break: break-all; text-decoration: none;\">{{ $('normalizar').item.json.normalizado.reunion.linkMeet }}</a>                                         </p>                                     </td>                                 </tr>                             </table>                              <!-- Botón llamada a la acción -->                             <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin: 35px 0;\">                                 <tr>                                     <td align=\"center\">                                         <a href=\"{{ $('normalizar').item.json.normalizado.reunion.linkMeet }}\" style=\"display: inline-block; background: linear-gradient(135deg, #00ffff 0%, #00cccc 100%); color: #000000; text-decoration: none; padding: 18px 45px; border-radius: 30px; font-size: 18px; font-weight: 700; box-shadow: 0 0 25px rgba(0, 255, 255, 0.6); text-transform: uppercase; letter-spacing: 1px;\">                                             🎥 Unirse a la Reunión                                         </a>                                     </td>                                 </tr>                             </table>                              <!-- Sección de servicios -->                             <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin: 40px 0 30px 0;\">                                 <tr>                                     <td width=\"33%\" style=\"padding: 5px;\">                                         <div style=\"background-color: #1a1a1a; padding: 20px 10px; border-radius: 10px; text-align: center; border: 1px solid #00ffff; box-shadow: 0 0 15px rgba(0, 255, 255, 0.1);\">                                             <div style=\"font-size: 32px; margin-bottom: 10px;\">🤖</div>                                             <h4 style=\"margin: 0; color: #00ffff; font-size: 14px;\">Inteligencia Artificial</h4>                                         </div>                                     </td>                                     <td width=\"33%\" style=\"padding: 5px;\">                                         <div style=\"background-color: #1a1a1a; padding: 20px 10px; border-radius: 10px; text-align: center; border: 1px solid #00ffff; box-shadow: 0 0 15px rgba(0, 255, 255, 0.1);\">                                             <div style=\"font-size: 32px; margin-bottom: 10px;\">📊</div>                                             <h4 style=\"margin: 0; color: #00ffff; font-size: 14px;\">Marketing Digital</h4>                                         </div>                                     </td>                                     <td width=\"33%\" style=\"padding: 5px;\">                                         <div style=\"background-color: #1a1a1a; padding: 20px 10px; border-radius: 10px; text-align: center; border: 1px solid #00ffff; box-shadow: 0 0 15px rgba(0, 255, 255, 0.1);\">                                             <div style=\"font-size: 32px; margin-bottom: 10px;\">📱</div>                                             <h4 style=\"margin: 0; color: #00ffff; font-size: 14px;\">Redes Sociales</h4>                                         </div>                                     </td>                                 </tr>                             </table>                              <!-- Link al sitio web -->                             <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin: 30px 0;\">                                 <tr>                                     <td align=\"center\" style=\"background-color: #0a0a0a; padding: 20px; border-radius: 10px; border: 1px solid #333333;\">                                         <p style=\"margin: 0 0 10px 0; color: #ffffff; font-size: 15px;\">                                             🌐 Conoce más sobre nuestros servicios                                         </p>                                         <a href=\"https://www.your_brand.com.mx\" style=\"color: #00ffff; text-decoration: none; font-weight: 600; font-size: 16px; text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);\">                                             Visítanos aquí →                                         </a>                                     </td>                                 </tr>                             </table>                          </td>                     </tr>                      <!-- Footer -->                     <tr>                         <td style=\"background-color: #000000; padding: 35px 30px; text-align: center; border-top: 2px solid #00ffff;\">                             <p style=\"margin: 0 0 15px 0; color: #ffffff; font-size: 16px; font-weight: 600;\">                                 Gracias por confiar en nosotros                             </p>                             <p style=\"margin: 0 0 20px 0; color: #00ffff; font-size: 15px;\">                                 your_name<br>                                 <span style=\"color: #999999; font-size: 13px;\">CEO de your_brand</span>                             </p>                             <div style=\"width: 60px; height: 2px; background: linear-gradient(90deg, transparent, #00ffff, transparent); margin: 20px auto;\"></div>                             <p style=\"margin: 0; color: #666666; font-size: 12px;\">                                 © 2025 your_brand. Todos los derechos reservados.                             </p>                             <p style=\"margin: 15px 0 0 0;\">                                 <a href=\"https://www.your_brand.com.mx\" style=\"color: #00ffff; text-decoration: none; margin: 0 10px; font-size: 12px;\">Sitio Web</a>                                 <span style=\"color: #333333;\">|</span>                                 <a href=\"https://wa.me/your_phone_number?text=\" style=\"color: #00ffff; text-decoration: none; margin: 0 10px; font-size: 12px;\">WhatsApp</a>                             </p>                         </td>                     </tr>                  </table>             </td>         </tr>     </table> </body> </html>",
+        "options": {
+          "appendAttribution": false,
+          "senderName": "your_name, CEO de your_brand"
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1696,
+        -464
+      ],
+      "id": "f613d6b5-b12d-44c0-9b70-4de213b128a6",
+      "name": "enviar_correo_cita_agendada1",
+      "webhookId": "61a46709-2e59-4111-9e1c-426028790690",
+      "alwaysOutputData": true,
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "your_gmail_credential_id",
+          "name": "your_brand Nuevo"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "d53f423e-7a92-457d-b906-13ad7953a26f",
+              "leftValue": "={{ $json.extendedProperties.shared[\"goo.createdBySet\"] }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        -96,
+        -656
+      ],
+      "id": "ee37a3cb-4268-4de8-ac3d-d2223a5375c0",
+      "name": "proviene de pagina de reservas"
+    }
+  ],
+  "pinData": {
+    "Google Calendar Trigger": [
+      {
+        "json": {
+          "kind": "calendar#event",
+          "etag": "\"3527917347370078\"",
+          "id": "62udqdopftmdcggqdqndptsra4",
+          "status": "confirmed",
+          "htmlLink": "https://www.google.com/calendar/event?eid=NjJ1ZHFkb3BmdG1kY2dncWRxbmRwdHNyYTQgc29jaWFsbWFzazBAbQ",
+          "created": "2025-11-24T04:31:13.000Z",
+          "updated": "2025-11-24T04:31:13.685Z",
+          "summary": "Citas your_brand (your_name)",
+          "description": "<b>Reservada por</b>\nyour_name\nyour_email@example.com\n999999999999\n<br><b>Servicio</b>\nMarketing Digital\n<br><b>País</b>\nMéxico\n<br><b>Empresa</b>\nyour_company\n<br>Reunión con your_brand",
+          "creator": {
+            "email": "your_calendar_id@gmail.com",
+            "self": true
+          },
+          "organizer": {
+            "email": "your_calendar_id@gmail.com",
+            "self": true
+          },
+          "start": {
+            "dateTime": "2025-11-24T09:00:00-06:00",
+            "timeZone": "America/Mexico_City"
+          },
+          "end": {
+            "dateTime": "2025-11-24T09:30:00-06:00",
+            "timeZone": "America/Mexico_City"
+          },
+          "iCalUID": "62udqdopftmdcggqdqndptsra4@google.com",
+          "sequence": 0,
+          "attendees": [
+            {
+              "email": "your_email@example.com",
+              "responseStatus": "accepted"
+            },
+            {
+              "email": "your_calendar_id@gmail.com",
+              "organizer": true,
+              "self": true,
+              "responseStatus": "accepted"
+            }
+          ],
+          "extendedProperties": {
+            "shared": {
+              "goo.createdByAvailId": "5kifv69uje10vpls4jlaerfd7n",
+              "goo.createdBySet": "default_cita"
+            }
+          },
+          "hangoutLink": "https://meet.google.com/your-meeting-link",
+          "conferenceData": {
+            "createRequest": {
+              "requestId": "hskdm24ut6io82e9f9rsencdnc",
+              "conferenceSolutionKey": {
+                "type": "hangoutsMeet"
+              },
+              "status": {
+                "statusCode": "success"
+              }
+            },
+            "entryPoints": [
+              {
+                "entryPointType": "video",
+                "uri": "https://meet.google.com/your-meeting-link",
+                "label": "meet.google.com/your-meeting-link"
+              }
+            ],
+            "conferenceSolution": {
+              "key": {
+                "type": "hangoutsMeet"
+              },
+              "name": "Google Meet",
+              "iconUri": "https://fonts.gstatic.com/s/i/productlogos/meet_2020q4/v6/web-512dp/logo_meet_2020q4_color_2x_web_512dp.png"
+            },
+            "conferenceId": "dsc-kacj-vdc"
+          },
+          "reminders": {
+            "useDefault": true
+          },
+          "eventType": "default"
+        }
+      }
+    ]
+  },
+  "connections": {
+    "actualizar_lead1": {
+      "main": [
+        [
+          {
+            "node": "enviar_correo_cita_agendada1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "enviar_correo_cita_reprogramada1": {
+      "main": [
+        [
+          {
+            "node": "agenda_telegram_citas1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "reagendar_cita_wa": {
+      "main": [
+        [
+          {
+            "node": "actualizar memoria agente6",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "agenda_telegram_citas": {
+      "main": [
+        [
+          {
+            "node": "confirmar_cita_wa",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "agenda_telegram_citas1": {
+      "main": [
+        [
+          {
+            "node": "reagendar_cita_wa",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "crear o actualizar registro de cita": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "crear_cita1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "crear_cita": {
+      "main": [
+        [
+          {
+            "node": "actualizar_lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "enviar_correo_cita_agendada": {
+      "main": [
+        [
+          {
+            "node": "agenda_telegram_citas4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "agenda_telegram_citas4": {
+      "main": [
+        [
+          {
+            "node": "confirmar_cita_wa1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "confirmar_cita_wa1": {
+      "main": [
+        [
+          {
+            "node": "actualizar memoria agente4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Calendar Trigger": {
+      "main": [
+        [
+          {
+            "node": "proviene de pagina de reservas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many rows": {
+      "main": [
+        [
+          {
+            "node": "obtener_citas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "obtener_citas": {
+      "main": [
+        [
+          {
+            "node": "crear o actualizar registro de cita",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "normalizar": {
+      "main": [
+        [
+          {
+            "node": "Filter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter": {
+      "main": [
+        [
+          {
+            "node": "Get many rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "crear_cita",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Eliminar cita anterior",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "crear_cita1": {
+      "main": [
+        [
+          {
+            "node": "actualizar_lead1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "reagendar_cita": {
+      "main": [
+        [
+          {
+            "node": "enviar_correo_cita_reprogramada1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Eliminar cita anterior": {
+      "main": [
+        [
+          {
+            "node": "reagendar_cita",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "confirmar_cita_wa": {
+      "main": [
+        [
+          {
+            "node": "actualizar memoria agente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "actualizar_lead": {
+      "main": [
+        [
+          {
+            "node": "enviar_correo_cita_agendada",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "enviar_correo_cita_agendada1": {
+      "main": [
+        [
+          {
+            "node": "agenda_telegram_citas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "proviene de pagina de reservas": {
+      "main": [
+        [
+          {
+            "node": "normalizar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "795310fc-6ba9-4a0a-a95d-f91b2b61656c",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "your_instance_id"
+  },
+  "id": "your_credential_id",
+  "tags": []
+}

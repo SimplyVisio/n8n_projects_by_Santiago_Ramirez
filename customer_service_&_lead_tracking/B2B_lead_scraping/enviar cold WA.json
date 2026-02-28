@@ -1,0 +1,550 @@
+{
+  "name": "enviar cold WA",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "B2B Cold Outreach Automator (WhatsApp)\n\nThis workflow handles the 'Top of Funnel' activities by initiating contact with new B2B prospects.\n\nWorkflow Sequence:\n1. Lead Selection: Queries Postgres for prospects who haven't received the initial message.\n2. Business Hours Check: Ensures messages are only sent during human-like hours (Mon-Fri, 9am-5pm).\n3. Intelligent Delays: Adds a randomized wait to mimic human behavior and protect account reputation.\n4. API Dispatch: Sends the personalized message via Evolution API.\n5. Status Update: Flags the lead as 'contacted' in Postgres to prevent duplicates.\n6. History Injection: Seeds the conversational memory to provide the Inbound Agent with context if the user replies.",
+        "height": 480,
+        "width": 340,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -2500,
+        0
+      ],
+      "typeVersion": 1,
+      "id": "doc-outreach-b2b",
+      "name": "Outbound Execution Layer"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "*/30 9-17 * * 1-5"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -2128,
+        16
+      ],
+      "id": "01726352-5e18-42b7-a6bf-8644e0ef4753",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT *\nFROM prospectos_b2b\nWHERE whatsapp_enviado = FALSE\n  OR whatsapp_enviado IS NULL\nORDER BY id ASC\nLIMIT 1;\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -1472,
+        16
+      ],
+      "id": "756699e8-6f89-460b-afdd-4e76efdb2c5a",
+      "name": "Execute a SQL query",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO conversaciones (\n    session_id,\n    message,\n    etiqueta,\n    clasificacion_cita,\n    fecha\n)\nVALUES (\n    '{{ $json.client_id }}',\n    jsonb_build_object(\n        'type', 'ai',\n        'content', jsonb_pretty(json_build_object(\n            'respuesta', '{{ $('Execute a SQL query').item.json.mensaje_personalizado }}',\n            'escalamiento', null,\n            'enviar_formulario', null,\n            'estado', null\n        )::jsonb),\n        'tool_calls', '[]'::jsonb,\n        'additional_kwargs', '{}'::jsonb,\n        'response_metadata', '{}'::jsonb,\n        'invalid_tool_calls', '[]'::jsonb\n    ),\n    'ventas',\n    'asesoria_de_ventas',\n    NOW()::timestamptz\n);",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        224,
+        0
+      ],
+      "id": "4dc57261-0942-423e-b220-cf292f5822d9",
+      "name": "actualizar memoria agente6",
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://evolution.url/message/sendText/agent_1",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "apikey",
+              "value": "your_api_key"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "number",
+              "value": "={{ \n  ($('Execute a SQL query').item.json.whatsapp_numero \n    ?? $('Execute a SQL query').item.json.telefono_empresa\n  ).replace(/\\D/g, '')\n}}"
+            },
+            {
+              "name": "text",
+              "value": "={{ $('Execute a SQL query').item.json.mensaje_personalizado }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -672,
+        16
+      ],
+      "id": "97b421c7-5eb7-49a7-b318-7c76f750dfd8",
+      "name": "HTTP Request",
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "prospectos_b2b",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $('Execute a SQL query').item.json.id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "whatsapp_enviado",
+              "fieldValue": "TRUE"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -448,
+        16
+      ],
+      "id": "538c5fbf-fcea-49b9-82d2-0b1ed089f1e6",
+      "name": "Update a row",
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.mensaje_personalizado }}",
+        "options": {
+          "systemMessage": "=Eres un auditor, corrector y generador experto de mensajes comerciales 1-a-1 de your_brand.\n\nTu tarea es doble:\n\n1) Revisar el contenido del campo mensaje_personalizado y validar si:\n- Contiene servicios que your_brand NO ofrece\n- Hace promesas irreales o imposibles\n- Contiene información técnica incorrecta\n- Menciona integraciones o capacidades que no existen\n- Ofrece cosas riesgosas o que van contra políticas de Meta o Retell\n- Tiene un tono inapropiado o demasiado vendedor\n- Presenta datos inventados sin respaldo\n- Promete precios, tiempos o resultados garantizados\n\n2) Generar un SUBJECT de email dinámico, humano y anti-spam.\n\n---\n\n### REGLAS PARA EL MENSAJE\n\nSi el mensaje es correcto:\n- Devuélvelo IDÉNTICO, sin modificar ni una coma.\n\nSi encuentras errores:\n- Corrige y devuelve una versión válida, realista, segura y alineada con your_brand.\n\nNunca inventes servicios nuevos.\nNunca elimines la personalización original.\nEl CTA siempre debe ser:\n\"videollamada de 30 minutos con el CEO de your_brand\".\n\n---\n\n### SERVICIOS PERMITIDOS DE your_brand\n\nChatbots IA multicanal (WhatsApp, Messenger, Instagram, Telegram)\nAutomatización de procesos\nIA aplicada:\n- Atención 24/7\n- Calificación automática de leads\n- Análisis predictivo\n- Closer IA\n- Soporte técnico IA\n- Recepcionista virtual telefónica\nDesarrollo Web (landing pages, sitios web, PWAs)\nWeb Apps (NO apps nativas iOS/Android)\nCRM personalizados, sistemas internos, bases de datos\nBackend completo y marca blanca\nPortal del cliente con autenticación\nConsultoría digital\nAutomatización de contratos\nInstalación local privada\nRecordatorios por WhatsApp Business API\nSistema de reservas conectado a Google Calendar u otro proveedor\nNúmero virtual adicional con Retell AI\nCasos de éxito reales (solo si vienen del input)\nNoticias de IA (solo si vienen del input)\n\n---\n\n### COSAS PROHIBIDAS\n\n❌ Marketing digital o ads  \n❌ Apps nativas iOS/Android  \n❌ Prometer resultados, fechas o precios  \n❌ Decir que Retell usa el número actual del cliente  \n❌ Decir que WhatsApp API funciona sin proveedor oficial  \n❌ Afirmaciones técnicas imposibles  \n❌ Decir “somos agencia de marketing”  \n\n---\n\n### REGLAS ESPECIALES WHATSAPP Y RETELL\n\nSiempre se recomienda número nuevo para IA.\nSe puede ofrecer línea adicional virtual con Retell AI.\nEl número actual del cliente puede usarse para WhatsApp Business API,\npero con advertencia de riesgo si no hay proveedor oficial.\nNo mencionar Respond.io salvo que venga en el input.\nEl agente IA puede transferir llamadas a humano.\n\n---\n\n### REGLAS PARA EL SUBJECT (ANTI-SPAM)\n\nGenera UN subject por ejecución siguiendo estas reglas:\n\n- Máximo 2–4 palabras\n- Sin emojis\n- Sin mayúsculas exageradas\n- Sin promesas\n- Sin palabras de venta\n- Debe sonar humano y natural\n\nUsa una variación aleatoria basada en ejemplos como:\n- \"Consulta rápida\"\n- \"Pregunta breve\"\n- \"Sobre tu empresa\"\n- \"Una duda\"\n- \"Contacto inicial\"\n- \"{{nombre}}, consulta\" (solo si el nombre existe)\n- \"Te escribo por una duda\"\n\nNunca repitas exactamente el mismo subject si puedes variarlo ligeramente.\n\n---\n\n### SALIDA OBLIGATORIA\n\nDevuelve SOLO este JSON, sin explicaciones:\n\n{\n  \"subject\": \"...\",\n  \"mensaje_final\": \"...\"\n}\n\n---\n\n### INPUT DEL USUARIO\n\nMensaje a evaluar:\n{{ $json.mensaje_personalizado }}\n\nDatos completos del prospecto:\n{{ JSON.stringify($json, null, 2) }}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        -1248,
+        224
+      ],
+      "id": "74cfa133-f02b-4809-bc79-60b579979d09",
+      "name": "AI Agent",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4o-mini"
+        },
+        "builtInTools": {},
+        "options": {
+          "textFormat": {
+            "textOptions": {
+              "type": "json_object"
+            }
+          },
+          "temperature": 0.1
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        -1184,
+        448
+      ],
+      "id": "af7aeed9-4df6-40e0-ab76-ec5c2239c5ee",
+      "name": "OpenAI Chat Model",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// ====================================\n// NORMALIZADOR DE OUTPUT DEL AGENTE\n// Convierte cualquier formato en:\n// {\n//   subject: \"...\",\n//   mensaje_final: \"...\"\n// }\n// ====================================\n\nconst rawOutput = $input.first().json.output || \"\";\n\n// ====================================\n// LIMPIADOR DE OUTPUT\n// ====================================\n\nfunction limpiarOutputAgente(output) {\n  if (!output) return \"\";\n\n  let limpio = output.trim();\n\n  // Quitar bloques ```json ``` o ``` ```\n  limpio = limpio.replace(/^```json/i, \"\");\n  limpio = limpio.replace(/^```/, \"\");\n  limpio = limpio.replace(/```$/, \"\");\n\n  // Quitar \"json\\n\" o \"json\"\n  limpio = limpio.replace(/^json\\s*/i, \"\");\n\n  // Si viene como string escapado\n  if (limpio.startsWith('\"') && limpio.endsWith('\"')) {\n    try {\n      limpio = JSON.parse(limpio);\n    } catch (_) {\n      limpio = limpio.slice(1, -1);\n    }\n  }\n\n  return limpio.trim();\n}\n\n// ====================================\n// PROCESAR OUTPUT DEL AGENTE\n// ====================================\n\nlet mensajeFinal = \"\";\nlet subjectFinal = \"\";\n\ntry {\n  const limpio = limpiarOutputAgente(rawOutput);\n\n  const data = JSON.parse(limpio);\n\n  mensajeFinal = data.mensaje_final || \"\";\n  subjectFinal = data.subject || \"\";\n\n} catch (err) {\n  // Fallback ultra seguro\n  mensajeFinal = rawOutput;\n  subjectFinal = \"\";\n}\n\n// ====================================\n// FALLBACK DE SUBJECT (SI EL AGENTE FALLA)\n// ====================================\n\nif (!subjectFinal) {\n  const subjectsFallback = [\n    \"Consulta rápida\",\n    \"Pregunta breve\",\n    \"Una duda\",\n    \"Sobre tu empresa\",\n    \"Contacto inicial\"\n  ];\n\n  subjectFinal =\n    subjectsFallback[\n      Math.floor(Math.random() * subjectsFallback.length)\n    ];\n}\n\n// ====================================\n// OUTPUT FINAL PARA N8N\n// ====================================\n\nreturn [\n  {\n    json: {\n      subject: subjectFinal,\n      mensaje_final: mensajeFinal,\n      procesado_correctamente: true,\n      timestamp: new Date().toISOString()\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -896,
+        224
+      ],
+      "id": "5a8bb13f-e38c-4a69-86fb-a9a05283907c",
+      "name": "normalizar salida agente",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Forzar zona horaria a America/Mexico_City\nconst now = new Date(\n  new Date().toLocaleString(\"en-US\", { timeZone: \"America/Mexico_City\" })\n);\n\n// Obtener datos\nconst day = now.getDay();      // 0 = domingo, 1 = lunes ... 5 = viernes\nconst hour = now.getHours();   // 0–23\nconst minute = now.getMinutes(); // 0–59\n\n// Validaciones\nconst isBusinessDay = day >= 1 && day <= 5;\n\n// Horario permitido:\n// 09:00 → 16:30\n// 17:00 sí\n// 17:30 NO\nconst isBusinessHour =\n  (hour >= 9 && hour < 17) ||\n  (hour === 17 && minute === 0);\n\n// Solo cada 30 minutos exactos\nconst isHalfHour = minute === 0 || minute === 30;\n\nif (isBusinessDay && isBusinessHour && isHalfHour) {\n  return [{\n    json: {\n      ok: true,\n      message: \"Dentro del horario permitido (cada 30 minutos)\",\n      fecha_mexico: now.toString(),\n      hour,\n      minute\n    }\n  }];\n}\n\n// Fuera del horario → detener flujo devolviendo 0 items\nreturn [];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1904,
+        16
+      ],
+      "id": "0c1b2f46-b513-49a9-85ab-6e4f49222c52",
+      "name": "validar horario"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT *\nFROM leads_formularios_optimizada\nWHERE empresa = '{{ $('Execute a SQL query').item.json.empresa_nombre }}'\n  OR telefono = '{{ $('Execute a SQL query').item.json.telefono_empresa }}'\n  OR whatsapp = '{{ $('Execute a SQL query').item.json.whatsapp_numero }}'\n  OR email = '{{ $('Execute a SQL query').item.json.email_corporativo }}'\nORDER BY created_at DESC\nLIMIT 1;\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        0,
+        0
+      ],
+      "id": "26c2edbf-56d3-4c13-902d-a5e8092e8375",
+      "name": "extraer client_id",
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "3fc0d7bf-1406-4de4-8973-7e7799152bb7",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "PENDING",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "c5496779-d680-4bf9-852b-8a989a3b624d",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "SUCCESS",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -224,
+        16
+      ],
+      "id": "30b4e974-e19b-4a62-9370-44626b54718f",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO conversaciones (\n    session_id,\n    message,\n    etiqueta,\n    clasificacion_cita,\n    fecha\n)\nVALUES (\n    '{{ $json.client_id }}',\n    jsonb_build_object(\n        'type', 'ai',\n        'content', jsonb_pretty(json_build_object(\n            'respuesta', '{{ $('normalizar salida agente').item.json.mensaje_final }}',\n            'escalamiento', null,\n            'enviar_formulario', null,\n            'estado', null\n        )::jsonb),\n        'tool_calls', '[]'::jsonb,\n        'additional_kwargs', '{}'::jsonb,\n        'response_metadata', '{}'::jsonb,\n        'invalid_tool_calls', '[]'::jsonb\n    ),\n    'ventas',\n    'asesoria_de_ventas',\n    NOW()::timestamptz\n);",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -224,
+        240
+      ],
+      "id": "1d950924-8229-478e-8927-e49a1544d609",
+      "name": "actualizar memoria agente",
+      "alwaysOutputData": true,
+      "disabled": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT *\nFROM leads_formularios_optimizada\nWHERE empresa = '{{ $('Execute a SQL query').item.json.empresa_nombre }}'\n  OR telefono = '{{ $('Execute a SQL query').item.json.telefono_empresa }}'\n  OR whatsapp = '{{ $('Execute a SQL query').item.json.whatsapp_numero }}'\n  OR email = '{{ $('Execute a SQL query').item.json.email_corporativo }}'\nORDER BY created_at DESC\nLIMIT 1;\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -448,
+        240
+      ],
+      "id": "d03bc871-9008-4710-a8b9-bf66382e2892",
+      "name": "extraer client_id1",
+      "alwaysOutputData": true,
+      "disabled": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "toEmail": "={{ $('Execute a SQL query').item.json.email_corporativo }}",
+        "subject": "={{ $('normalizar salida agente').item.json.subject }}",
+        "emailFormat": "text",
+        "text": "={{ $('Execute a SQL query').item.json.mensaje_personalizado }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        -672,
+        240
+      ],
+      "id": "cea9141e-771b-4b44-a723-94cf113e497a",
+      "name": "Send email",
+      "webhookId": "f96dfdbf-ee0a-47bb-be00-0e13b616c67d",
+      "alwaysOutputData": true,
+      "disabled": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "d8af6c0a-2799-401c-8fa6-5bf2871bfbe7",
+              "leftValue": "={{ $('Send email').item.json.error }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        0,
+        240
+      ],
+      "id": "b0e86b5c-b3ca-463b-b948-176f2e4b05d5",
+      "name": "If1",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "amount": "={{ Math.floor(Math.random() * 16) + 3 }}\n",
+        "unit": "minutes"
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        -1680,
+        16
+      ],
+      "id": "d190c9b8-a5c1-4b32-a60a-6ade54a91ae9",
+      "name": "Wait",
+      "webhookId": "dd56b062-5ca1-4ddf-9fb4-755517795f6e"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "validar horario",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute a SQL query": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Update a row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "normalizar salida agente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "validar horario": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "extraer client_id": {
+      "main": [
+        [
+          {
+            "node": "actualizar memoria agente6",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update a row": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "extraer client_id",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "extraer client_id1": {
+      "main": [
+        [
+          {
+            "node": "actualizar memoria agente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "actualizar memoria agente": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send email": {
+      "main": [
+        [
+          {
+            "node": "extraer client_id1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Execute a SQL query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "3189ff62-2bea-4590-b013-44e0d21634b7",
+  "meta": {
+    "instanceId": "your_instance_id"
+  },
+  "id": "your_credential_id",
+  "tags": []
+}

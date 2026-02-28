@@ -1,0 +1,699 @@
+{
+  "name": "confirmar_asistencia_&_embudo",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## 📊 Meeting Attendance & Sales Pipeline Tracker\\n\\nThis workflow manages the feedback loop between scheduled meetings and the CRM. It uses an interactive Telegram interface to allow human agents to quickly update the status of leads and meetings.\\n\\n### Key Features:\\n1. **Interactive Feedback**: Sends automated Telegram messages with inline buttons to the agent after a meeting is scheduled to occur.\\n2. **One-Click CRM Updates**: Agents can confirm attendance (Yes/No) and sales progress (In Process, Closed, New Sale) directly from Telegram.\\n3. **Supabase Integration**: Automatically updates the `citas` and `leads_formularios_optimizada` tables in Supabase based on the agent's feedback.\\n4. **State Management**: Uses a custom JavaScript block to parse callback data and route updates through a switch node to the correct database operation.",
+        "height": 450,
+        "width": 320,
+        "color": 2
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -1000,
+        -100
+      ],
+      "typeVersion": 1,
+      "id": "doc-attendance-tracker",
+      "name": "Architecture Documentation"
+    },
+    {
+      "parameters": {
+        "updates": [
+          "callback_query"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -688,
+        144
+      ],
+      "id": "f0711022-1437-4a7b-ad7d-62ac23a97a86",
+      "name": "Telegram Trigger",
+      "webhookId": "86b895ca-686a-4e98-840a-60b11cfc325c",
+      "credentials": {
+        "telegramApi": {
+          "id": "your_telegram_credential_id",
+          "name": "Citas your_brand"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Separar la respuesta y el client_id\nconst data = $json.callback_query.data;\nconst [respuesta, client_id] = data.split('|');\n\nreturn [\n  {\n    json: {\n      client_id,\n      respuesta,\n      chat_id: $json.callback_query.message.chat.id,\n      admin_id: $json.callback_query.from.id\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -352,
+        144
+      ],
+      "id": "818790dc-1a23-4099-bc74-5b08d7887b1b",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "citas",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "client_id",
+              "condition": "eq",
+              "keyValue": "={{ $json.client_id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "asistencia",
+              "fieldValue": "si_asistio"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        272,
+        -208
+      ],
+      "id": "7da701d2-62b1-4b1a-b125-51af1d7d8821",
+      "name": "si asistio",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "your_supabase_credential_id",
+          "name": "Supabase account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "citas",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "client_id",
+              "condition": "eq",
+              "keyValue": "={{ $json.client_id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "asistencia",
+              "fieldValue": "no_asistio"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        272,
+        -32
+      ],
+      "id": "84c5bbf6-13f2-4b33-93ec-98f45fe4ec02",
+      "name": "no asistio",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "your_supabase_credential_id",
+          "name": "Supabase account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.respuesta }}",
+                    "rightValue": "asistencia_si",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "9ce0bff4-161a-436c-9a72-040d73a8ab8a"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "asistencia_si"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "41a4fb55-af19-4f8f-8c54-7fb6bd52ca63",
+                    "leftValue": "={{ $json.respuesta }}",
+                    "rightValue": "asistencia_no",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "asistencia_no"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "b0414a07-fed5-41ed-acb2-e8a65e1beb16",
+                    "leftValue": "={{ $json.respuesta }}",
+                    "rightValue": "En_proceso_de_venta",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "En_proceso_de_venta"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "3b4c62e6-4d2e-4a55-bb2e-f7692ca51575",
+                    "leftValue": "={{ $json.respuesta }}",
+                    "rightValue": "Venta_cerrada",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Venta_cerrada"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "5cedeefa-cdf6-4fd0-b244-9e2089c7dc93",
+                    "leftValue": "={{ $json.respuesta }}",
+                    "rightValue": "Nueva_Venta_con_el_mismo_cliente",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Nueva_Venta_con_el_mismo_cliente"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "f6995541-bd0f-46fd-ab4b-ebabebf2c229",
+                    "leftValue": "={{ $json.respuesta }}",
+                    "rightValue": "nada",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "No se logro nada"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.3,
+      "position": [
+        -144,
+        80
+      ],
+      "id": "c3588b64-de91-47b2-bdf6-63bce2273001",
+      "name": "Switch"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        272,
+        640
+      ],
+      "id": "d9769de2-2366-41aa-a83f-aeed652e1552",
+      "name": "No Operation, do nothing"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "leads_formularios_optimizada",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "client_id",
+              "condition": "eq",
+              "keyValue": "={{ $('Code in JavaScript').item.json.client_id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "estado_lead",
+              "fieldValue": "En proceso de venta"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        272,
+        128
+      ],
+      "id": "5545faae-515d-4025-ac46-aad30ec2a612",
+      "name": "en proceso de venta",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "your_supabase_credential_id",
+          "name": "Supabase account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "leads_formularios_optimizada",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "client_id",
+              "condition": "eq",
+              "keyValue": "={{ $('Code in JavaScript').item.json.client_id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "es_cliente",
+              "fieldValue": "true"
+            },
+            {
+              "fieldId": "estado_lead",
+              "fieldValue": "Venta cerrada"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        272,
+        288
+      ],
+      "id": "5b7015df-6a74-4b98-9e96-da555c542dd1",
+      "name": "venta cerrada",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "your_supabase_credential_id",
+          "name": "Supabase account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "leads_formularios_optimizada",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "client_id",
+              "condition": "eq",
+              "keyValue": "={{ $('Code in JavaScript').item.json.client_id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "es_cliente",
+              "fieldValue": "true"
+            },
+            {
+              "fieldId": "estado_lead",
+              "fieldValue": "Nueva Venta con el mismo cliente"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        272,
+        448
+      ],
+      "id": "da0455a8-0874-4c84-8e2e-5908c9503a11",
+      "name": "nueva venta con el mismo cliente",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "your_supabase_credential_id",
+          "name": "Supabase account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "chatId": "your_telegram_chat_id",
+        "text": "=Que tal te fue en tu cita con  {{ $json.body.nombre }} del {{ $json.body.fecha_cita_legible }}?",
+        "replyMarkup": "inlineKeyboard",
+        "inlineKeyboard": {
+          "rows": [
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "✅ Si asistió",
+                    "additionalFields": {
+                      "callback_data": "=asistencia_si|{{$json.body.client_id}}"
+                    }
+                  },
+                  {
+                    "text": "❌ No asistió ",
+                    "additionalFields": {
+                      "callback_data": "=asistencia_no|{{ $json.body.client_id }}"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -480,
+        -112
+      ],
+      "id": "e81b2c37-5199-462f-adce-330991e3e0c2",
+      "name": "mensaje de asistencia",
+      "webhookId": "af6fee69-2703-4970-9867-737bc046036e",
+      "credentials": {
+        "telegramApi": {
+          "id": "your_telegram_credential_id",
+          "name": "Citas your_brand"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "your_telegram_chat_id",
+        "text": "=Que lograste en esta cita con {{ $('conexión a supabase').item.json.body.nombre }} del {{ $('conexión a supabase').item.json.body.fecha_cita_legible }}?",
+        "replyMarkup": "inlineKeyboard",
+        "inlineKeyboard": {
+          "rows": [
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "🤝En proceso de venta",
+                    "additionalFields": {
+                      "callback_data": "=En_proceso_de_venta|{{ $('conexión a supabase').item.json.body.client_id }}"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "💲Venta cerrada",
+                    "additionalFields": {
+                      "callback_data": "=Venta_cerrada|{{ $('conexión a supabase').item.json.body.client_id }}"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "🤑Nueva Venta con el mismo cliente",
+                    "additionalFields": {
+                      "callback_data": "=Nueva_venta_con_el_mismo_cliente|{{ $('conexión a supabase').item.json.body.client_id }}"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "😢No se logro nada",
+                    "additionalFields": {
+                      "callback_data": "=nada|{{ $('conexión a supabase').item.json.body.client_id }}"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -288,
+        -112
+      ],
+      "id": "a0cb9bf5-b1da-4704-961b-aa4a21197459",
+      "name": "mensaje de embudo de ventas",
+      "webhookId": "af6fee69-2703-4970-9867-737bc046036e",
+      "credentials": {
+        "telegramApi": {
+          "id": "your_telegram_credential_id",
+          "name": "Citas your_brand"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ce1ccf70-ef0f-4e36-80dd-f643614e2844",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -704,
+        -112
+      ],
+      "id": "ef67de28-3576-454f-ab65-55a8d0d8ccf4",
+      "name": "conexión a supabase",
+      "webhookId": "ce1ccf70-ef0f-4e36-80dd-f643614e2844"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "si asistio": {
+      "main": [
+        []
+      ]
+    },
+    "no asistio": {
+      "main": [
+        []
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "si asistio",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "no asistio",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "en proceso de venta",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "venta cerrada",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "nueva venta con el mismo cliente",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Operation, do nothing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "venta cerrada": {
+      "main": [
+        []
+      ]
+    },
+    "nueva venta con el mismo cliente": {
+      "main": [
+        []
+      ]
+    },
+    "mensaje de asistencia": {
+      "main": [
+        [
+          {
+            "node": "mensaje de embudo de ventas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "conexión a supabase": {
+      "main": [
+        [
+          {
+            "node": "mensaje de asistencia",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Mexico_City",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "versionId": "eecced52-17a6-4324-872b-164f4158da30",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "your_instance_id"
+  },
+  "id": "your_credential_id",
+  "tags": []
+}

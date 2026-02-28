@@ -1,0 +1,78 @@
+services:
+  ############################
+  # PostgreSQL
+  ############################
+  n8n_postgres:
+    image: postgres:15
+    restart: always
+    environment:
+      POSTGRES_DB: n8n
+      POSTGRES_USER: n8n
+      POSTGRES_PASSWORD: ${DB_POSTGRESDB_PASSWORD}
+    volumes:
+      - n8n_postgres_data:/var/lib/postgresql/data
+    command: >
+      postgres
+      -c shared_buffers=256MB
+      -c work_mem=16MB
+      -c maintenance_work_mem=64MB
+    mem_limit: 1G
+
+  ############################
+  # Redis (Queue mode)
+  ############################
+  n8n_redis:
+    image: redis:7
+    restart: always
+    volumes:
+      - n8n_redis_data:/data
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+    mem_limit: 300M
+
+  ############################
+  # n8n main (editor + API)
+  ############################
+  n8n:
+    image: docker.n8n.io/n8nio/n8n:latest
+    restart: always
+    env_file: .env
+    depends_on:
+      - n8n_postgres
+      - n8n_redis
+    ports:
+      - "5678:5678"
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ./local-files:/files
+    mem_limit: 1G
+
+  ############################
+  # n8n worker (queue mode)
+  ############################
+  n8n-worker:
+    image: docker.n8n.io/n8nio/n8n:latest
+    restart: always
+    env_file: .env
+    command: ["worker"]
+    depends_on:
+      - n8n_postgres
+      - n8n_redis
+    mem_limit: 800M
+
+  ############################
+  # Python API interna
+  ############################
+  python-api:
+    build: ./python-api
+    restart: always
+    environment:
+      PYTHON_API_KEY: ${PYTHON_API_KEY}
+    volumes:
+      - ./python-api:/app
+    command: ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]
+    mem_limit: 500M
+
+volumes:
+  n8n_data:
+  n8n_postgres_data:
+  n8n_redis_data:

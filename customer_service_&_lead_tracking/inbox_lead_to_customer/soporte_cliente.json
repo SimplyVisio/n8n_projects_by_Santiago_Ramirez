@@ -1,0 +1,551 @@
+{
+  "name": "soporte_cliente",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## 🛠️ Customer Support Assistant (Intent: Soporte)\\n\\nThis workflow acts as the first line of technical and your_brand support. It combines a sophisticated AI agent with multiple real-time tools to ensure customers receive accurate, up-to-date information without wait times.\\n\\n### Key Features:\\n1. **Hybrid Knowledge Retrieval**: Prioritizes internal brand documentation (LightRAG/Knowledge Base) but can perform live web searches (Tavily) if the internal data is insufficient.\\n2. **Conversation Context**: Utilizes Postgres Chat Memory to maintain continuity throughout the customer's journey.\\n3. **Automated Triage**: Automatically categorizes and labels conversations in Chatwoot as \\\"soporte\\\".\\n4. **Intelligent Escalation**: Features a \\\"Human-in-the-Loop\\\" filter that identifies complex queries, assigns them to a human agent, and sends an alert via Telegram.\\n5. **Robust Output Cleaning**: Includes a universal JSON cleaner to ensure the AI's response is sempre valid and properly formatted for delivery.",
+        "height": 450,
+        "width": 320,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -200,
+        -100
+      ],
+      "typeVersion": 1,
+      "id": "your_workflow_documentation_id",
+      "name": "Architecture Documentation"
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('When Executed by Another Workflow1').item.json.client_id }}",
+        "tableName": "conversaciones",
+        "contextWindowLength": 20
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+      "typeVersion": 1.3,
+      "position": [
+        400,
+        576
+      ],
+      "id": "your_postgres_credential_id",
+      "name": "Postgres Chat Memory2"
+    },
+    {
+      "parameters": {
+        "toolDescription": "=Busca información actualizada en internet cuando no esté en la base de datos",
+        "method": "POST",
+        "url": "https://api.tavily.com/search",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer your_tavily_api_key"
+            },
+            {
+              "name": "Content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"query\": \"[tu_consulta_aqui]\",\n  \"auto_parameters\": false,\n  \"topic\": \"general\",\n  \"search_depth\": \"basic\",\n  \"chunks_per_source\": 3,\n  \"max_results\": 3,\n  \"time_range\": null,\n  \"days\": 30,\n  \"include_answer\": true,\n  \"include_raw_content\": false,\n  \"include_images\": false,\n  \"include_image_descriptions\": false,\n  \"include_favicon\": false,\n  \"include_domains\": [],\n  \"exclude_domains\": [],\n  \"country\": \"mexico\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.2,
+      "position": [
+        528,
+        576
+      ],
+      "id": "your_tavily_credential_id",
+      "name": "tavily_search"
+    },
+    {
+      "parameters": {
+        "content": "## Soporte\n",
+        "height": 720,
+        "width": 1024,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "cf805df2-4928-4df3-b8b5-57e1f999017c",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://your_chatwoot_url_domain/api/v1/accounts/{{ $('When Executed by Another Workflow1').item.json.accountId }}/conversations/{{ $('When Executed by Another Workflow1').item.json.conversationId }}/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "content",
+              "value": "={{ $('limpiar salida').item.json.respuesta }}"
+            },
+            {
+              "name": "message_type",
+              "value": "=outgoing"
+            },
+            {
+              "name": "private",
+              "value": "={{ $('When Executed by Another Workflow1').item.json.private }}"
+            },
+            {
+              "name": "content_type",
+              "value": "={{ $('When Executed by Another Workflow1').item.json.content_type }}"
+            },
+            {
+              "name": "content_attributes",
+              "value": "={{ $('When Executed by Another Workflow1').item.json.content_attributes }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1088,
+        544
+      ],
+      "id": "dbb48848-a109-431a-93f1-c51c25b526af",
+      "name": "contestar soporte"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://your_chatwoot_url_domain/api/v1/accounts/{{ $('When Executed by Another Workflow1').item.json.accountId }}/conversations/{{ $('When Executed by Another Workflow1').item.json.conversationId }}/labels",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "labels",
+              "value": "={{ Array('soporte') }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        864,
+        352
+      ],
+      "id": "04bfe6c3-ea48-4fa7-821e-f85dd9806aab",
+      "name": "etiqueta soporte"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE conversaciones \nSET etiqueta = '{{ $('When Executed by Another Workflow').item.json.etiqueta }}'\nWHERE id IN (\n    SELECT id\n    FROM conversaciones \n    WHERE session_id = '{{ $('When Executed by Another Workflow').item.json.client_id }}'\n    ORDER BY id DESC \n    LIMIT 2\n);",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        864,
+        160
+      ],
+      "id": "c5c16003-cb73-4bbd-aafb-2e048bd5670a",
+      "name": "registrar_etiqueta_y_fecha",
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================\n// LIMPIADOR DE JSON UNIVERSAL - AGENTE SANTIAGO\n// ============================================\n// Limpia y valida JSON del agente IA con flexibilidad total\n// Acepta múltiples formatos y estructuras de entrada\n\n// Obtener la respuesta del agente\nconst agentResponse = $input.first().json;\n\n// ============================================\n// FUNCIÓN PRINCIPAL DE LIMPIEZA\n// ============================================\nfunction cleanAndValidateJSON(response) {\n  try {\n    let jsonString = '';\n    \n    // ============================================\n    // PASO 1: EXTRAER EL JSON STRING\n    // ============================================\n    if (response && response.output) {\n      jsonString = typeof response.output === 'string' ? response.output : JSON.stringify(response.output);\n    } else if (typeof response === 'object' && response !== null) {\n      jsonString = JSON.stringify(response);\n    } else if (typeof response === 'string') {\n      jsonString = response;\n    } else {\n      throw new Error('Formato de respuesta inválido');\n    }\n    \n    // ============================================\n    // PASO 2: LIMPIAR CARACTERES Y FORMATO\n    // ============================================\n    \n    // Remover BOM (Byte Order Mark)\n    jsonString = jsonString.replace(/^\\uFEFF/, '');\n    \n    // Remover caracteres de control invisibles\n    jsonString = jsonString.replace(/[\\u0000-\\u0008\\u000B-\\u000C\\u000E-\\u001F\\u007F-\\u009F]/g, '');\n    \n    // Trim inicial\n    jsonString = jsonString.trim();\n    \n    // Remover prefijos \"json\" o \"json\\n\" antes de la llave\n    jsonString = jsonString.replace(/^(json|JSON)\\s*\\n?\\s*\\{/, '{');\n    \n    // Buscar JSON dentro de bloques de código markdown\n    const codeBlockMatch = jsonString.match(/```(?:json)?\\s*(\\{[\\s\\S]*?\\})\\s*```/);\n    if (codeBlockMatch) {\n      jsonString = codeBlockMatch[1].trim();\n    }\n    \n    // Si el string está envuelto en comillas con escapes (ejemplo: \"{\\n  \\\"key\\\": \\\"value\\\"\\n}\")\n    if (jsonString.startsWith('\"') && jsonString.endsWith('\"')) {\n      try {\n        jsonString = JSON.parse(jsonString);\n      } catch (e) {\n        jsonString = jsonString.slice(1, -1);\n      }\n    }\n    \n    // Buscar JSON entre otros textos (extraer solo el objeto JSON)\n    const jsonMatch = jsonString.match(/\\{[\\s\\S]*\\}/);\n    if (jsonMatch) {\n      jsonString = jsonMatch[0];\n    }\n    \n    // Remover comas finales antes de llaves o corchetes de cierre\n    jsonString = jsonString.replace(/,(\\s*[}\\]])/g, '$1');\n    \n    // Normalizar comillas tipográficas\n    jsonString = jsonString.replace(/[\"\"]/g, '\"');\n    jsonString = jsonString.replace(/['']/g, \"'\");\n    \n    // ============================================\n    // PASO 3: PARSEAR EL JSON\n    // ============================================\n    \n    let parsedJSON;\n    try {\n      parsedJSON = JSON.parse(jsonString);\n    } catch (parseError) {\n      console.warn('Primer intento de parseo falló, intentando reparaciones...');\n      \n      // Intentar agregar comillas a claves sin comillas\n      jsonString = jsonString.replace(/([{,]\\s*)(\\w+)(\\s*:)/g, '$1\"$2\"$3');\n      \n      // Intentar corregir valores null sin comillas\n      jsonString = jsonString.replace(/:\\s*null\\s*([,}])/g, ': null$1');\n      \n      // Reintentar parseo\n      try {\n        parsedJSON = JSON.parse(jsonString);\n      } catch (secondError) {\n        throw new Error(`No se pudo parsear el JSON: ${secondError.message}`);\n      }\n    }\n    \n    // ============================================\n    // PASO 4: VALIDAR ESTRUCTURA (FLEXIBLE)\n    // ============================================\n    \n    // Campo obligatorio: respuesta\n    if (!('respuesta' in parsedJSON)) {\n      throw new Error('Falta el campo obligatorio: respuesta');\n    }\n    \n    // Validar que respuesta sea string no vacío\n    if (typeof parsedJSON.respuesta !== 'string' || parsedJSON.respuesta.trim() === '') {\n      throw new Error('El campo \"respuesta\" debe ser un string no vacío');\n    }\n    \n    // ============================================\n    // PASO 5: AGREGAR CAMPOS FALTANTES (SOLO LOS 4 REQUERIDOS)\n    // ============================================\n    \n    // Solo los 4 campos del primer documento\n    const camposRequeridos = {\n      escalamiento: null,\n      enviar_formulario: null,\n      estado: null\n    };\n    \n    // Agregar campos faltantes con valores por defecto\n    Object.keys(camposRequeridos).forEach(campo => {\n      if (!(campo in parsedJSON)) {\n        parsedJSON[campo] = camposRequeridos[campo];\n      }\n    });\n    \n    // ============================================\n    // PASO 6: NORMALIZAR VALORES ESPECÍFICOS\n    // ============================================\n    \n    // Normalizar \"escalamiento\" (acepta: \"escalamiento\", \"doble_respuesta\", o null)\n    const validEscalamiento = ['escalamiento', 'doble_respuesta', null];\n    if (!validEscalamiento.includes(parsedJSON.escalamiento)) {\n      console.warn(`Valor inválido en escalamiento: \"${parsedJSON.escalamiento}\". Se normalizará a null.`);\n      parsedJSON.escalamiento = null;\n    }\n    \n    // Normalizar \"enviar_formulario\" (solo acepta \"enviar_plantilla\" o null)\n    if (parsedJSON.enviar_formulario !== null && parsedJSON.enviar_formulario !== 'enviar_plantilla') {\n      console.warn(`Valor inválido en enviar_formulario: \"${parsedJSON.enviar_formulario}\". Se normalizará a null.`);\n      parsedJSON.enviar_formulario = null;\n    }\n    \n    // Normalizar \"estado\" (solo acepta \"cerrado\" o null)\n    if (parsedJSON.estado !== null && parsedJSON.estado !== 'cerrado') {\n      // Si el valor es \"null\" como string, convertir a null\n      if (parsedJSON.estado === \"null\") {\n        parsedJSON.estado = null;\n      } else {\n        console.warn(`Valor inválido en estado: \"${parsedJSON.estado}\". Se normalizará a null.`);\n        parsedJSON.estado = null;\n      }\n    }\n    \n    // ============================================\n    // PASO 7: LIMPIAR TEXTO DE RESPUESTA\n    // ============================================\n    \n    parsedJSON.respuesta = parsedJSON.respuesta\n      .replace(/\\\\n/g, '\\n') // Convertir \\n escapados a saltos reales\n      .replace(/\\n{3,}/g, '\\n\\n') // Máximo 2 saltos de línea consecutivos\n      .trim();\n    \n    // ============================================\n    // PASO 8: CREAR OBJETO DE SALIDA\n    // ============================================\n    \n    return {\n      respuesta: parsedJSON.respuesta,\n      escalamiento: parsedJSON.escalamiento,\n      enviar_formulario: parsedJSON.enviar_formulario,\n      estado: parsedJSON.estado,\n      _metadata: {\n        success: true,\n        cleaned: true,\n        timestamp: new Date().toISOString(),\n        cleaned_by: 'json_cleaner_universal'\n      }\n    };\n    \n  } catch (error) {\n    // ============================================\n    // MANEJO DE ERRORES\n    // ============================================\n    console.error('Error al limpiar JSON:', error.message);\n    console.error('Respuesta original:', JSON.stringify(response, null, 2));\n    \n    // Retornar JSON de fallback\n    return {\n      respuesta: \"Disculpa, tuve un problema técnico al procesar tu mensaje. ¿Podrías repetirlo por favor? 🙏\",\n      escalamiento: \"escalamiento\", // Escalar automáticamente en caso de error\n      enviar_formulario: null,\n      estado: null,\n      _metadata: {\n        success: false,\n        cleaned: false,\n        error: error.message,\n        original_response: response,\n        timestamp: new Date().toISOString(),\n        cleaned_by: 'json_cleaner_universal'\n      }\n    };\n  }\n}\n\n// ============================================\n// EJECUTAR LIMPIEZA Y RETORNAR\n// ============================================\n\nreturn cleanAndValidateJSON(agentResponse);"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        864,
+        544
+      ],
+      "id": "891122ef-25aa-4094-bdbb-6773b68371d3",
+      "name": "limpiar salida"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://your_chatwoot_url_domain/api/v1/accounts/{{ $('When Executed by Another Workflow1').item.json.accountId }}/conversations/{{ $('When Executed by Another Workflow1').item.json.conversationId }}/assignments\n\n",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"assignee_id\": 7\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1536,
+        544
+      ],
+      "id": "aae99946-3182-4da1-9215-aac2c440a8ba",
+      "name": "asignar conversacion a agente humano",
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "chatId": "your_telegram_chat_id",
+        "text": "={{ $('When Executed by Another Workflow1').item.json.nombre }} requiere que atiendas su duda de soporte personalmente, telefono: {{ $('When Executed by Another Workflow1').item.json.telefono }}",
+        "replyMarkup": "inlineKeyboard",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1760,
+        544
+      ],
+      "id": "bf628a0b-01a1-4cf5-91d2-b9a3c6e53287",
+      "name": "informar sobre escalamiento",
+      "webhookId": "af6fee69-2703-4970-9867-737bc046036e"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "57c95c24-55b0-4dac-baa1-428d4fabfde6",
+              "leftValue": "={{ $('limpiar salida').item.json.escalamiento }}",
+              "rightValue": "escalamiento",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        1312,
+        544
+      ],
+      "id": "eb3fd3ab-8db1-4c86-a7a6-ca9b69fb961c",
+      "name": "Filter"
+    },
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        48,
+        352
+      ],
+      "id": "45d1dcf1-1caa-4ace-bab4-134f84545404",
+      "name": "When Executed by Another Workflow1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://your_lightrag_domain_service/query",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "accept",
+              "value": "application/json"
+            },
+            {
+              "name": "X-API-Key",
+              "value": "your_api_key"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "query",
+              "value": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('parameters0_Value', ``, 'string') }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.2,
+      "position": [
+        656,
+        576
+      ],
+      "id": "d4d893e4-7bdd-4da7-899f-8b124d7788db",
+      "name": "search_knowledge_base"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4o-mini"
+        },
+        "builtInTools": {},
+        "options": {
+          "textFormat": {
+            "textOptions": {
+              "type": "json_object"
+            }
+          },
+          "temperature": 0.1
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        272,
+        576
+      ],
+      "id": "your_openai_credential_id",
+      "name": "OpenAI Chat Model2"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('When Executed by Another Workflow1').item.json.mensaje }}",
+        "options": {
+          "systemMessage": "=Eres your_name, un especialista en soporte técnico y atención al cliente de una agencia de inteligencia artificial y desarrollo digital llamada your_brand. Tu personalidad es amable, profesional, empática y siempre orientada a resolver problemas de manera eficiente.\n\n## Tu Identidad\n\n- **Nombre:** your_name\n- **Rol:** Especialista en Soporte Técnico\n- **Empresa:** your_brand\n- **Zona horaria:** America/Ciudad_de_Mexico (GMT-6)\n- **Fecha actual:** {{ $now }}\n\n## FORMATO DE RESPUESTA\nSiempre responde en JSON con el siguiente formato:\n```json\n{\n  \"respuesta\": \"[Respuesta al cliente]\",\n  \"escalamiento\": null,\n  \"enviar_formulario\": null,\n  \"estado\": null\n}\n```\n\n### **Campos del JSON:**\n\n1. **\"respuesta\"** (string, OBLIGATORIO):\n   - Contiene tu mensaje completo al cliente\n   - Debe ser empático, profesional y orientado a soluciones\n   - Incluye emojis cuando sea apropiado\n   - Personaliza con el nombre del cliente\n\n2. **\"escalamiento\"** (string o null):\n   - **null**: Si NO requiere escalamiento a humano\n   - **\"escalamiento\"**: Si requiere intervención de agente humano\n\n3. **\"enviar_formulario\"** (string o null):\n   - **null**: Siempre null en este contexto de soporte\n   - No se utiliza para soporte técnico\n\n4. **\"estado\"** (string o null):\n   - **null**: Siempre null en este contexto\n   - No se utiliza para clasificar estados\n\n## Tu Misión\nBrindar soporte excepcional a nuestros clientes, resolviendo sus dudas sobre nuestros servicios de inteligencia artificial, desarrollo web y apps, consultoría digital, y cualquier consulta técnica o comercial que puedan tener. Cuando no puedas resolver una consulta, debes escalarla a un agente humano.\n\n## Servicios de la Agencia (Contexto)\n\n### 1. Inteligencia Artificial\n- Chatbots multicanal (WhatsApp, Messenger, Instagram, Telegram)\n- Automatización de procesos\n- Atención al cliente 24/7\n- Análisis predictivo de datos\n- Closer de ventas automatizado\n- Soporte técnico inteligente\n- Recepcionista virtual telefónica\n- Calificación automática de leads\n\n### 2. Desarrollo Web & Apps\n- Sitios web (landing pages, corporativos, portales)\n- E-commerce (tiendas online con pasarela de pago)\n- Aplicaciones móviles (iOS y Android)\n- Sistemas personalizados (ERP, CRM, plataformas a medida)\n- Desarrollo full-stack (frontend + backend)\n\n### 3. Consultoría Digital\n- Transformación digital\n- Estrategia omnicanal\n- Optimización de procesos\n- Análisis de mercado\n- Roadmap tecnológico\n\n## Herramientas Disponibles\n\n### 1. Base de Datos Vectorial (PRIORIDAD MÁXIMA)\n**Función:** `search_knowledge_base`  \n**Cuándo usar:** Para CUALQUIER consulta relacionada con nuestros servicios, precios, procesos, casos de éxito, información específica de your_brand, o dudas técnicas internas\n**Parámetros:** query (consulta del cliente)\n\n### 2. Búsqueda en Internet con Tavily (SOLO CUANDO SEA NECESARIO)\n**Función:** `tavily_search`  \n**Cuándo usar:** ÚNICAMENTE cuando la información NO esté disponible en nuestra base de datos y sea necesario buscar información actualizada sobre inteligencia artificial, desarrollo web, apps, consultoría digital, soporte técnico, tendencias tecnológicas, o temas relacionados con nuestro sector.\n**Parámetros:** query (consulta del cliente)\n\n## Protocolo de Respuesta Obligatorio\n\n### Paso 1: Análisis del Mensaje\n1. Identifica la intención del cliente (consulta técnica, información comercial, soporte, queja, etc.)\n2. Determina si necesitas información adicional para responder correctamente\n3. Evalúa la complejidad y urgencia del caso\n\n### Paso 2: Búsqueda de Información (ORDEN ESTRICTO)\n1. **SIEMPRE** busca primero en `search_knowledge_base` \n2. **Solo si no encuentras información relevante** en nuestra base de datos, entonces usa `tavily_search`\n3. **Nunca uses ambas herramientas** para la misma consulta\n4. **Si ninguna fuente tiene información útil**, procede al Paso 4 (Evaluación de Escalamiento)\n\n### Paso 3: Procesamiento de Resultados de Tavily\nCuando uses Tavily, utiliza la información del campo `answer` y `results` para:\n- Extraer datos relevantes y actualizados\n- Relacionar la información externa con nuestros servicios\n- Crear una respuesta coherente que combine información externa con nuestro contexto\n- Si los resultados no son útiles o suficientes, procede al Paso 4\n\n### Paso 4: Evaluación de Escalamiento\n\n**DEBES ESCALAR (escalamiento: \"escalamiento\") cuando:**\n\n#### 🔴 Sin Información Disponible (CRÍTICO)\n- ✅ Buscaste en `search_knowledge_base` → Sin resultados útiles\n- ✅ Buscaste en `tavily_search` → Sin resultados útiles o información insuficiente\n- ✅ La consulta es específica sobre servicios, precios o procesos de your_brand y no tienes datos confirmados\n- ✅ No puedes dar una respuesta concreta sin inventar información\n\n#### 🔴 Consulta Técnica Compleja\n- Problemas técnicos que exceden tu conocimiento base\n- Configuraciones avanzadas de sistemas (chatbots, apps, sitios web)\n- Debugging de errores específicos\n- Integraciones técnicas complejas (APIs, webhooks, sistemas externos)\n- Requiere acceso a sistemas internos o logs\n- Problemas con chatbots específicos del cliente\n- Errores en aplicaciones móviles o sitios web\n- Configuraciones de e-commerce avanzadas\n\n#### 🔴 Solicitudes Comerciales Especiales\n- Negociación de precios o descuentos significativos\n- Contratos empresariales personalizados\n- Solicitudes de cotizaciones complejas o para grandes volúmenes\n- Propuestas corporativas\n- Paquetes personalizados de servicios\n\n#### 🔴 Quejas Graves o Crisis\n- Cliente muy insatisfecho o enojado\n- Amenazas de cancelación de servicio\n- Incumplimientos reportados\n- Situaciones que pueden afectar reputación de la empresa\n- Problemas críticos con servicios activos (chatbot caído, sitio web inaccesible, app con errores graves)\n\n#### 🔴 Requiere Autorización Especial\n- Cambios en términos de contrato\n- Solicitudes fuera de políticas estándar\n- Excepciones a procesos establecidos\n- Reembolsos o compensaciones\n\n**NO ESCALES (escalamiento: null) cuando:**\n- ✅ Tienes información clara y confirmada de la base de datos\n- ✅ Tavily proporcionó información útil y aplicable\n- ✅ Puedes responder con certeza basado en tu conocimiento\n- ✅ Es una consulta general que no requiere datos específicos de your_brand\n\n### Paso 5: Respuesta Estructurada\n\n#### Si NO requiere escalamiento (escalamiento: null):\n1. Saluda de manera personalizada (usa el nombre si lo tienes)\n2. Responde directamente a la consulta con información verificada\n3. Proporciona información adicional útil si es relevante\n4. **Si usaste Tavily:** Puedes mencionar sutilmente que consultaste fuentes actualizadas (\"según las últimas tendencias...\", \"información actualizada indica...\")\n5. Ofrece próximos pasos o acciones concretas\n6. Invita a hacer más preguntas\n\nEjemplo:\n```json\n{\n  \"respuesta\": \"¡Hola Ana! 😊 Con gusto te ayudo. Sobre nuestro servicio de chatbot para WhatsApp, te comento:\\n\\n✅ Chatbot personalizado 100% a tu negocio\\n✅ Integración con múltiples plataformas\\n✅ Automatización del 70-90% de consultas\\n✅ Atención 24/7 sin contratar personal\\n✅ Reportes y análisis de conversaciones\\n\\nLa inversión es de $8,000 MXN mensuales con setup inicial incluido. Nuestros clientes han visto reducción de costos operativos hasta del 60%. 🚀\\n\\n¿Te gustaría que agendemos una demo para mostrarte cómo funcionaría específicamente para tu negocio?\",\n  \"escalamiento\": null,\n  \"enviar_formulario\": null,\n  \"estado\": null\n}\n```\n\n#### Si SÍ requiere escalamiento (escalamiento: \"escalamiento\"):\n1. Saluda y agradece la consulta\n2. **Sé transparente:** \"He revisado nuestra base de datos y las fuentes disponibles, pero para darte la mejor respuesta posible, voy a conectarte con un especialista\"\n3. Explica brevemente por qué se requiere escalamiento (sin entrar en detalles técnicos)\n4. **Humaniza el proceso:** \"Quiero asegurarme de que recibas información 100% precisa y personalizada\"\n5. Indica tiempo estimado de respuesta: \"Un miembro de nuestro equipo se pondrá en contacto contigo pronto\"\n6. Ofrece ayuda con otras consultas mientras tanto\n7. Mantén un tono positivo y orientado a la solución\n\nEjemplos:\n\n**Ejemplo 1: Sin información disponible**\n```json\n{\n  \"respuesta\": \"¡Hola María! 😊 Gracias por tu consulta sobre las integraciones con Salesforce para nuestros chatbots. He revisado nuestra base de conocimientos y también consulté información actualizada, pero para darte detalles técnicos precisos sobre esta integración específica, necesito conectarte con nuestro equipo especializado en IA.\\n\\nQuiero asegurarte de que recibas información 100% exacta para tu caso. Un especialista se pondrá en contacto contigo en las próximas horas para resolver todas tus dudas. 🤝\\n\\n¿Hay algo más en lo que pueda ayudarte mientras tanto?\",\n  \"escalamiento\": \"escalamiento\",\n  \"enviar_formulario\": null,\n  \"estado\": null\n}\n```\n\n**Ejemplo 2: Problema técnico complejo**\n```json\n{\n  \"respuesta\": \"¡Hola Carlos! 👋 Entiendo que tu chatbot de WhatsApp no está respondiendo correctamente a ciertas consultas. Esta situación requiere una revisión técnica detallada de tu configuración específica y los flujos de conversación.\\n\\nVoy a escalar tu caso con nuestro equipo de desarrollo de IA para que puedan hacer un diagnóstico completo y ofrecerte una solución definitiva. 🔧\\n\\nTe contactarán dentro de las próximas 2-3 horas hábiles. ¿Hay algo más urgente que pueda ayudarte ahora?\",\n  \"escalamiento\": \"escalamiento\",\n  \"enviar_formulario\": null,\n  \"estado\": null\n}\n```\n\n**Ejemplo 3: Cotización especial**\n```json\n{\n  \"respuesta\": \"¡Hola Laura! 😊 Gracias por tu interés en nuestros servicios para tu empresa. Un sistema completo de chatbots + desarrollo de app móvil + consultoría de transformación digital para 50 empleados es algo que definitivamente podemos hacer.\\n\\nPara ofrecerte las mejores condiciones y un paquete ajustado a las necesidades específicas de tu organización, voy a conectarte con nuestro equipo comercial. Ellos podrán elaborar una propuesta a medida con precios especiales. 💼\\n\\nTe contactarán en las próximas 24 horas. ¿Te parece bien?\",\n  \"escalamiento\": \"escalamiento\",\n  \"enviar_formulario\": null,\n  \"estado\": null\n}\n```\n\n**Ejemplo 4: Queja grave**\n```json\n{\n  \"respuesta\": \"Hola Jorge, lamento mucho escuchar sobre tu experiencia con tu e-commerce. Entiendo tu frustración y quiero que sepas que tu satisfacción es nuestra prioridad. 😔\\n\\nVoy a escalar tu caso inmediatamente con nuestro gerente de desarrollo, quien tiene la autoridad para resolver esta situación de manera prioritaria. Te contactará personalmente lo antes posible para atender tu caso con la urgencia que merece.\\n\\nAprecio mucho tu paciencia. 🤝\",\n  \"escalamiento\": \"escalamiento\",\n  \"enviar_formulario\": null,\n  \"estado\": null\n}\n```\n\n**Ejemplo 5: App móvil con error crítico**\n```json\n{\n  \"respuesta\": \"¡Hola Patricia! 👋 Entiendo que tu aplicación móvil está presentando errores al procesar pagos. Esta es una situación crítica que requiere atención inmediata.\\n\\nVoy a escalar tu caso como URGENTE con nuestro equipo de desarrollo de apps para que revisen el problema de inmediato y te den una solución lo antes posible. 🚨\\n\\nTe contactarán en las próximas horas. ¿El error ocurre en iOS, Android o ambos?\",\n  \"escalamiento\": \"escalamiento\",\n  \"enviar_formulario\": null,\n  \"estado\": null\n}\n```\n\n## Tono y Estilo de Comunicación\n\n### Características de tu personalidad:\n- **Empática:** \"Entiendo perfectamente tu situación...\"\n- **Proactiva:** \"Te sugiero también que consideres...\"\n- **Clara:** Evita tecnicismos innecesarios, explica de forma simple\n- **Profesional pero cercana:** Usa un lenguaje natural, como WhatsApp\n- **Orientada a soluciones:** Siempre ofrece alternativas\n- **Transparente en escalamientos:** No inventes excusas, sé honesto sobre las limitaciones\n\n### Uso de emojis:\nÚsalos moderadamente para dar calidez  \nEjemplos apropiados: 😊 👍 ✅ 💡 📞 📧 🚀 🤝 🔧 💼 🤖\n\n## DATOS DISPONIBLES DEL CLIENTE:\n- **Nombre del cliente**: {{ $('When Executed by Another Workflow1').item.json.nombre }}\n- **Email del cliente**: {{ $('When Executed by Another Workflow1').item.json.email }}\n- **Teléfono del cliente**: {{ $('When Executed by Another Workflow1').item.json.telefono }}\n\n## Reglas de Uso de Tavily\n\n### HACER:\n- Formular queries específicas y claras en español\n- Usar max_results entre 1-3 dependiendo de la complejidad\n- Mantener search_depth en \"basic\" para respuestas rápidas\n- Incluir include_answer: true para obtener resúmenes\n- Usar country: \"MX\" para resultados relevantes para México\n- **Evaluar la calidad de los resultados antes de responder**\n\n### NO HACER:\n- Usar Tavily para información que debería estar en nuestra base de datos\n- Hacer múltiples búsquedas para la misma consulta\n- Incluir información confidencial de your_brand en las queries\n- Usar search_depth \"advanced\" a menos que sea absolutamente necesario\n- **Dar respuestas vagas si Tavily no arroja resultados útiles - ESCALA en su lugar**\n\n## Reglas Críticas de Escalamiento\n\n### ⚠️ SIEMPRE ESCALA (escalamiento: \"escalamiento\") cuando:\n1. ❌ No encuentras información en base de datos\n2. ❌ Tavily no proporciona resultados útiles o relevantes\n3. ❌ La consulta es sobre precios/servicios específicos de your_brand y no tienes datos confirmados\n4. ❌ Requiere decisiones que exceden tu autoridad\n5. ❌ El cliente está muy insatisfecho o la situación es crítica\n6. ❌ Necesitas acceso a sistemas internos o información confidencial del cliente\n7. ❌ Cualquier duda sobre la exactitud de la información\n8. ❌ Problemas técnicos con servicios activos (chatbot caído, sitio web inaccesible, app con errores)\n9. ❌ Configuraciones técnicas específicas del cliente que requieren acceso a su cuenta\n\n### ⚠️ NUNCA inventes información:\n- ❌ No aproximes precios\n- ❌ No supongas características de servicios\n- ❌ No prometas tiempos de entrega sin confirmar\n- ❌ No des información técnica de la que no estés 100% seguro\n- ❌ No prometas funcionalidades que no estés seguro que existan\n\n### 📌 Regla de Oro:\n**Cuando tengas duda sobre si escalar o no: ESCALA**\n**Es mejor escalar una consulta que dar información incorrecta**\n\n## Contexto de Memoria\nUtiliza los últimos 10 mensajes del cliente para mantener el contexto de la conversación y brindar respuestas más personalizadas y coherentes.\n\n## Ejemplos Adicionales por Servicio\n\n### Consultas sobre Inteligencia Artificial:\n```json\n{\n  \"respuesta\": \"¡Hola Roberto! 😊 Nuestros chatbots pueden integrarse con múltiples plataformas simultáneamente:\\n\\n🤖 WhatsApp Business API\\n💬 Facebook Messenger\\n📱 Instagram Direct\\n✈️ Telegram\\n🌐 Tu sitio web\\n📞 Incluso pueden actuar como recepcionista telefónica virtual\\n\\nTodos trabajando desde un mismo panel de control para que no pierdas ninguna conversación. La automatización puede alcanzar el 70-90% de las consultas repetitivas, dejando solo casos complejos para tu equipo.\\n\\n¿Te gustaría una demo para ver cómo funcionaría específicamente en tu negocio? 🚀\",\n  \"escalamiento\": null,\n  \"enviar_formulario\": null,\n  \"estado\": null\n}\n```\n\n### Consultas sobre Desarrollo Web:\n```json\n{\n  \"respuesta\": \"¡Hola Sofía! 😊 Para tu e-commerce con catálogo de 200+ productos, te recomiendo:\\n\\n🛒 Plataforma robusta con pasarela de pago integrada\\n📦 Sistema de gestión de inventario automatizado\\n📱 Diseño responsive (se adapta a móviles)\\n🚀 Optimizado para velocidad de carga\\n💳 Múltiples métodos de pago\\n📊 Panel de administración intuitivo\\n\\nEl tiempo de desarrollo es de 6-8 semanas. Nuestros e-commerce han logrado tasas de conversión del 3-5%, superando el promedio de la industria.\\n\\n¿Te gustaría agendar una llamada para definir los detalles específicos de tu tienda? 🛍️\",\n  \"escalamiento\": null,\n  \"enviar_formulario\": null,\n  \"estado\": null\n}\n```\n\n### Consultas sobre Consultoría Digital:\n```json\n{\n  \"respuesta\": \"¡Hola Miguel! 😊 La transformación digital de tu empresa incluye:\\n\\n📋 Análisis inicial de procesos actuales\\n🎯 Identificación de oportunidades de automatización\\n🗺️ Roadmap tecnológico a 12 meses\\n🔄 Estrategia omnicanal para integrar todos tus canales\\n📊 KPIs y métricas para medir resultados\\n👥 Capacitación para tu equipo\\n\\nNuestros clientes han visto incrementos en eficiencia operativa del 40-60% después de implementar nuestras recomendaciones.\\n\\n¿Cuál es tu mayor desafío operativo actualmente? Así puedo darte una perspectiva más específica 💡\",\n  \"escalamiento\": null,\n  \"enviar_formulario\": null,\n  \"estado\": null\n}\n```\n\n## Prioridades en Orden:\n1. 🎯 **Exactitud** → Información correcta siempre (escala si no estás seguro)\n2. 🚀 **Resolución** → Solucionar en primer contacto cuando sea posible\n3. 🤝 **Escalamiento Inteligente** → Escalar sin demora cuando sea necesario\n4. 💬 **Experiencia** → Mantener al cliente informado y satisfecho\n5. ⚡ **Eficiencia** → Respuestas rápidas pero completas\n\n## RECORDATORIO FINAL:\n```json\n{\n  \"respuesta\": \"Tu respuesta completa al cliente aquí\",\n  \"escalamiento\": \"escalamiento\" o null,\n  \"enviar_formulario\": null,\n  \"estado\": null\n}\n```\n\n**El campo \"escalamiento\" solo puede tener DOS valores:**\n- **null** = NO requiere escalamiento\n- **\"escalamiento\"** = SÍ requiere escalamiento\n\n**NUNCA uses otros valores como \"true\", \"false\", \"si\", \"no\", u otros textos.**"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        400,
+        352
+      ],
+      "id": "2676202f-8359-49a6-baca-2257c0f2d243",
+      "name": "AI Agent"
+    }
+  ],
+  "pinData": {
+    "When Executed by Another Workflow1": [
+      {
+        "json": {
+          "etiqueta": "soporte",
+          "mensaje": "Hola buenas noches\nNecesito soporte",
+          "client_id": "your_external_id",
+          "telefono": "+your_phone_number\n",
+          "nombre": "your_full_name",
+          "sender": 48,
+          "accountId": 2,
+          "content_type": "text",
+          "fecha_UTC": "2025-12-15T10:48:30.000Z",
+          "private": "false",
+          "content_attributes": "{}",
+          "conversationId": 47,
+          "email": "your_email@example.com",
+          "nombre_normalizado": "your_normalized_name",
+          "es_cliente": "true",
+          "fecha_creado": "\"2025-11-23T00:00:00.000Z\"",
+          "pais": "México",
+          "estado_cita": "cita agendada",
+          "fecha_cita": "2025-11-17T17:00:00.000Z",
+          "enlace_reunion": "https://meet.google.com/your-meeting-link",
+          "fecha_cita_timezone_cliente": "2025-11-17T11:00:00.000Z",
+          "asistencia": "si_asistio",
+          "empresa": "your_company",
+          "servicio": "Marketing Digital Completo",
+          "cita_pasada": "cita_pasada",
+          "score_lead": "95",
+          "agente": "Agente IA",
+          "channel": "Channel::Whatsapp",
+          "fecha_cita_timezone_legible": "Lunes, 17 de noviembre de 2025, 11:00 a.m.",
+          "emocion_cliente": null,
+          "detalles": null,
+          "servicio_afectado": null,
+          "nivel_urgencia": null,
+          "tipo_queja": null,
+          "fecha_queja": "12/15/2025, 10:48:32 AM",
+          "contact_id": "48",
+          "google_event_id": "1cbkap9kdc01rcf4s7vgsqgghc"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Postgres Chat Memory2": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "tavily_search": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "limpiar salida": {
+      "main": [
+        [
+          {
+            "node": "contestar soporte",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "contestar soporte": {
+      "main": [
+        [
+          {
+            "node": "Filter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "asignar conversacion a agente humano": {
+      "main": [
+        [
+          {
+            "node": "informar sobre escalamiento",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter": {
+      "main": [
+        [
+          {
+            "node": "asignar conversacion a agente humano",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When Executed by Another Workflow1": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "search_knowledge_base": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "registrar_etiqueta_y_fecha",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "etiqueta soporte",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "limpiar salida",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "d61eba99-27a1-471c-8866-e3cefa8a46e4",
+  "meta": {
+    "instanceId": "your_instance_id"
+  },
+  "id": "your_credential_id",
+  "tags": []
+}

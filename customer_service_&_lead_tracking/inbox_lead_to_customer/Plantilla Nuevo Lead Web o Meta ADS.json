@@ -1,0 +1,866 @@
+{
+  "name": "Plantilla Nuevo Lead Web o Meta ADS",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## 🚀 Omnichannel Entry: Meta & Web Leads\\n\\nThis workflow handles the initial ingestion of leads from Meta (Facebook/Instagram) ADS and Web forms. It ensures every new lead is normalized, registered in the CRM, and receives an immediate automated response.\\n\\n### Key Features:\\n1. **Data Normalization**: Cleans and formats phone numbers (e.g., adding Mexico's +521 prefix) to ensure compatibility with WhatsApp and Chatwoot.\\n2. **Lead Routing**: Checks if a contact already exists in Chatwoot to avoid duplicates and maintains conversation continuity.\\n3. **Engagement**: Automatically sends a pre-approved WhatsApp template to the lead to initiate the conversation.\\n4. **CRM & Memory Integration**: Syncs lead data with Supabase and updates the AI Agent's long-term memory via Postgres.",
+        "height": 450,
+        "width": 320,
+        "color": 1
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -400,
+        200
+      ],
+      "typeVersion": 1,
+      "id": "doc-meta-web-leads",
+      "name": "Architecture Documentation"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "3c54c05c-69d5-4a9d-b4fb-a24a8f6491f8",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -80,
+        624
+      ],
+      "id": "855170bf-9824-4805-9c2c-607e872cae7e",
+      "name": "Webhook a supabase para extraer nuevo leads de meta y web",
+      "webhookId": "3c54c05c-69d5-4a9d-b4fb-a24a8f6491f8"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Procesar cada item\nfor (const item of $input.all()) {\n  const telefono = item.json.body?.telefono || '';\n  \n  if (telefono) {\n    // Limpiar el número de caracteres no numéricos\n    const numeroLimpio = telefono.replace(/\\D/g, '');\n    \n    // Si empieza con 52 (código de país de México)\n    if (numeroLimpio.startsWith('52')) {\n      const despuesDe52 = numeroLimpio.substring(2);\n      \n      // Verificar si ya tiene el '1' después del 52\n      if (!despuesDe52.startsWith('1')) {\n        // Agregar el '1' después del código de país\n        const nuevoTelefono = '+521' + despuesDe52;\n        item.json.body.telefono = nuevoTelefono;\n      }\n    }\n  }\n}\n\nreturn $input.all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -112,
+        368
+      ],
+      "id": "85601a40-d38f-4084-8944-ebc7d6172eca",
+      "name": "colocar 1 despues de lada de telefono si es de mexico para que chatwoot lo reconozca"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://your_chatwoot_url_domain/api/v1/accounts/2/conversations",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "source_id",
+              "value": "={{ $('Webhook a supabase para extraer nuevo leads de meta y web').item.json.body.telefono.replace('+', '') }}"
+            },
+            {
+              "name": "inbox_id",
+              "value": "={{ $('filtra si contacto existente').item.json.payload[3].id }}"
+            },
+            {
+              "name": "contact_id",
+              "value": "={{ $json.payload.contact.id }}"
+            },
+            {
+              "name": "status",
+              "value": "open"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        880,
+        464
+      ],
+      "id": "2ef33bae-c16e-48ba-8e11-17bc37015c66",
+      "name": "crear conversacion",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "your_chatwoot_credential_id",
+          "name": "chatwoot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://your_chatwoot_url_domain/api/v1/accounts/2/contacts",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "name",
+              "value": "={{ $('colocar 1 despues de lada de telefono si es de mexico para que chatwoot lo reconozca').item.json.body.nombre }}"
+            },
+            {
+              "name": "phone_number",
+              "value": "={{ $('colocar 1 despues de lada de telefono si es de mexico para que chatwoot lo reconozca').item.json.body.telefono }}"
+            },
+            {
+              "name": "email",
+              "value": "={{ $('Webhook a supabase para extraer nuevo leads de meta y web').item.json.body.email }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        672,
+        464
+      ],
+      "id": "243d7c74-c62f-4019-80ac-5ef0540b6235",
+      "name": "crear contacto",
+      "alwaysOutputData": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "your_chatwoot_credential_id",
+          "name": "chatwoot"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://your_chatwoot_url_domain/api/v1/accounts/2/conversations",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "source_id",
+              "value": "={{ $('Webhook a supabase para extraer nuevo leads de meta y web').item.json.body.telefono.replace('+', '') }}"
+            },
+            {
+              "name": "inbox_id",
+              "value": "={{ $('filtra si contacto existente').item.json.payload[3].id }}"
+            },
+            {
+              "name": "contact_id",
+              "value": "={{ $('obtener contact id').item.json.payload[0].id }}"
+            },
+            {
+              "name": "status",
+              "value": "open"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        672,
+        240
+      ],
+      "id": "11832fdc-08b1-4af0-9992-125489958701",
+      "name": "crear conversacion contacto existe",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "your_chatwoot_credential_id",
+          "name": "chatwoot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "=https://your_chatwoot_url_domain/api/v1/accounts/2/inboxes",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        256,
+        368
+      ],
+      "id": "885904e8-56ea-4b65-beea-4fcf5d9d33fb",
+      "name": "obtener inbox id",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "your_chatwoot_credential_id",
+          "name": "chatwoot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "17bd3b85-218b-4f51-863e-e2c0a491dbd1",
+              "leftValue": "={{ $('obtener contact id').item.json.meta.count }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        448,
+        368
+      ],
+      "id": "b7b091a5-4f9f-4da6-8592-237b7e26947b",
+      "name": "filtra si contacto existente"
+    },
+    {
+      "parameters": {
+        "phoneNumberId": "710637588808362",
+        "recipientPhoneNumber": "={{ $('Webhook a supabase para extraer nuevo leads de meta y web').item.json.body.telefono }}",
+        "template": "nuevo_lead_meta_ads_y_web|es",
+        "components": {
+          "component": [
+            {
+              "bodyParameters": {
+                "parameter": [
+                  {
+                    "text": "={{ $('Webhook a supabase para extraer nuevo leads de meta y web').item.json.body.nombre }}"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1,
+      "position": [
+        144,
+        624
+      ],
+      "id": "154d0cc3-b13b-48c8-a956-920523bf37b0",
+      "name": "enviar_plantilla_nuevo_lead_meta_o_Web",
+      "webhookId": "1ce963f2-ff36-4026-9e4e-b9776bf3f6eb",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "your_whatsapp_credential_id",
+          "name": "WhatsApp account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://your_chatwoot_url_domain/api/v1/accounts/2/conversations/{{ $('crear conversacion').item.json.id }}/labels",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "labels",
+              "value": "={{ Array('nuevo_lead_ads') }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1632,
+        464
+      ],
+      "id": "9d72bba8-0930-4890-8e97-8ff0a84b4a3d",
+      "name": "etiqueta nuevo lead",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "your_chatwoot_credential_id",
+          "name": "chatwoot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://your_chatwoot_url_domain/api/v1/accounts/2/conversations/{{ $('crear conversacion contacto existe').item.json.id }}/labels",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "labels",
+              "value": "={{ Array('nuevo_lead_ads') }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1472,
+        240
+      ],
+      "id": "01b3d223-4e90-4db9-b1f5-be45a36fa761",
+      "name": "etiqueta nuevo lead1",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "your_chatwoot_credential_id",
+          "name": "chatwoot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://your_chatwoot_url_domain/api/v1/accounts/2/conversations/{{ $('crear conversacion').item.json.id }}/assignments",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "team_id",
+              "value": "={{ $json.id[1] }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1472,
+        464
+      ],
+      "id": "ba1c36f0-dbe3-468c-b9e6-3493ac973b70",
+      "name": "asignar a equipo2",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "your_chatwoot_credential_id",
+          "name": "chatwoot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://your_chatwoot_url_domain/api/v1/accounts/2/conversations/{{ $('crear conversacion contacto existe').item.json.id }}/assignments",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "team_id",
+              "value": "={{ $json.id[1] }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1280,
+        240
+      ],
+      "id": "54423f9e-287a-43ae-ae8b-638865f6884d",
+      "name": "asignar a equipo",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "your_chatwoot_credential_id",
+          "name": "chatwoot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "=https://your_chatwoot_url_domain/api/v1/accounts/2/teams",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        880,
+        240
+      ],
+      "id": "f948203e-0efd-4e3f-b943-f6539ec4c990",
+      "name": "extraer team_id",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "your_chatwoot_credential_id",
+          "name": "chatwoot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "=https://your_chatwoot_url_domain/api/v1/accounts/2/teams",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1056,
+        464
+      ],
+      "id": "95769f1c-ac06-4516-a158-d9d97c99e2aa",
+      "name": "extraer team_id1",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "your_chatwoot_credential_id",
+          "name": "chatwoot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fieldsToAggregate": {
+          "fieldToAggregate": [
+            {
+              "fieldToAggregate": "id"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        1088,
+        240
+      ],
+      "id": "f31e77eb-fa93-4864-87c5-305f9dc192e6",
+      "name": "Aggregate"
+    },
+    {
+      "parameters": {
+        "fieldsToAggregate": {
+          "fieldToAggregate": [
+            {
+              "fieldToAggregate": "id"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        1312,
+        464
+      ],
+      "id": "33c7d653-7973-4a52-935c-d08cee749fa5",
+      "name": "Aggregate1"
+    },
+    {
+      "parameters": {
+        "url": "=https://your_chatwoot_url_domain/api/v1/accounts/2/contacts/search?q={{ $json.body.telefono }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        96,
+        368
+      ],
+      "id": "a25b1fe5-98c0-4f47-8b55-50d623e08566",
+      "name": "obtener contact id",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "your_chatwoot_credential_id",
+          "name": "chatwoot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://your_chatwoot_url_domain/api/v1/accounts/2/conversations/{{ $('crear conversacion contacto existe').item.json.id }}/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "=  {\n  \"content\": \"Hello, how can I help you?\",\n  \"message_type\": \"outgoing\",\n  \"private\": false,\n  \"content_type\": \"text\",\n  \"content_attributes\": {},\n  \"campaign_id\": 1,\n  \"template_params\": {\n    \"name\": \"nuevo_lead_meta_ads_y_web\",\n    \"category\": \"MARKETING\",\n    \"language\": \"es_MX\",\n    \"processed_params\": {\n      \"body\": {\n        \"1\": \"{{ $('Webhook a supabase para extraer nuevo leads de meta y web').item.json.body.nombre }}\"}\n}}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1952,
+        320
+      ],
+      "id": "6076081d-3eda-4c48-9af3-2b330ec451ba",
+      "name": "enviar plantilla1",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "your_chatwoot_credential_id",
+          "name": "chatwoot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO conversaciones (\n    session_id,\n    message,\n    etiqueta,\n    clasificacion_cita,\n    fecha\n)\nVALUES (\n    '{{ $('Webhook a supabase para extraer nuevo leads de meta y web').item.json.body.client_id }}',\n    jsonb_build_object(\n        'type', 'ai',\n        'content', jsonb_pretty(json_build_object(\n            'respuesta', '¡Bienvenido a your_brand! Tu agencia de Marketing e IA\n¡Gracias por tu interés {{ $('Webhook a supabase para extraer nuevo leads de meta y web').item.json.body.nombre }}!, hemos recibido tu información con éxito y queremos platicar mas a fondo sobre tu empresa. .\n¡Estas a un paso del futuro!...🦿\n¿Estas dispuesto a CRECER tu negocio y AUTOMATIZAR con IA lo que todo mundo tarda horas en hacer?🦾',\n            'escalamiento', null,\n            'enviar_formulario', null,\n            'estado', null\n        )::jsonb),\n        'tool_calls', '[]'::jsonb,\n        'additional_kwargs', '{}'::jsonb,\n        'response_metadata', '{}'::jsonb,\n        'invalid_tool_calls', '[]'::jsonb\n    ),\n    'ventas',\n    'asesoria_de_ventas',\n    '{{ $('Webhook a supabase para extraer nuevo leads de meta y web').item.json.body.created_at }}'::timestamptz\n);",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        352,
+        624
+      ],
+      "id": "8dac6f14-d010-4814-be2a-c4d65ba4250d",
+      "name": "actualizar memoria agente",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "your_postgres_credential_id",
+          "name": "Postgres account 2"
+        }
+      },
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "pinData": {
+    "colocar 1 despues de lada de telefono si es de mexico para que chatwoot lo reconozca": [
+      {
+        "json": {
+          "headers": {
+            "host": "your_n8n_domain_service",
+            "user-agent": "pg_net/0.14.0",
+            "content-length": "335",
+            "accept": "*/*",
+            "content-type": "application/json",
+            "x-forwarded-for": "your_ip_address",
+            "x-forwarded-host": "your_n8n_domain_service",
+            "x-forwarded-port": "443",
+            "x-forwarded-proto": "https",
+            "x-forwarded-server": "737fb838982b",
+            "x-real-ip": "your_ip_address",
+            "accept-encoding": "gzip"
+          },
+          "params": {},
+          "query": {},
+          "body": {
+            "pais": "México",
+            "email": "your_email@example.com",
+            "fuente": "WordPress",
+            "nombre": "your_client_name",
+            "empresa": "your_company",
+            "servicio": "Inteligencia Artificial",
+            "telefono": "+your_phone_number",
+            "client_id": "1762459014109101",
+            "created_at": "2025-11-06T19:56:52.346+00:00",
+            "estado_lead": "Nuevo Lead"
+          },
+          "webhookUrl": "https://your_n8n_domain_service/webhook/3c54c05c-69d5-4a9d-b4fb-a24a8f6491f8",
+          "executionMode": "production"
+        }
+      }
+    ],
+    "Webhook a supabase para extraer nuevo leads de meta y web": [
+      {
+        "json": {
+          "headers": {
+            "host": "your_n8n_domain_service",
+            "user-agent": "pg_net/0.14.0",
+            "content-length": "335",
+            "accept": "*/*",
+            "content-type": "application/json",
+            "x-forwarded-for": "your_ip_address",
+            "x-forwarded-host": "your_n8n_domain_service",
+            "x-forwarded-port": "443",
+            "x-forwarded-proto": "https",
+            "x-forwarded-server": "df8eceeef8f9",
+            "x-real-ip": "your_ip_address",
+            "accept-encoding": "gzip"
+          },
+          "params": {},
+          "query": {},
+          "body": {
+            "pais": "México",
+            "email": "your_email@example.com",
+            "fuente": "WordPress",
+            "nombre": "your_full_name",
+            "empresa": "your_company",
+            "servicio": "Inteligencia Artificial",
+            "telefono": "+your_phone_number",
+            "client_id": "1766969489047429",
+            "created_at": "2025-12-29T00:51:28.815+00:00",
+            "estado_lead": "Nuevo Lead"
+          },
+          "webhookUrl": "https://your_n8n_domain_service/webhook/3c54c05c-69d5-4a9d-b4fb-a24a8f6491f8",
+          "executionMode": "production"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Webhook a supabase para extraer nuevo leads de meta y web": {
+      "main": [
+        [
+          {
+            "node": "enviar_plantilla_nuevo_lead_meta_o_Web",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "colocar 1 despues de lada de telefono si es de mexico para que chatwoot lo reconozca": {
+      "main": [
+        [
+          {
+            "node": "obtener contact id",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "crear conversacion": {
+      "main": [
+        [
+          {
+            "node": "extraer team_id1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "crear contacto": {
+      "main": [
+        [
+          {
+            "node": "crear conversacion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "crear conversacion contacto existe": {
+      "main": [
+        [
+          {
+            "node": "extraer team_id",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "obtener inbox id": {
+      "main": [
+        [
+          {
+            "node": "filtra si contacto existente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "filtra si contacto existente": {
+      "main": [
+        [
+          {
+            "node": "crear conversacion contacto existe",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "crear contacto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "enviar_plantilla_nuevo_lead_meta_o_Web": {
+      "main": [
+        [
+          {
+            "node": "actualizar memoria agente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "etiqueta nuevo lead": {
+      "main": [
+        [
+          {
+            "node": "enviar plantilla1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "etiqueta nuevo lead1": {
+      "main": [
+        [
+          {
+            "node": "enviar plantilla1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "asignar a equipo2": {
+      "main": [
+        [
+          {
+            "node": "etiqueta nuevo lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "asignar a equipo": {
+      "main": [
+        [
+          {
+            "node": "etiqueta nuevo lead1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "extraer team_id": {
+      "main": [
+        [
+          {
+            "node": "Aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "extraer team_id1": {
+      "main": [
+        [
+          {
+            "node": "Aggregate1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate": {
+      "main": [
+        [
+          {
+            "node": "asignar a equipo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate1": {
+      "main": [
+        [
+          {
+            "node": "asignar a equipo2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "obtener contact id": {
+      "main": [
+        [
+          {
+            "node": "obtener inbox id",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Mexico_City",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "221e243e-5b6d-41c7-b30f-f73865b3d749",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "your_instance_id"
+  },
+  "id": "your_credential_id",
+  "tags": []
+}
