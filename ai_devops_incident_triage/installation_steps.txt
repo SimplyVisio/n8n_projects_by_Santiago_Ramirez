@@ -1,0 +1,86 @@
+# Agentic AI DevOps Incident Intelligence System - Installation Guide
+
+Follow these steps to set up and run the production-grade incident triage agent.
+
+---
+
+## 1. Environment Preparation
+
+1.  Clone or copy the project into a folder.
+2.  Copy `.env.example` to `.env`:
+    `cp .env.example .env`
+3.  Fill in the values in `.env`:
+    - `OPENAI_API_KEY`: Your GPT-4o API Key.
+    - `SUPABASE_DB_URL`: The connection string from Supabase (e.g., `postgresql+asyncpg://postgres:pass@db.uuid.supabase.co:5432/postgres`).
+    - `TELEGRAM_BOT_TOKEN/CHAT_ID`: Create a bot using BotFather on Telegram.
+
+---
+
+## 2. Supabase / Postgres Database Setup
+
+1.  Log in to your Supabase dashboard.
+2.  Open the **SQL Editor**.
+3.  Copy and paste the entire content of `database_schema.sql` into the editor.
+4.  Run the query to create tables, indexes, and extensions.
+
+---
+
+## 3. Running with Docker (Recommended)
+
+1.  Copy `docker-compose.example.yml` to `docker-compose.yml`:
+    `cp docker-compose.example.yml docker-compose.yml`
+2.  Start the services:
+    `docker-compose up --build -d`
+3.  Verify the containers are running:
+    `docker-compose ps`
+4.  Check the logs:
+    `docker-compose logs -f`
+
+---
+
+## 4. Local Installation (Alternative)
+
+1.  Create a virtual environment:
+    `python -m venv venv`
+2.  Activate it:
+    `source venv/bin/activate`
+3.  Install dependencies:
+    `pip install -r requirements.txt`
+4.  Ensure Redis is running locally on port 6379.
+5.  Run the API:
+    `uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload`
+6.  In a separate terminal, start the worker:
+    `python app/worker.py`
+
+---
+
+## 5. n8n Integration Instructions
+
+1.  In your n8n workflow, add an **Error Trigger** or a **Try/Catch** block.
+2.  Add an **HTTP Request** node.
+3.  Set the Method to **POST**.
+4.  Set the URL to your API's `/incident` endpoint (e.g., `http://your-server-ip:8000/incident`).
+5.  Set the Body content to **JSON**.
+6.  The agent will take over and post an alert to your **Telegram** channel within seconds.
+
+---
+
+## 6. Testing the Setup
+
+Send a test incident via `curl`:
+
+```bash
+curl -X POST "http://localhost:8000/incident" \
+     -H "Content-Type: application/json" \
+     -d '{
+           "workflow_id": "test_workflow",
+           "node_name": "Database Node",
+           "error_message": "Connection timeout",
+           "stack_trace": "OperationalError: (psycopg2.OperationalError) could not connect to server: Connection timed out",
+           "severity": "critical"
+         }'
+```
+
+Check the **Telegram** channel for a structured alert from the AI agent.
+Check the **Supabase** table `incidents` to see the resolution details.
+Check the **Supabase** table `agent_reasoning_logs` to see the agent's chain of thought.

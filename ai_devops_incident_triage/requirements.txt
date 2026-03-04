@@ -1,0 +1,16 @@
+fastapi
+uvicorn[standard]
+pydantic
+pydantic-settings
+openai
+redis
+rq
+sqlalchemy[asyncio]
+asyncpg
+httpx
+python-dotenv
+cryptography
+psycopg2-binary
+nest-asyncio
+prometheus-client
+gunicorn

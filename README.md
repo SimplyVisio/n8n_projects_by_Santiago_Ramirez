@@ -17,6 +17,7 @@ graph TD
         MA[Meta Ads / Forms]
         WA[WhatsApp / Instagram / Messenger]
         VC[Voice Calls - Retell AI]
+        AL[External Alerts / Monitoring - Site24x7 / Datadog]
     end
 
     %% Processing
@@ -43,6 +44,7 @@ graph TD
     MA --> N8N
     WA --> N8N
     VC --> N8N
+    AL --> N8N
     N8N <--> PY
     N8N <--> AI
     N8N <--> DB
@@ -88,7 +90,13 @@ Microservices for brand scaling and community management.
 ### 4. 🐍 [Internal Python API](./python_api)
 Dedicated FastAPI backend for tasks that require heavy computation:
 *   Advanced lead scoring algorithms.
-*   Complex data normalization and business logic that exceeds standard no-code capabilities.
+*   Complex data normalization and business logic que no puede ser procesada por n8n.
+
+### 5. 🤖 [AI DevOps & Incident Intelligence](./ai_devops_incident_triage)
+Autonomous agentic triage for infrastructure and workflow incidents.
+*   **Agentic Reasoning Loop**: Analyzes raw JSON errors, fingerprints stack traces, and queries historical data.
+*   **Self-Healing Suggestions**: Provides root cause analysis and automated fix suggestions directly to the DevOps team.
+*   **Atomic Persistence**: Dual-write pattern to Redis (hot memory) and Postgres (long-term stats) for resilient incident tracking.
 
 ---
 
@@ -147,9 +155,10 @@ Execute the SQL schema in your Supabase SQL Editor:
 This platform represents a fusion of **Full-Stack Development** and **Workflow Engineering**. It isn’t just a collection of "if-then" statements; it is a **scalable, resilient, and intelligent automation ecosystem** built for high-performance business environments.
 
 **Key Technical Skills Demonstrated:**
-*   **Agentic AI Orchestration** (Multi-agent workflows).
+*   **Agentic AI Orchestration** (Multi-agent workflows & Triage).
 *   **Database Design** (SSOT pattern with Supabase).
 *   **Microservice Interconnectivity** (FastAPI + n8n).
+*   **DevOps Intelligence** (Autonomous error classification & resolution).
 *   **Multichannel Messaging Integration** (Meta/WA/Web).
 
 ---

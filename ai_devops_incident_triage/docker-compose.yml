@@ -1,0 +1,65 @@
+version: '3.8'
+
+services:
+  # FastAPI API Layer (non-blocking)
+  api:
+    build: .
+    container_name: incident_agent_api
+    ports:
+      - "8001:8000"
+    restart: always
+    env_file:
+      - .env
+    depends_on:
+      redis:
+        condition: service_healthy
+    command: gunicorn -k uvicorn.workers.UvicornWorker app.main:app --bind 0.0.0.0:8000 --workers 2
+    healthcheck:
+      # Use python instead of curl — curl is not in the slim Python base image
+      test: [ "CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/health')" ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    networks:
+      - agent_net
+    mem_limit: 512M
+
+  # Background Worker (agent execution)
+  worker:
+    build: .
+    container_name: incident_agent_worker
+    restart: always
+    env_file:
+      - .env
+    depends_on:
+      redis:
+        condition: service_healthy
+    command: python -m app.worker
+    mem_limit: 512M
+    networks:
+      - agent_net
+  # Redis Queue (hot memory and task dispatch)
+  redis:
+    image: redis:alpine
+    container_name: incident_agent_redis
+    restart: always
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    networks:
+      - agent_net
+
+volumes:
+  redis_data:
+
+
+networks:
+  agent_net:
+    external: true
+    name: n8n_n8n-network
+    # Confirmed: this network contains n8n-n8n-1, n8n-n8n-worker-1
+    # Use this URL in n8n HTTP Request node: http://incident_agent_api:8000/incident
